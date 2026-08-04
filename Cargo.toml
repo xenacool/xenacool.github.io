@@ -1,0 +1,20 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/gate",
+    "crates/core",
+    "crates/compiler",
+]
+
+[profile.dev]
+opt-level = 1
+
+[profile.dev.package."*"]
+opt-level = 3
+
+[profile.dev.package.wgpu-types]
+debug-assertions = false
+
+[profile.release]
+codegen-units = 1
+lto = "thin"

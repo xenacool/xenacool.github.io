@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Xenacool's Pystral Gate</title>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: black; color: white; font-family: sans-serif; }
+        canvas { width: 100vw; height: 100vh; display: block; }
+        #ui {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px 20px;
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+        }
+        input[type=range] { width: 300px; }
+        .controls-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 5px;
+        }
+        button {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            padding: 5px 10px;
+            cursor: pointer;
+            background: #444;
+            color: white;
+            border: 1px solid #666;
+            border-radius: 4px;
+        }
+        button:hover { background: #555; }
+        svg { width: 16px; height: 16px; }
+        .play-icon, .pause-icon { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    </style>
+</head>
+<body>
+<canvas id="canvas"></canvas>
+<div id="ui">
+    <div class="controls-row">
+        <label for="history-slider">History Log:</label>
+        <input type="range" id="history-slider" min="0" max="320" value="0">
+        <span id="slider-value">0</span>
+    </div>
+    <div class="controls-row">
+        <button id="play-log" title="Play/Pause Log Scrubbing">
+            <svg class="play-icon" viewBox="0 0 24 24">
+                <polygon points="5 3 19 12 5 21 5 3"></polygon>
+            </svg>
+            <svg class="pause-icon" viewBox="0 0 24 24" style="display:none;">
+                <rect x="6" y="4" width="4" height="16"></rect>
+                <rect x="14" y="4" width="4" height="16"></rect>
+            </svg>
+            Log
+        </button>
+        <button id="play-sim" title="Play/Pause Simulation (Animations & Camera)">
+            <svg class="play-icon" viewBox="0 0 24 24">
+                <polygon points="5 3 19 12 5 21 5 3"></polygon>
+            </svg>
+            <svg class="pause-icon" viewBox="0 0 24 24" style="display:none;">
+                <rect x="6" y="4" width="4" height="16"></rect>
+                <rect x="14" y="4" width="4" height="16"></rect>
+            </svg>
+            Sim
+        </button>
+        <div style="margin-left: 10px; display: flex; align-items: center; gap: 5px;">
+            <input type="checkbox" id="debug-checkbox">
+            <label for="debug-checkbox" style="font-size: 12px; cursor: pointer;">Debug</label>
+        </div>
+        <div style="margin-left: 10px; display: flex; align-items: center; gap: 5px;">
+            <span id="error-display" style="font-size: 12px; cursor: pointer; color: white;">Error: 0</span>
+        </div>
+    </div>
+    <div style="font-size: 8px; color: #666; margin-top: 5px; text-align: center;">
+        Icons by Lucide (lucide.dev)
+    </div>
+</div>
+<div id="log-container" style="position: absolute; top: 10px; right: 10px; width: 300px; max-height: 400px; overflow-y: auto; background: rgba(0,0,0,0.5); font-size: 10px; pointer-events: none; padding: 5px; color: #ffcc00; font-family: monospace; white-space: pre-wrap;"></div>
+<script type="module">
+    import init, { set_history_index, get_log_length, toggle_play_log, toggle_play_animations, set_debug_mode, set_broken_mode } from './web/pystral_gate.js';
+
+    window.update_ui_slider = (index) => {
+        const slider = document.getElementById('history-slider');
+        slider.value = index;
+        document.getElementById('slider-value').innerText = index;
+    };
+
+    async function run() {
+        await init();
+        
+        const slider = document.getElementById('history-slider');
+        const valueDisplay = document.getElementById('slider-value');
+        
+        const logLen = get_log_length();
+        slider.max = logLen;
+        console.log("Log length detected:", logLen);
+        
+        slider.addEventListener('input', (e) => {
+            const val = parseInt(e.target.value, 10);
+            valueDisplay.textContent = val;
+            set_history_index(val);
+        });
+
+        const setupToggle = (btnId, toggleFn, autostart = false) => {
+            const btn = document.getElementById(btnId);
+            const playIcon = btn.querySelector('.play-icon');
+            const pauseIcon = btn.querySelector('.pause-icon');
+            let playing = autostart;
+            
+            if (playing) {
+                toggleFn();
+                playIcon.style.display = 'none';
+                pauseIcon.style.display = 'block';
+            }
+
+            btn.addEventListener('click', () => {
+                playing = !playing;
+                toggleFn();
+                playIcon.style.display = playing ? 'none' : 'block';
+                pauseIcon.style.display = playing ? 'block' : 'none';
+            });
+        };
+
+        setupToggle('play-log', toggle_play_log, true);
+        setupToggle('play-sim', toggle_play_animations, true);
+
+        const debugCheckbox = document.getElementById('debug-checkbox');
+        debugCheckbox.addEventListener('change', (e) => {
+            set_debug_mode(e.target.checked);
+        });
+        
+        let errorMode = false;
+        const errorDisplay = document.getElementById('error-display');
+        errorDisplay.addEventListener('click', () => {
+            errorMode = !errorMode;
+            set_broken_mode(errorMode);
+            if (errorMode) {
+                errorDisplay.style.border = "1px solid red";
+            } else {
+                errorDisplay.style.border = "none";
+            }
+        });
+    }
+    run().catch(console.error);
+</script>
+</body>
+</html>
