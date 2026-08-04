@@ -1,0 +1,183 @@
+use glam::{Vec2, Vec3};
+use hexx::{Hex, HexLayout, HexOrientation};
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum GridOrientation {
+    Pointy,
+    Flat,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct Material {
+    pub color: [f32; 3],
+    pub roughness: f32,
+    pub metalness: f32,
+    pub emissive: f32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct HexTile {
+    pub hex: Hex,
+    pub layer: i32,
+    pub bottom: f32,
+    pub height: f32,
+    pub material: String, // Reference to a material definition
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct HexMap {
+    pub orientation: GridOrientation,
+    pub hex_size: Vec2,
+    pub tiles: Vec<HexTile>,
+}
+
+impl HexMap {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn layout(&self) -> HexLayout {
+        HexLayout {
+            orientation: match self.orientation {
+                GridOrientation::Pointy => HexOrientation::Pointy,
+                GridOrientation::Flat => HexOrientation::Flat,
+            },
+            origin: Vec2::ZERO,
+            scale: self.hex_size,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct HexGrid {
+    pub orientation: GridOrientation,
+    pub hex_size: Vec2,
+    pub radius: u32,
+}
+
+impl Default for HexMap {
+    fn default() -> Self {
+        Self {
+            orientation: GridOrientation::Pointy,
+            hex_size: Vec2::splat(1.0),
+            tiles: Vec::new(),
+        }
+    }
+}
+
+impl HexGrid {
+    pub fn new(radius: u32) -> Self {
+        Self {
+            orientation: GridOrientation::Pointy,
+            hex_size: Vec2::splat(1.0),
+            radius,
+        }
+    }
+
+    pub fn layout(&self) -> HexLayout {
+        HexLayout {
+            orientation: match self.orientation {
+                GridOrientation::Pointy => HexOrientation::Pointy,
+                GridOrientation::Flat => HexOrientation::Flat,
+            },
+            origin: Vec2::ZERO,
+            scale: self.hex_size,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct Light {
+    pub direction: [f32; 3],
+    pub color: [f32; 3],
+    pub intensity: f32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct Capsule {
+    pub radius: f32,
+    pub height: f32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum Shape3D {
+    Capsule(Capsule),
+    Cube(f32),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum Joint {
+    Property(String),
+    Constant(f32, f32, f32),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum PainterCommand {
+    MoveTo(f32, f32, f32),
+    LineTo(f32, f32, f32),
+    QuadTo(f32, f32, f32, f32, f32, f32),
+    CubicTo(f32, f32, f32, f32, f32, f32, f32, f32, f32),
+    Close,
+    SetColor([f32; 4], [f32; 4]), // Front, Mirrored
+    SetStrokeWidth(f32),
+    Fill,
+    Stroke,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct Bone {
+    pub start: Joint,
+    pub end: Joint,
+    pub painter_commands: Vec<PainterCommand>,
+    pub spritestack: Option<(String, String)>,
+    pub scale: f32,
+}
+
+impl Bone {
+    pub fn new(start: Joint, end: Joint) -> Self {
+        Self {
+            start,
+            end,
+            painter_commands: Vec::new(),
+            spritestack: None,
+            scale: 1.0,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct SpritestackSlice {
+    pub color_data: Vec<u8>,  // RGBA
+    pub normal_data: Vec<u8>, // RGBA (packed Nx, Ny, Nz, 1.0)
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct Spritestack {
+    pub width: u32,
+    pub height: u32,
+    pub spacing: f32,
+    pub aabb: Vec3,
+    pub slices: Vec<SpritestackSlice>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct LightingConfig {
+    pub ambient_color: [f32; 3],
+    pub ambient_intensity: f32,
+    pub lights: Vec<Light>,
+}
+
+impl Default for LightingConfig {
+    fn default() -> Self {
+        Self {
+            ambient_color: [1.0, 1.0, 1.0],
+            ambient_intensity: 0.2,
+            lights: vec![Light {
+                direction: [-1.0, -2.0, -1.0],
+                color: [1.0, 1.0, 1.0],
+                intensity: 0.8,
+            }],
+        }
+    }
+}

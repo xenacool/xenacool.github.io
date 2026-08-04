@@ -1,0 +1,44 @@
+{
+  "format": "pystral-gate-history-v1",
+  "case": "batched-movement-transitions",
+  "history": {
+    "log": [
+      {
+        "SpawnEntity": {
+          "id": 1,
+          "kind": "unit",
+          "hex": {"x": 0, "y": 0},
+          "init_properties": []
+        }
+      },
+      {
+        "MoveSprite": {
+          "id": 1,
+          "destination": {"x": 1, "y": 0},
+          "transition": {
+            "duration_ms": 500,
+            "delta_time_ms": 16.0,
+            "tween": "SineInOut"
+          }
+        }
+      },
+      {
+        "MoveSprite": {
+          "id": 1,
+          "destination": {"x": 2, "y": 0},
+          "transition": {
+            "duration_ms": 500,
+            "delta_time_ms": 16.0,
+            "tween": "SineInOut"
+          }
+        }
+      }
+    ],
+    "current_index": 3
+  },
+  "expected": {
+    "move_events": 2,
+    "transition_events": 2,
+    "batched_event_gap": true
+  }
+}

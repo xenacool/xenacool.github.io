@@ -1,0 +1,26 @@
+{
+  "name": "pystral_gate",
+  "version": "1.0.0",
+  "description": "Xenacool's Pystral Gate =======================",
+  "main": "index.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xenacool/xenacool.github.io.git"
+  },
+  "keywords": [],
+  "author": "",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/xenacool/xenacool.github.io/issues"
+  },
+  "homepage": "https://github.com/xenacool/xenacool.github.io#readme",
+  "devDependencies": {
+    "@playwright/test": "^1.62.1"
+  }
+}

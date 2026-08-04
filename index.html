@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="./web/favicon.ico" type="image/x-icon">
+    <title>Xenacool's Pystral Gate</title>
+    <script src="web/enable-threads.js"></script>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: black; color: white; font-family: sans-serif; }
+        canvas { width: 100vw; height: 100vh; display: block; }
+        #ui {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px 20px;
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+        }
+        input[type=range] { width: 300px; }
+        .controls-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 5px;
+        }
+        button {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            padding: 5px 10px;
+            cursor: pointer;
+            background: #444;
+            color: white;
+            border: 1px solid #666;
+            border-radius: 4px;
+        }
+        button:hover { background: #555; }
+        svg { width: 16px; height: 16px; }
+        .play-icon, .pause-icon { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+        #entity-viewer {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            width: 250px;
+            max-height: 80vh;
+            overflow-y: auto;
+            background: rgba(0, 0, 0, 0.8);
+            color: #00ff00;
+            font-family: monospace;
+            font-size: 11px;
+            padding: 10px;
+            border: 1px solid #444;
+            display: none;
+            pointer-events: auto;
+            z-index: 100;
+        }
+        #history-viewer {
+            position: absolute;
+            top: 10px;
+            right: 320px;
+            width: 250px;
+            max-height: 80vh;
+            overflow-y: auto;
+            background: rgba(0, 0, 0, 0.8);
+            color: #00ccff;
+            font-family: monospace;
+            font-size: 11px;
+            padding: 10px;
+            border: 1px solid #444;
+            display: none;
+            pointer-events: auto;
+            z-index: 100;
+        }
+        #heartbeat-panel {
+            position: absolute;
+            top: 10px;
+            right: 590px;
+            width: 220px;
+            background: rgba(0, 0, 0, 0.8);
+            color: #ffcc00;
+            font-family: monospace;
+            font-size: 11px;
+            padding: 10px;
+            border: 1px solid #665500;
+            display: none;
+            pointer-events: auto;
+            z-index: 100;
+        }
+        .history-entry {
+            padding: 2px 4px;
+            cursor: pointer;
+            border-bottom: 1px solid #222;
+        }
+        .history-entry:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        .history-entry.current {
+            background: rgba(0, 204, 255, 0.3);
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+<canvas id="canvas"></canvas>
+<div id="entity-viewer"></div>
+<div id="history-viewer"></div>
+<section id="heartbeat-panel" aria-label="Worker heartbeat">
+    <strong>Worker heartbeat</strong>
+    <div id="heartbeat-message" role="status" aria-live="polite">No heartbeat received.</div>
+    <div id="heartbeat-reason" role="status" aria-live="polite">Waiting for first probe response.</div>
+</section>
+<div id="ui">
+    <div class="controls-row">
+        <label for="history-slider">History Log:</label>
+        <input type="range" id="history-slider" min="0" max="320" value="0">
+        <span id="slider-value">0</span>
+    </div>
+    <div class="controls-row">
+        <button id="play-log" title="Play/Pause Log Scrubbing">
+            <svg class="play-icon" viewBox="0 0 24 24">
+                <polygon points="5 3 19 12 5 21 5 3"></polygon>
+            </svg>
+            <svg class="pause-icon" viewBox="0 0 24 24" style="display:none;">
+                <rect x="6" y="4" width="4" height="16"></rect>
+                <rect x="14" y="4" width="4" height="16"></rect>
+            </svg>
+            Log
+        </button>
+        <button id="play-sim" title="Play/Pause Simulation (Animations & Camera)">
+            <svg class="play-icon" viewBox="0 0 24 24">
+                <polygon points="5 3 19 12 5 21 5 3"></polygon>
+            </svg>
+            <svg class="pause-icon" viewBox="0 0 24 24" style="display:none;">
+                <rect x="6" y="4" width="4" height="16"></rect>
+                <rect x="14" y="4" width="4" height="16"></rect>
+            </svg>
+            Sim
+        </button>
+        <div style="margin-left: 10px; display: flex; align-items: center; gap: 5px;">
+            <input type="checkbox" id="debug-checkbox">
+            <label for="debug-checkbox" style="font-size: 12px; cursor: pointer;">Debug</label>
+        </div>
+        <div id="history-step-control" style="margin-left: 10px; display: none; align-items: center; gap: 5px;">
+            <label for="history-step-ms" style="font-size: 12px;">Step ms</label>
+            <input id="history-step-ms" type="number" min="1" max="10000" step="1" value="100" style="width: 65px;">
+        </div>
+        <div style="margin-left: 10px; display: flex; align-items: center; gap: 5px;">
+            <span id="error-display" style="font-size: 12px; cursor: pointer; color: white;">Error: 0</span>
+        </div>
+    </div>
+    <div class="controls-row">
+        <button id="nav-up" title="Camera Up">Up</button>
+        <button id="nav-down" title="Camera Down">Down</button>
+        <button id="nav-left" title="Camera Left">Left</button>
+        <button id="nav-right" title="Camera Right">Right</button>
+    </div>
+    <div class="controls-row" id="action-controls" style="display: none; background: rgba(0, 100, 200, 0.3); padding: 5px; border-radius: 5px;">
+        <button id="action-up">▲</button>
+        <button id="action-down">▼</button>
+        <button id="action-left">◀</button>
+        <button id="action-right">▶</button>
+        <button id="action-layer-up" title="Game layer up">Layer ▲</button>
+        <button id="action-layer-down" title="Game layer down">Layer ▼</button>
+        <button id="action-confirm" style="background: #228b22;">Action</button>
+        <button id="action-wait" style="background: #6a5acd;">Wait</button>
+        <button id="action-return" style="background: #b22222;">Return</button>
+        <button id="test-occupy-destination" style="display: none;">Occupy selected destination</button>
+    </div>
+</div>
+<div id="action-stack" style="display: none; position: absolute; left: 16px; bottom: 92px; max-width: min(420px, calc(100vw - 32px)); max-height: calc(100vh - 110px); flex-direction: column; align-items: stretch; gap: 8px;">
+<section id="unit-state-panel" aria-label="UnitState information" style="display: none; overflow-y: auto; max-height: 42vh; padding: 10px; border: 1px solid rgba(255,255,255,0.45); border-radius: 6px; background: rgba(8, 14, 28, 0.94); color: white; font: 12px monospace;">
+    <strong>UnitState</strong>
+    <div id="unit-state-items"></div>
+</section>
+<section id="action-menu" role="region" aria-labelledby="action-menu-heading" aria-describedby="action-menu-status" style="display: none; min-width: 240px; max-width: 340px; max-height: 42vh; overflow-y: auto; padding: 10px; border: 1px solid rgba(255,255,255,0.45); border-radius: 6px; background: rgba(8, 14, 28, 0.9); color: white; font: 14px monospace;">
+    <h2 id="action-menu-heading" tabindex="-1" style="font-size: 14px; margin: 0 0 6px;">Action menu</h2>
+    <div id="action-menu-status" role="status" aria-live="polite"></div>
+    <div id="action-menu-items"></div>
+</section>
+</div>
+<section id="diagnostics-panel" aria-label="Diagnostics" style="position: absolute; top: 10px; right: 10px; width: 340px; max-height: 70vh; overflow-y: auto; background: rgba(0,0,0,0.78); font-size: 11px; padding: 8px; color: #ffcc00; font-family: monospace; z-index: 110;">
+    <strong>UI log</strong>
+    <pre id="log-container" aria-label="UI log" style="max-height: 260px; overflow-y: auto; white-space: pre-wrap; margin: 5px 0;"></pre>
+    <textarea id="log-copy" aria-label="Copyable UI log" readonly style="width: 100%; height: 110px; box-sizing: border-box; color: white; background: #111; font: 11px monospace;">No UI log messages.</textarea>
+    <div style="display: flex; gap: 5px; margin-top: 5px;">
+        <button id="copy-ui-log" type="button">Copy UI log</button>
+        <button id="download-ui-log" type="button">Download UI log</button>
+        <button id="download-history" type="button">Download history</button>
+    </div>
+    <div id="diagnostics-download-status" aria-live="polite" style="margin-top: 5px; color: #aaa;"></div>
+</section>
+<script type="module">
+    import init, { run_app } from './web/pystral_gate.js';
+
+    window.update_ui_slider = (index) => {
+        const slider = document.getElementById('history-slider');
+        slider.value = index;
+        document.getElementById('slider-value').innerText = index;
+        window.__pystralHistoryCurrentIndex = index;
+
+        // Highlight current history entry
+        document.querySelectorAll('.history-entry').forEach(el => el.classList.remove('current'));
+        const currentEntry = document.getElementById(`history-entry-${index}`);
+        if (currentEntry) {
+            currentEntry.classList.add('current');
+            currentEntry.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        }
+    };
+
+    window.update_entity_viewer = (json) => {
+        const entities = JSON.parse(json);
+        const viewer = document.getElementById('entity-viewer');
+        viewer.replaceChildren();
+        const title = document.createElement('strong');
+        title.textContent = 'Entities';
+        viewer.append(title, document.createElement('hr'));
+        entities.forEach(entity => {
+            const heading = document.createElement('div');
+            heading.textContent = `ID: ${entity.id} (${entity.kind})`;
+            heading.style.fontWeight = 'bold';
+            viewer.appendChild(heading);
+
+            const position = document.createElement('div');
+            position.textContent = `Pos: ${entity.hex.q},${entity.hex.r}`;
+            position.style.paddingLeft = '10px';
+            viewer.appendChild(position);
+
+            Object.entries(entity.properties).forEach(([key, value]) => {
+                const property = document.createElement('div');
+                property.textContent = `${key}: ${JSON.stringify(value)}`;
+                property.style.cssText = 'padding-left:10px;color:#aaa;';
+                viewer.appendChild(property);
+            });
+
+            const state = document.createElement('div');
+            state.textContent = `Animation: ${entity.animation_state}`;
+            state.style.paddingLeft = '10px';
+            viewer.appendChild(state);
+            viewer.appendChild(document.createElement('br'));
+        });
+    };
+
+    window.update_history_log = (json) => {
+        const log = JSON.parse(json);
+        const viewer = document.getElementById('history-viewer');
+
+        viewer.replaceChildren();
+        const title = document.createElement('strong');
+        title.textContent = 'History Log';
+        viewer.append(title, document.createElement('hr'));
+        log.forEach((entry, i) => {
+            const div = document.createElement('div');
+            div.className = 'history-entry';
+            div.id = `history-entry-${i}`;
+            div.textContent = `${i}: ${JSON.stringify(entry)}`;
+            div.onclick = () => {
+                if (window.app) {
+                    window.app.set_history_index(i);
+                }
+            };
+            viewer.appendChild(div);
+        });
+
+        // Re-apply highlight
+        const slider = document.getElementById('history-slider');
+        window.update_ui_slider(parseInt(slider.value, 10));
+    };
+
+    window.__pystralHistoryExportSource = null;
+    window.__pystralHistoryExportUpdateCount = 0;
+    window.__pystralReplayInputs = [];
+    window.refreshReplayExport = () => {
+        window.__pystralHistoryExportUpdateCount += 1;
+        window.__pystralHistoryExportSource = JSON.stringify({
+            format: 'pystral-gate-replay-v1',
+            replay: {
+                entrypoint: 'web/scripts/demo.rhai',
+                actionInputs: window.__pystralReplayInputs,
+            },
+        });
+    };
+    window.refreshReplayExport();
+    window.sendActionInput = (direction) => {
+        window.__pystralReplayInputs.push(direction);
+        window.refreshReplayExport();
+        window.app.action_nav(direction);
+    };
+
+    window.set_ui_slider_max = (max) => {
+        const slider = document.getElementById('history-slider');
+        slider.max = max;
+    };
+
+    window.update_nav_buttons = (up, down, left, right) => {
+        document.getElementById('nav-up').style.display = up ? 'block' : 'none';
+        document.getElementById('nav-down').style.display = down ? 'block' : 'none';
+        document.getElementById('nav-left').style.display = left ? 'block' : 'none';
+        document.getElementById('nav-right').style.display = right ? 'block' : 'none';
+    };
+
+    window.update_action_buttons = (visible, up, down, left, right, layerUp, layerDown, confirm, ret, wait) => {
+        const container = document.getElementById('action-controls');
+        const previewActive = window.previewActive === true;
+        container.style.display = (visible || previewActive) ? 'flex' : 'none';
+        document.getElementById('action-up').style.display = (up || previewActive) ? 'block' : 'none';
+        document.getElementById('action-down').style.display = (down || previewActive) ? 'block' : 'none';
+        document.getElementById('action-left').style.display = (left || previewActive) ? 'block' : 'none';
+        document.getElementById('action-right').style.display = (right || previewActive) ? 'block' : 'none';
+        document.getElementById('action-layer-up').style.display = layerUp ? 'block' : 'none';
+        document.getElementById('action-layer-down').style.display = layerDown ? 'block' : 'none';
+        document.getElementById('action-confirm').style.display = (confirm || previewActive) ? 'block' : 'none';
+        document.getElementById('action-wait').style.display = (wait && !previewActive) ? 'block' : 'none';
+        document.getElementById('action-return').style.display = (ret || previewActive) ? 'block' : 'none';
+    };
+
+    window.update_action_menu = (json) => {
+        const state = JSON.parse(json);
+        const stack = document.getElementById('action-stack');
+        const unitStatePanel = document.getElementById('unit-state-panel');
+        const unitStateItems = document.getElementById('unit-state-items');
+        const menu = document.getElementById('action-menu');
+        const actions = state.available_actions;
+        const status = document.getElementById('action-menu-status');
+        const items = document.getElementById('action-menu-items');
+        window.__pystralLastTransientState = state;
+        if (state.ability_targets) {
+            menu.dataset.targetSessionId = String(state.ability_targets.target_session_id);
+            menu.dataset.targetStateVersion = String(state.ability_targets.state_version);
+            menu.dataset.targetSnapshotFingerprint = String(state.ability_targets.snapshot_fingerprint);
+            menu.dataset.selectedTargetIndex = String(state.ability_targets.selected_index);
+        } else {
+            delete menu.dataset.targetSessionId;
+            delete menu.dataset.targetStateVersion;
+            delete menu.dataset.targetSnapshotFingerprint;
+            delete menu.dataset.selectedTargetIndex;
+        }
+        window.previewActive = Boolean(state.preview);
+        menu.dataset.gameCompleted = state.game_completed ? 'true' : 'false';
+        if (state.action_feedback) {
+            window.pendingActionFeedback = state.action_feedback;
+        } else if (!state.action_pending && !state.wait_pending) {
+            window.pendingActionFeedback = '';
+        }
+        unitStateItems.replaceChildren();
+        (state.unit_states || []).forEach(({ unit_id, state: unit }) => {
+            const details = document.createElement('details');
+            details.open = unit_id === state.active_unit_id;
+            const summary = document.createElement('summary');
+            summary.textContent = `Unit ${unit_id} · team ${unit.team_id} · HP ${unit.health} · MP ${unit.mana} · AP ${unit.action_points}`;
+            details.appendChild(summary);
+            const pre = document.createElement('pre');
+            pre.textContent = JSON.stringify(unit, null, 2);
+            pre.style.cssText = 'margin:4px 0 0 14px;white-space:pre-wrap;color:#bbb;font:11px monospace;';
+            details.appendChild(pre);
+            unitStateItems.appendChild(details);
+        });
+        unitStatePanel.style.display = (state.unit_states || []).length ? 'block' : 'none';
+        stack.style.display = (state.unit_states || []).length || state.available_actions ? 'flex' : 'none';
+        menu.dataset.actionPending = state.action_pending ? 'true' : 'false';
+        menu.dataset.animationPending = state.action_pending ? 'true' : 'false';
+        menu.dataset.waitPending = state.wait_pending ? 'true' : 'false';
+        if (!window.previewActive && !state.action_pending && !state.wait_pending) {
+            window.previewLocation = '';
+            window.previewReachableCount = 0;
+        }
+        if (!actions) {
+            menu.style.display = state.game_completed ? 'block' : 'none';
+            status.textContent = state.game_completed ? 'Game completed.' : '';
+            items.replaceChildren();
+            return;
+        }
+
+        menu.style.display = 'block';
+        document.getElementById('action-menu-heading').textContent = `Unit ${actions.unit_id} action menu`;
+        items.replaceChildren();
+
+        const addEntry = (label, depth, detail = '', command = null, key = '', selected = false) => {
+            const row = command ? document.createElement('button') : document.createElement('div');
+            row.textContent = `${'  '.repeat(depth)}${label}${detail ? ` — ${detail}` : ''}`;
+            row.style.cssText = `display:block;width:100%;text-align:left;color:${depth === 0 ? '#8ecae6' : '#e0e0e0'};background:${selected ? 'rgba(40,120,180,0.45)' : 'transparent'};border:0;padding:3px;font:inherit;cursor:${command ? 'pointer' : 'default'};`;
+            if (command) {
+                row.type = 'button';
+                row.dataset.menuKey = key;
+                row.setAttribute('aria-current', selected ? 'true' : 'false');
+                row.onclick = () => window.sendActionInput(command);
+            }
+            items.appendChild(row);
+        };
+
+        const selectedPath = state.menu_path || [];
+        const selectedJob = selectedPath.find(path => path.startsWith('job:')) || '';
+        const selectedAbility = selectedPath.find(path => path.startsWith('ability:')) || '';
+        addEntry('Move', 0, `${actions.movement.length} reachable`, 'confirm', 'move', false);
+        const renderJob = (job, descriptor) => {
+            const selected = selectedJob === `job:${descriptor}`;
+            const affordance = selected ? '▾' : '▸';
+            addEntry(`${affordance} ${job.name}`, 0, `${job.abilities.length} abilities — press Enter to ${selected ? 'close' : 'open'}`, `menu-job:${descriptor}`, `job:${descriptor}`, selected);
+            const row = items.querySelector(`[data-menu-key="job:${descriptor}"]`);
+            if (row) {
+                row.setAttribute('aria-haspopup', 'true');
+                row.setAttribute('aria-expanded', selected ? 'true' : 'false');
+                row.setAttribute('aria-label', `${job.name}, ${job.abilities.length} abilities, ${selected ? 'expanded' : 'collapsed'}; press Enter to ${selected ? 'close' : 'open'}`);
+            }
+            if (selected && !state.ability_targets) {
+                job.abilities.forEach(ability => addEntry(
+                    ability.name,
+                    1,
+                    `id ${ability.id}`,
+                    `menu-ability:${ability.id}`,
+                    `ability:${ability.id}`,
+                    selectedAbility === `ability:${ability.id}`,
+                ));
+            }
+        };
+        renderJob(actions.primary_job, 'primary');
+        actions.secondary_jobs.forEach((job, index) => renderJob(job, `secondary:${index}`));
+
+        const targetMenu = state.ability_targets;
+        if (targetMenu) {
+            targetMenu.targets.forEach((target, index) => addEntry(
+                target.label,
+                1,
+                index === targetMenu.selected_index ? 'selected' : '',
+                `menu-target:${index}`,
+                `target:${index}`,
+                index === targetMenu.selected_index,
+            ));
+        }
+
+        if (state.wait_pending) {
+            addEntry('Wait', 0, 'turn committed; awaiting action acknowledgment');
+        }
+
+        const preview = state.preview;
+        if (preview) {
+            const selected = preview.selected_destination || preview.source;
+            const location = selected
+                ? `q ${selected.hex.x}, r ${selected.hex.y}, layer ${selected.layer}`
+                : 'source cell';
+            const previewStatus = `Move preview: selected ${location}; ${preview.reachable.length} reachable destinations. Use directional controls to change selection.`;
+            window.previewLocation = location;
+            window.previewReachableCount = preview.reachable.length;
+            status.textContent = window.pendingActionFeedback
+                ? `${window.pendingActionFeedback} ${previewStatus}`
+                : previewStatus;
+        } else if (targetMenu) {
+            const selected = targetMenu.targets[targetMenu.selected_index];
+            const targetStatus = selected
+                ? `Ability target: selected ${selected.label}; ${targetMenu.targets.length} legal targets. Use directional controls to change selection.`
+                : (targetMenu.disabled_reason || 'No legal targets for this ability.');
+            status.textContent = targetStatus;
+        } else {
+            const refreshStatus = window.previewLocation
+                ? ` Move preview: selected ${window.previewLocation}; reachability refreshed.`
+                : '';
+                status.textContent = state.wait_pending
+                ? 'Wait committed; awaiting action acknowledgment.'
+                : state.action_pending
+                ? (window.pendingActionFeedback
+                    ? `${window.pendingActionFeedback} Action committed; awaiting animation acknowledgment.`
+                    : 'Action committed; awaiting animation acknowledgment.')
+                : window.pendingActionFeedback
+                ? `${window.pendingActionFeedback}${refreshStatus}`
+                : 'Choose Move, Wait, or a job. Focus a job and press Enter to open its abilities.';
+        }
+
+        if (!state.action_pending && !state.wait_pending) {
+            let focusKey = 'heading';
+            if (targetMenu) focusKey = `target:${targetMenu.selected_index}`;
+            else if (selectedAbility) focusKey = selectedAbility;
+            else if (selectedJob) focusKey = 'first-ability';
+            const focusTarget = (focusKey === 'first-ability'
+                ? items.querySelector('[data-menu-key^="ability:"]')
+                : items.querySelector(`[data-menu-key="${focusKey}"]`))
+                || document.getElementById('action-menu-heading');
+            queueMicrotask(() => focusTarget.focus());
+        }
+    };
+
+    window.update_action_feedback = (message) => {
+        const normalized = message.length
+            ? `${message[0].toUpperCase()}${message.slice(1)}`
+            : message;
+        window.pendingActionFeedback = normalized;
+        const status = document.getElementById('action-menu-status');
+        const fallback = window.previewLocation
+            ? ` Move preview: selected ${window.previewLocation}; ${window.previewReachableCount} reachable destinations.`
+            : ' Choose primary job, secondary job, Move, or Wait.';
+        const currentPreview = status.textContent.includes('Move preview: selected')
+            ? ` ${status.textContent}`
+            : fallback;
+        status.textContent = `${normalized}${currentPreview}`;
+        document.getElementById('action-menu-heading').focus();
+    };
+
+    window.__pystralDebugTraces = [];
+    window.record_debug_trace = (message) => {
+        window.__pystralDebugTraces.push(message);
+        if (window.__pystralDebugTraces.length > 200) window.__pystralDebugTraces.shift();
+        window.dispatchEvent(new CustomEvent('pystral-debug-trace', { detail: message }));
+        console.debug(message);
+    };
+
+    // Latest worker-output sequence observed by the main-thread replica.  This
+    // is intentionally separate from the transport watermark, which only
+    // acknowledges main->worker input delivery.
+    window.__pystralWorkerLatestSeq = 0;
+    window.update_worker_heartbeat = (latestSeq, latestInputSeq, status) => {
+        const seq = Number(latestSeq);
+        window.__pystralWorkerLatestSeq = Math.max(window.__pystralWorkerLatestSeq, seq);
+        window.__pystralWorkerLatestInputSeq = Math.max(
+            window.__pystralWorkerLatestInputSeq,
+            Number(latestInputSeq),
+        );
+        window.__pystralWorkerStatus = status;
+        window.__pystralHeartbeatReceivedAt = Date.now();
+        document.getElementById('heartbeat-reason').textContent =
+            `Worker responsive · ${status} · input seq ${window.__pystralWorkerLatestInputSeq}`;
+    };
+
+    // Heartbeats can arrive in bursts while the worker drains its queue. Keep
+    // the debug panel readable by publishing only the latest one once per
+    // second; the protocol still receives every heartbeat immediately.
+    window.__pystralHeartbeatReceivedAt = 0;
+    window.__pystralWorkerLatestInputSeq = 0;
+    window.__pystralWorkerStatus = 'Unknown';
+    window.setInterval(() => {
+        const receivedAt = window.__pystralHeartbeatReceivedAt;
+        if (!receivedAt) return;
+        const age = Math.max(0, Math.round((Date.now() - receivedAt) / 1000));
+        document.getElementById('heartbeat-message').textContent =
+            `latest output seq: ${window.__pystralWorkerLatestSeq} · ${age}s ago`;
+        if (age >= 2) {
+            document.getElementById('heartbeat-reason').textContent =
+                `No probe response for ${age}s · last state ${window.__pystralWorkerStatus}`;
+        } else {
+            document.getElementById('heartbeat-reason').textContent =
+                `Worker responsive · ${window.__pystralWorkerStatus} · input seq ${window.__pystralWorkerLatestInputSeq}`;
+        }
+    }, 1000);
+
+    window.set_debug_panels_visible = (visible) => {
+        document.getElementById('heartbeat-panel').style.display = visible ? 'block' : 'none';
+    };
+
+    window.update_log_ui = (messages, totalErrors, totalInfo) => {
+        const logContainer = document.getElementById('log-container');
+        const text = messages.length ? messages.join('\n') : 'No UI log messages.';
+        logContainer.innerText = text;
+        document.getElementById('log-copy').value = text;
+        
+        const errorDisplay = document.getElementById('error-display');
+        if (totalInfo > 0 && totalErrors === 0) {
+            errorDisplay.innerText = `Info: ${totalInfo}`;
+            errorDisplay.style.color = 'white';
+        } else {
+            errorDisplay.innerText = `Error: ${totalErrors}`;
+            if (totalErrors > 0) {
+                errorDisplay.style.color = 'red';
+            } else {
+                errorDisplay.style.color = 'white';
+            }
+        }
+    };
+
+    function setDiagnosticsDownloadStatus(message) {
+        document.getElementById('diagnostics-download-status').textContent = message;
+    }
+
+    function downloadText(filename, text, mimeType) {
+        const blob = new Blob([text], { type: mimeType });
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = filename;
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 0);
+    }
+
+    document.getElementById('copy-ui-log').addEventListener('click', async () => {
+        const text = document.getElementById('log-copy').value;
+        try {
+            await navigator.clipboard.writeText(text);
+            setDiagnosticsDownloadStatus('UI log copied to clipboard.');
+        } catch (_) {
+            const textarea = document.getElementById('log-copy');
+            textarea.focus();
+            textarea.select();
+            document.execCommand('copy');
+            setDiagnosticsDownloadStatus('UI log selected for copying.');
+        }
+    });
+
+    document.getElementById('download-ui-log').addEventListener('click', () => {
+        downloadText('pystral-ui-log.txt', document.getElementById('log-copy').value, 'text/plain');
+        setDiagnosticsDownloadStatus('UI log download started.');
+    });
+
+    document.getElementById('download-history').addEventListener('click', () => {
+        if (!window.__pystralHistoryExportSource) {
+            setDiagnosticsDownloadStatus('History is not ready yet.');
+            return;
+        }
+        const replay = JSON.parse(window.__pystralHistoryExportSource).replay;
+        const exportText = JSON.stringify({
+            format: 'pystral-gate-replay-v1',
+            replay,
+        });
+        downloadText(
+            'pystral-replay-' + new Date().toISOString().replaceAll(':', '-') + '.json',
+            exportText,
+            'application/json',
+        );
+        setDiagnosticsDownloadStatus('Replay download started.');
+    });
+
+    async function run() {
+        console.log('Main thread starting run()...');
+        
+        try {
+            await init({ module_or_path: 'web/pystral_gate_bg.wasm' });
+            window.app = await run_app();
+        } catch (err) {
+            console.error('Main thread initialization failed:', err);
+            return;
+        }
+
+        const app = window.app;
+
+        const slider = document.getElementById('history-slider');
+        const valueDisplay = document.getElementById('slider-value');
+        
+        slider.addEventListener('input', (e) => {
+            const val = parseInt(e.target.value, 10);
+            valueDisplay.textContent = val;
+            app.set_history_index(val);
+        });
+
+        const setupToggle = (btnId, toggleFn, autostart = false) => {
+            const btn = document.getElementById(btnId);
+            const playIcon = btn.querySelector('.play-icon');
+            const pauseIcon = btn.querySelector('.pause-icon');
+            let playing = autostart;
+            
+            if (playing) {
+                playIcon.style.display = 'none';
+                pauseIcon.style.display = 'block';
+            }
+
+            btn.addEventListener('click', () => {
+                playing = !playing;
+                toggleFn();
+                playIcon.style.display = playing ? 'none' : 'block';
+                pauseIcon.style.display = playing ? 'block' : 'none';
+            });
+        };
+
+        setupToggle('play-log', () => app.toggle_play_log(), true);
+        setupToggle('play-sim', () => app.toggle_play_animations(), true);
+
+        document.getElementById('nav-up').addEventListener('click', () => app.camera_nav('up'));
+        document.getElementById('nav-down').addEventListener('click', () => app.camera_nav('down'));
+        document.getElementById('nav-left').addEventListener('click', () => app.camera_nav('left'));
+        document.getElementById('nav-right').addEventListener('click', () => app.camera_nav('right'));
+
+        document.getElementById('action-up').addEventListener('click', () => window.sendActionInput('up'));
+        document.getElementById('action-down').addEventListener('click', () => window.sendActionInput('down'));
+        document.getElementById('action-left').addEventListener('click', () => window.sendActionInput('left'));
+        document.getElementById('action-right').addEventListener('click', () => window.sendActionInput('right'));
+        document.getElementById('action-layer-up').addEventListener('click', () => window.sendActionInput('layer-up'));
+        document.getElementById('action-layer-down').addEventListener('click', () => window.sendActionInput('layer-down'));
+        document.getElementById('action-confirm').addEventListener('click', () => window.sendActionInput('confirm'));
+        document.getElementById('action-wait').addEventListener('click', () => window.sendActionInput('wait'));
+        document.getElementById('action-return').addEventListener('click', () => window.sendActionInput('return'));
+
+        const testOccupy = document.getElementById('test-occupy-destination');
+        if (new URLSearchParams(window.location.search).has('test')) {
+            testOccupy.style.display = 'block';
+            testOccupy.addEventListener('click', () => app.action_nav('test-occupy'));
+        }
+
+        const debugCheckbox = document.getElementById('debug-checkbox');
+        debugCheckbox.addEventListener('change', (e) => {
+            const isChecked = e.target.checked;
+            app.set_debug_mode(isChecked);
+            document.getElementById('entity-viewer').style.display = isChecked ? 'block' : 'none';
+            document.getElementById('history-viewer').style.display = isChecked ? 'block' : 'none';
+            window.set_debug_panels_visible(isChecked);
+            document.getElementById('history-step-control').style.display = isChecked ? 'flex' : 'none';
+        });
+
+        document.getElementById('history-step-ms').addEventListener('change', (e) => {
+            app.set_history_step_ms(Number(e.target.value));
+        });
+        
+        let errorMode = false;
+        const errorDisplay = document.getElementById('error-display');
+        errorDisplay.addEventListener('click', () => {
+            errorMode = !errorMode;
+            app.set_broken_mode(errorMode);
+            if (errorMode) {
+                errorDisplay.style.border = "1px solid red";
+            } else {
+                errorDisplay.style.border = "none";
+            }
+        });
+    }
+    run().catch(console.error);
+</script>
+</body>
+</html>

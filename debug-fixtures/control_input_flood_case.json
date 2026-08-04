@@ -1,0 +1,27 @@
+{
+  "format": "pystral-gate-history-v1",
+  "diagnostics": {
+    "uiLog": "Action input: confirm\nAction input: wait",
+    "workerLatestOutputSeq": 82,
+    "workerLatestInputSeq": 1401,
+    "workerStatus": "Simulating"
+  },
+  "history": {
+    "current_index": 6,
+    "log": [
+      {"SequenceNumber": 11},
+      {"Log": {"msg": "Unit 1 used ability 9 on 1 target(s)"}},
+      {"UnitStateChanged": {"unit_id": 1}},
+      {"SequenceNumber": 12},
+      {"TurnCompleted": {"unit_id": 1}},
+      {"SequenceNumber": 13}
+    ]
+  },
+  "expected": {
+    "event_count": 6,
+    "last_sequence_number": 13,
+    "worker_status": "Simulating",
+    "input_output_gap": 1319,
+    "possible_control_input_flood": true
+  }
+}

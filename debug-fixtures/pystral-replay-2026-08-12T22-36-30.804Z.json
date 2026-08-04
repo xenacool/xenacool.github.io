@@ -1,0 +1,1 @@
+{"format":"pystral-gate-replay-v1","replay":{"entrypoint":"web/scripts/demo.rhai","actionInputs":["menu-job:primary","menu-ability:9","confirm","wait","menu-job:secondary:0","menu-ability:9","confirm","wait","menu-job:secondary:0","menu-job:secondary:0","wait"]}}
