@@ -1,0 +1,2172 @@
+{
+  "version": 1,
+  "rigs": {
+    "Medium": {
+      "skeleton": "Rig_Medium",
+      "nodes": [
+        "Mannequin_ArmLeft",
+        "Mannequin_ArmRight",
+        "Mannequin_Body",
+        "Mannequin_Head",
+        "Mannequin_LegLeft",
+        "Mannequin_LegRight",
+        "Rig_Medium",
+        "Scene",
+        "chest",
+        "footl",
+        "footr",
+        "handl",
+        "handr",
+        "handslotl",
+        "handslotr",
+        "head",
+        "hips",
+        "lowerarml",
+        "lowerarmr",
+        "lowerlegl",
+        "lowerlegr",
+        "root",
+        "spine",
+        "toesl",
+        "toesr",
+        "upperarml",
+        "upperarmr",
+        "upperlegl",
+        "upperlegr",
+        "wristl",
+        "wristr"
+      ],
+      "bones": [
+        "chest",
+        "footl",
+        "footr",
+        "handl",
+        "handr",
+        "handslotl",
+        "handslotr",
+        "head",
+        "hips",
+        "lowerarml",
+        "lowerarmr",
+        "lowerlegl",
+        "lowerlegr",
+        "root",
+        "spine",
+        "toesl",
+        "toesr",
+        "upperarml",
+        "upperarmr",
+        "upperlegl",
+        "upperlegr",
+        "wristl",
+        "wristr"
+      ],
+      "animated_nodes": [
+        "chest",
+        "footl",
+        "footr",
+        "handl",
+        "handr",
+        "handslotl",
+        "handslotr",
+        "head",
+        "hips",
+        "lowerarml",
+        "lowerarmr",
+        "lowerlegl",
+        "lowerlegr",
+        "root",
+        "spine",
+        "toesl",
+        "toesr",
+        "upperarml",
+        "upperarmr",
+        "upperlegl",
+        "upperlegr",
+        "wristl",
+        "wristr"
+      ],
+      "clips": [
+        {
+          "name": "Melee_1H_Attack_Chop",
+          "duration_ms": 1067,
+          "track_count": 69,
+          "source": "Rig_Medium_CombatMelee.glb"
+        },
+        {
+          "name": "Melee_1H_Attack_Jump_Chop",
+          "duration_ms": 1333,
+          "track_count": 69,
+          "source": "Rig_Medium_CombatMelee.glb"
+        },
+        {
+          "name": "Melee_1H_Attack_Slice_Diagonal",
+          "duration_ms": 1000,
+          "track_count": 69,
+          "source": "Rig_Medium_CombatMelee.glb"
+        },
+        {
+          "name": "Melee_1H_Attack_Slice_Horizontal",
+          "duration_ms": 1367,
+          "track_count": 69,
+          "source": "Rig_Medium_CombatMelee.glb"
+        },
+        {
+          "name": "Melee_1H_Attack_Stab",
+          "duration_ms": 1600,
+          "track_count": 69,
+          "source": "Rig_Medium_CombatMelee.glb"
+        },
+        {
+          "name": "Melee_2H_Attack_Chop",
+          "duration_ms": 1633,
+          "track_count": 55,
+          "source": "Rig_Medium_CombatMelee.glb"
+        },
+        {
+          "name": "Melee_2H_Attack_Slice",
+          "duration_ms": 1100,
+          "track_count": 52,
+          "source": "Rig_Medium_CombatMelee.glb"
+        },
+        {
+          "name": "Melee_2H_Attack_Spin",
+          "duration_ms": 2400,
+          "track_count": 55,
+          "source": "Rig_Medium_CombatMelee.glb"
+        },
+        {
+          "name": "Melee_2H_Attack_Spinning",
+          "duration_ms": 667,
+          "track_count": 51,
+          "source": "Rig_Medium_CombatMelee.glb"
+        },
+        {
+          "name": "Melee_2H_Attack_Stab",
+          "duration_ms": 1600,
+          "track_count": 53,
+          "source": "Rig_Medium_CombatMelee.glb"
+        },
+        {
+          "name": "Melee_2H_Idle",
+          "duration_ms": 1067,
+          "track_count": 53,
+          "source": "Rig_Medium_CombatMelee.glb"
+        },
+        {
+          "name": "Melee_Block",
+          "duration_ms": 1067,
+          "track_count": 69,
+          "source": "Rig_Medium_CombatMelee.glb"
+        },
+        {
+          "name": "Melee_Block_Attack",
+          "duration_ms": 1067,
+          "track_count": 69,
+          "source": "Rig_Medium_CombatMelee.glb"
+        },
+        {
+          "name": "Melee_Block_Hit",
+          "duration_ms": 1067,
+          "track_count": 69,
+          "source": "Rig_Medium_CombatMelee.glb"
+        },
+        {
+          "name": "Melee_Blocking",
+          "duration_ms": 1067,
+          "track_count": 69,
+          "source": "Rig_Medium_CombatMelee.glb"
+        },
+        {
+          "name": "Melee_Dualwield_Attack_Chop",
+          "duration_ms": 1267,
+          "track_count": 69,
+          "source": "Rig_Medium_CombatMelee.glb"
+        },
+        {
+          "name": "Melee_Dualwield_Attack_Slice",
+          "duration_ms": 1167,
+          "track_count": 52,
+          "source": "Rig_Medium_CombatMelee.glb"
+        },
+        {
+          "name": "Melee_Dualwield_Attack_Stab",
+          "duration_ms": 1600,
+          "track_count": 54,
+          "source": "Rig_Medium_CombatMelee.glb"
+        },
+        {
+          "name": "Melee_Unarmed_Attack_Kick",
+          "duration_ms": 933,
+          "track_count": 69,
+          "source": "Rig_Medium_CombatMelee.glb"
+        },
+        {
+          "name": "Melee_Unarmed_Attack_Punch_A",
+          "duration_ms": 1167,
+          "track_count": 69,
+          "source": "Rig_Medium_CombatMelee.glb"
+        },
+        {
+          "name": "Melee_Unarmed_Idle",
+          "duration_ms": 1067,
+          "track_count": 69,
+          "source": "Rig_Medium_CombatMelee.glb"
+        },
+        {
+          "name": "T-Pose",
+          "duration_ms": 0,
+          "track_count": 69,
+          "source": "Rig_Medium_CombatMelee.glb"
+        },
+        {
+          "name": "Ranged_1H_Aiming",
+          "duration_ms": 1067,
+          "track_count": 67,
+          "source": "Rig_Medium_CombatRanged.glb"
+        },
+        {
+          "name": "Ranged_1H_Reload",
+          "duration_ms": 1167,
+          "track_count": 68,
+          "source": "Rig_Medium_CombatRanged.glb"
+        },
+        {
+          "name": "Ranged_1H_Shoot",
+          "duration_ms": 1067,
+          "track_count": 67,
+          "source": "Rig_Medium_CombatRanged.glb"
+        },
+        {
+          "name": "Ranged_1H_Shooting",
+          "duration_ms": 1600,
+          "track_count": 56,
+          "source": "Rig_Medium_CombatRanged.glb"
+        },
+        {
+          "name": "Ranged_2H_Aiming",
+          "duration_ms": 1600,
+          "track_count": 69,
+          "source": "Rig_Medium_CombatRanged.glb"
+        },
+        {
+          "name": "Ranged_2H_Reload",
+          "duration_ms": 1600,
+          "track_count": 60,
+          "source": "Rig_Medium_CombatRanged.glb"
+        },
+        {
+          "name": "Ranged_2H_Shoot",
+          "duration_ms": 1067,
+          "track_count": 69,
+          "source": "Rig_Medium_CombatRanged.glb"
+        },
+        {
+          "name": "Ranged_2H_Shooting",
+          "duration_ms": 1067,
+          "track_count": 61,
+          "source": "Rig_Medium_CombatRanged.glb"
+        },
+        {
+          "name": "Ranged_Bow_Aiming_Idle",
+          "duration_ms": 1833,
+          "track_count": 53,
+          "source": "Rig_Medium_CombatRanged.glb"
+        },
+        {
+          "name": "Ranged_Bow_Draw",
+          "duration_ms": 1333,
+          "track_count": 68,
+          "source": "Rig_Medium_CombatRanged.glb"
+        },
+        {
+          "name": "Ranged_Bow_Draw_Up",
+          "duration_ms": 1333,
+          "track_count": 69,
+          "source": "Rig_Medium_CombatRanged.glb"
+        },
+        {
+          "name": "Ranged_Bow_Idle",
+          "duration_ms": 1567,
+          "track_count": 69,
+          "source": "Rig_Medium_CombatRanged.glb"
+        },
+        {
+          "name": "Ranged_Bow_Release",
+          "duration_ms": 1333,
+          "track_count": 69,
+          "source": "Rig_Medium_CombatRanged.glb"
+        },
+        {
+          "name": "Ranged_Bow_Release_Up",
+          "duration_ms": 1367,
+          "track_count": 69,
+          "source": "Rig_Medium_CombatRanged.glb"
+        },
+        {
+          "name": "Ranged_Magic_Raise",
+          "duration_ms": 2100,
+          "track_count": 69,
+          "source": "Rig_Medium_CombatRanged.glb"
+        },
+        {
+          "name": "Ranged_Magic_Shoot",
+          "duration_ms": 933,
+          "track_count": 69,
+          "source": "Rig_Medium_CombatRanged.glb"
+        },
+        {
+          "name": "Ranged_Magic_Spellcasting",
+          "duration_ms": 667,
+          "track_count": 53,
+          "source": "Rig_Medium_CombatRanged.glb"
+        },
+        {
+          "name": "Ranged_Magic_Spellcasting_Long",
+          "duration_ms": 2533,
+          "track_count": 69,
+          "source": "Rig_Medium_CombatRanged.glb"
+        },
+        {
+          "name": "Ranged_Magic_Summon",
+          "duration_ms": 4300,
+          "track_count": 53,
+          "source": "Rig_Medium_CombatRanged.glb"
+        },
+        {
+          "name": "T-Pose",
+          "duration_ms": 0,
+          "track_count": 69,
+          "source": "Rig_Medium_CombatRanged.glb"
+        },
+        {
+          "name": "Death_A",
+          "duration_ms": 800,
+          "track_count": 69,
+          "source": "Rig_Medium_General.glb"
+        },
+        {
+          "name": "Death_A_Pose",
+          "duration_ms": 0,
+          "track_count": 47,
+          "source": "Rig_Medium_General.glb"
+        },
+        {
+          "name": "Death_B",
+          "duration_ms": 2633,
+          "track_count": 69,
+          "source": "Rig_Medium_General.glb"
+        },
+        {
+          "name": "Death_B_Pose",
+          "duration_ms": 0,
+          "track_count": 47,
+          "source": "Rig_Medium_General.glb"
+        },
+        {
+          "name": "Hit_A",
+          "duration_ms": 667,
+          "track_count": 69,
+          "source": "Rig_Medium_General.glb"
+        },
+        {
+          "name": "Hit_B",
+          "duration_ms": 867,
+          "track_count": 69,
+          "source": "Rig_Medium_General.glb"
+        },
+        {
+          "name": "Idle_A",
+          "duration_ms": 1067,
+          "track_count": 69,
+          "source": "Rig_Medium_General.glb"
+        },
+        {
+          "name": "Idle_B",
+          "duration_ms": 2133,
+          "track_count": 69,
+          "source": "Rig_Medium_General.glb"
+        },
+        {
+          "name": "Interact",
+          "duration_ms": 1300,
+          "track_count": 69,
+          "source": "Rig_Medium_General.glb"
+        },
+        {
+          "name": "PickUp",
+          "duration_ms": 1300,
+          "track_count": 69,
+          "source": "Rig_Medium_General.glb"
+        },
+        {
+          "name": "Spawn_Air",
+          "duration_ms": 1300,
+          "track_count": 69,
+          "source": "Rig_Medium_General.glb"
+        },
+        {
+          "name": "Spawn_Ground",
+          "duration_ms": 1300,
+          "track_count": 69,
+          "source": "Rig_Medium_General.glb"
+        },
+        {
+          "name": "T-Pose",
+          "duration_ms": 0,
+          "track_count": 69,
+          "source": "Rig_Medium_General.glb"
+        },
+        {
+          "name": "Throw",
+          "duration_ms": 1367,
+          "track_count": 56,
+          "source": "Rig_Medium_General.glb"
+        },
+        {
+          "name": "Use_Item",
+          "duration_ms": 1600,
+          "track_count": 69,
+          "source": "Rig_Medium_General.glb"
+        },
+        {
+          "name": "Crawling",
+          "duration_ms": 1067,
+          "track_count": 69,
+          "source": "Rig_Medium_MovementAdvanced.glb"
+        },
+        {
+          "name": "Crouching",
+          "duration_ms": 1067,
+          "track_count": 69,
+          "source": "Rig_Medium_MovementAdvanced.glb"
+        },
+        {
+          "name": "Dodge_Backward",
+          "duration_ms": 400,
+          "track_count": 69,
+          "source": "Rig_Medium_MovementAdvanced.glb"
+        },
+        {
+          "name": "Dodge_Forward",
+          "duration_ms": 400,
+          "track_count": 69,
+          "source": "Rig_Medium_MovementAdvanced.glb"
+        },
+        {
+          "name": "Dodge_Left",
+          "duration_ms": 400,
+          "track_count": 69,
+          "source": "Rig_Medium_MovementAdvanced.glb"
+        },
+        {
+          "name": "Dodge_Right",
+          "duration_ms": 400,
+          "track_count": 69,
+          "source": "Rig_Medium_MovementAdvanced.glb"
+        },
+        {
+          "name": "Running_HoldingBow",
+          "duration_ms": 800,
+          "track_count": 63,
+          "source": "Rig_Medium_MovementAdvanced.glb"
+        },
+        {
+          "name": "Running_HoldingRifle",
+          "duration_ms": 800,
+          "track_count": 69,
+          "source": "Rig_Medium_MovementAdvanced.glb"
+        },
+        {
+          "name": "Running_Strafe_Left",
+          "duration_ms": 800,
+          "track_count": 69,
+          "source": "Rig_Medium_MovementAdvanced.glb"
+        },
+        {
+          "name": "Running_Strafe_Right",
+          "duration_ms": 800,
+          "track_count": 69,
+          "source": "Rig_Medium_MovementAdvanced.glb"
+        },
+        {
+          "name": "Sneaking",
+          "duration_ms": 2133,
+          "track_count": 69,
+          "source": "Rig_Medium_MovementAdvanced.glb"
+        },
+        {
+          "name": "T-Pose",
+          "duration_ms": 0,
+          "track_count": 69,
+          "source": "Rig_Medium_MovementAdvanced.glb"
+        },
+        {
+          "name": "Walking_Backwards",
+          "duration_ms": 1067,
+          "track_count": 69,
+          "source": "Rig_Medium_MovementAdvanced.glb"
+        },
+        {
+          "name": "Jump_Full_Long",
+          "duration_ms": 2333,
+          "track_count": 69,
+          "source": "Rig_Medium_MovementBasic.glb"
+        },
+        {
+          "name": "Jump_Full_Short",
+          "duration_ms": 1167,
+          "track_count": 69,
+          "source": "Rig_Medium_MovementBasic.glb"
+        },
+        {
+          "name": "Jump_Idle",
+          "duration_ms": 1067,
+          "track_count": 69,
+          "source": "Rig_Medium_MovementBasic.glb"
+        },
+        {
+          "name": "Jump_Land",
+          "duration_ms": 667,
+          "track_count": 69,
+          "source": "Rig_Medium_MovementBasic.glb"
+        },
+        {
+          "name": "Jump_Start",
+          "duration_ms": 600,
+          "track_count": 69,
+          "source": "Rig_Medium_MovementBasic.glb"
+        },
+        {
+          "name": "Running_A",
+          "duration_ms": 800,
+          "track_count": 68,
+          "source": "Rig_Medium_MovementBasic.glb"
+        },
+        {
+          "name": "Running_B",
+          "duration_ms": 800,
+          "track_count": 69,
+          "source": "Rig_Medium_MovementBasic.glb"
+        },
+        {
+          "name": "T-Pose",
+          "duration_ms": 0,
+          "track_count": 69,
+          "source": "Rig_Medium_MovementBasic.glb"
+        },
+        {
+          "name": "Walking_A",
+          "duration_ms": 1067,
+          "track_count": 69,
+          "source": "Rig_Medium_MovementBasic.glb"
+        },
+        {
+          "name": "Walking_B",
+          "duration_ms": 1067,
+          "track_count": 69,
+          "source": "Rig_Medium_MovementBasic.glb"
+        },
+        {
+          "name": "Walking_C",
+          "duration_ms": 1600,
+          "track_count": 65,
+          "source": "Rig_Medium_MovementBasic.glb"
+        },
+        {
+          "name": "Cheering",
+          "duration_ms": 1667,
+          "track_count": 69,
+          "source": "Rig_Medium_Simulation.glb"
+        },
+        {
+          "name": "Lie_Down",
+          "duration_ms": 3000,
+          "track_count": 69,
+          "source": "Rig_Medium_Simulation.glb"
+        },
+        {
+          "name": "Lie_Idle",
+          "duration_ms": 2667,
+          "track_count": 56,
+          "source": "Rig_Medium_Simulation.glb"
+        },
+        {
+          "name": "Lie_StandUp",
+          "duration_ms": 2333,
+          "track_count": 69,
+          "source": "Rig_Medium_Simulation.glb"
+        },
+        {
+          "name": "Push_Ups",
+          "duration_ms": 1033,
+          "track_count": 69,
+          "source": "Rig_Medium_Simulation.glb"
+        },
+        {
+          "name": "Sit_Chair_Down",
+          "duration_ms": 800,
+          "track_count": 69,
+          "source": "Rig_Medium_Simulation.glb"
+        },
+        {
+          "name": "Sit_Chair_Idle",
+          "duration_ms": 3600,
+          "track_count": 50,
+          "source": "Rig_Medium_Simulation.glb"
+        },
+        {
+          "name": "Sit_Chair_StandUp",
+          "duration_ms": 800,
+          "track_count": 69,
+          "source": "Rig_Medium_Simulation.glb"
+        },
+        {
+          "name": "Sit_Floor_Down",
+          "duration_ms": 1000,
+          "track_count": 69,
+          "source": "Rig_Medium_Simulation.glb"
+        },
+        {
+          "name": "Sit_Floor_Idle",
+          "duration_ms": 4000,
+          "track_count": 51,
+          "source": "Rig_Medium_Simulation.glb"
+        },
+        {
+          "name": "Sit_Floor_StandUp",
+          "duration_ms": 1133,
+          "track_count": 52,
+          "source": "Rig_Medium_Simulation.glb"
+        },
+        {
+          "name": "Sit_Ups",
+          "duration_ms": 1733,
+          "track_count": 67,
+          "source": "Rig_Medium_Simulation.glb"
+        },
+        {
+          "name": "T-Pose",
+          "duration_ms": 0,
+          "track_count": 69,
+          "source": "Rig_Medium_Simulation.glb"
+        },
+        {
+          "name": "Waving",
+          "duration_ms": 2133,
+          "track_count": 69,
+          "source": "Rig_Medium_Simulation.glb"
+        },
+        {
+          "name": "EXPERIMENTAL_Medium_Transform",
+          "duration_ms": 1000,
+          "track_count": 69,
+          "source": "Rig_Medium_Special.glb"
+        },
+        {
+          "name": "Skeletons_Awaken_Floor",
+          "duration_ms": 2300,
+          "track_count": 59,
+          "source": "Rig_Medium_Special.glb"
+        },
+        {
+          "name": "Skeletons_Awaken_Floor_Long",
+          "duration_ms": 3833,
+          "track_count": 60,
+          "source": "Rig_Medium_Special.glb"
+        },
+        {
+          "name": "Skeletons_Awaken_Standing",
+          "duration_ms": 1000,
+          "track_count": 57,
+          "source": "Rig_Medium_Special.glb"
+        },
+        {
+          "name": "Skeletons_Death",
+          "duration_ms": 2000,
+          "track_count": 55,
+          "source": "Rig_Medium_Special.glb"
+        },
+        {
+          "name": "Skeletons_Death_Pose",
+          "duration_ms": 0,
+          "track_count": 47,
+          "source": "Rig_Medium_Special.glb"
+        },
+        {
+          "name": "Skeletons_Death_Resurrect",
+          "duration_ms": 2700,
+          "track_count": 56,
+          "source": "Rig_Medium_Special.glb"
+        },
+        {
+          "name": "Skeletons_Idle",
+          "duration_ms": 4267,
+          "track_count": 51,
+          "source": "Rig_Medium_Special.glb"
+        },
+        {
+          "name": "Skeletons_Inactive_Floor_Pose",
+          "duration_ms": 0,
+          "track_count": 50,
+          "source": "Rig_Medium_Special.glb"
+        },
+        {
+          "name": "Skeletons_Inactive_Standing_Pose",
+          "duration_ms": 0,
+          "track_count": 56,
+          "source": "Rig_Medium_Special.glb"
+        },
+        {
+          "name": "Skeletons_Spawn_Ground",
+          "duration_ms": 3567,
+          "track_count": 69,
+          "source": "Rig_Medium_Special.glb"
+        },
+        {
+          "name": "Skeletons_Taunt",
+          "duration_ms": 1033,
+          "track_count": 69,
+          "source": "Rig_Medium_Special.glb"
+        },
+        {
+          "name": "Skeletons_Taunt_Longer",
+          "duration_ms": 3000,
+          "track_count": 69,
+          "source": "Rig_Medium_Special.glb"
+        },
+        {
+          "name": "Skeletons_Walking",
+          "duration_ms": 1600,
+          "track_count": 69,
+          "source": "Rig_Medium_Special.glb"
+        },
+        {
+          "name": "T-Pose",
+          "duration_ms": 0,
+          "track_count": 69,
+          "source": "Rig_Medium_Special.glb"
+        },
+        {
+          "name": "Chop",
+          "duration_ms": 4333,
+          "track_count": 69,
+          "source": "Rig_Medium_Tools.glb"
+        },
+        {
+          "name": "Chopping",
+          "duration_ms": 1333,
+          "track_count": 51,
+          "source": "Rig_Medium_Tools.glb"
+        },
+        {
+          "name": "Dig",
+          "duration_ms": 4667,
+          "track_count": 69,
+          "source": "Rig_Medium_Tools.glb"
+        },
+        {
+          "name": "Digging",
+          "duration_ms": 1400,
+          "track_count": 50,
+          "source": "Rig_Medium_Tools.glb"
+        },
+        {
+          "name": "Fishing_Bite",
+          "duration_ms": 2233,
+          "track_count": 69,
+          "source": "Rig_Medium_Tools.glb"
+        },
+        {
+          "name": "Fishing_Cast",
+          "duration_ms": 1933,
+          "track_count": 69,
+          "source": "Rig_Medium_Tools.glb"
+        },
+        {
+          "name": "Fishing_Catch",
+          "duration_ms": 3233,
+          "track_count": 69,
+          "source": "Rig_Medium_Tools.glb"
+        },
+        {
+          "name": "Fishing_Idle",
+          "duration_ms": 2333,
+          "track_count": 67,
+          "source": "Rig_Medium_Tools.glb"
+        },
+        {
+          "name": "Fishing_Reeling",
+          "duration_ms": 1600,
+          "track_count": 69,
+          "source": "Rig_Medium_Tools.glb"
+        },
+        {
+          "name": "Fishing_Struggling",
+          "duration_ms": 3433,
+          "track_count": 69,
+          "source": "Rig_Medium_Tools.glb"
+        },
+        {
+          "name": "Fishing_Tug",
+          "duration_ms": 1900,
+          "track_count": 68,
+          "source": "Rig_Medium_Tools.glb"
+        },
+        {
+          "name": "Hammer",
+          "duration_ms": 4333,
+          "track_count": 69,
+          "source": "Rig_Medium_Tools.glb"
+        },
+        {
+          "name": "Hammering",
+          "duration_ms": 2667,
+          "track_count": 51,
+          "source": "Rig_Medium_Tools.glb"
+        },
+        {
+          "name": "Holding_A",
+          "duration_ms": 1000,
+          "track_count": 67,
+          "source": "Rig_Medium_Tools.glb"
+        },
+        {
+          "name": "Holding_B",
+          "duration_ms": 1000,
+          "track_count": 67,
+          "source": "Rig_Medium_Tools.glb"
+        },
+        {
+          "name": "Holding_C",
+          "duration_ms": 1000,
+          "track_count": 67,
+          "source": "Rig_Medium_Tools.glb"
+        },
+        {
+          "name": "Lockpick",
+          "duration_ms": 3000,
+          "track_count": 69,
+          "source": "Rig_Medium_Tools.glb"
+        },
+        {
+          "name": "Lockpicking",
+          "duration_ms": 2333,
+          "track_count": 51,
+          "source": "Rig_Medium_Tools.glb"
+        },
+        {
+          "name": "Pickaxe",
+          "duration_ms": 6033,
+          "track_count": 69,
+          "source": "Rig_Medium_Tools.glb"
+        },
+        {
+          "name": "Pickaxing",
+          "duration_ms": 3733,
+          "track_count": 51,
+          "source": "Rig_Medium_Tools.glb"
+        },
+        {
+          "name": "Saw",
+          "duration_ms": 2400,
+          "track_count": 69,
+          "source": "Rig_Medium_Tools.glb"
+        },
+        {
+          "name": "Sawing",
+          "duration_ms": 667,
+          "track_count": 50,
+          "source": "Rig_Medium_Tools.glb"
+        },
+        {
+          "name": "T-Pose",
+          "duration_ms": 0,
+          "track_count": 69,
+          "source": "Rig_Medium_Tools.glb"
+        },
+        {
+          "name": "Work_A",
+          "duration_ms": 2533,
+          "track_count": 69,
+          "source": "Rig_Medium_Tools.glb"
+        },
+        {
+          "name": "Work_B",
+          "duration_ms": 3100,
+          "track_count": 69,
+          "source": "Rig_Medium_Tools.glb"
+        },
+        {
+          "name": "Work_C",
+          "duration_ms": 3667,
+          "track_count": 69,
+          "source": "Rig_Medium_Tools.glb"
+        },
+        {
+          "name": "Working_A",
+          "duration_ms": 1500,
+          "track_count": 50,
+          "source": "Rig_Medium_Tools.glb"
+        },
+        {
+          "name": "Working_B",
+          "duration_ms": 2533,
+          "track_count": 59,
+          "source": "Rig_Medium_Tools.glb"
+        },
+        {
+          "name": "Working_C",
+          "duration_ms": 2000,
+          "track_count": 52,
+          "source": "Rig_Medium_Tools.glb"
+        }
+      ]
+    },
+    "Large": {
+      "skeleton": "Rig_Large",
+      "nodes": [
+        "MannequinLarge_ArmLeft",
+        "MannequinLarge_ArmRight",
+        "MannequinLarge_Body",
+        "MannequinLarge_Head",
+        "MannequinLarge_LegLeft",
+        "MannequinLarge_LegRight",
+        "Rig_Large",
+        "Scene",
+        "chest",
+        "footl",
+        "footr",
+        "handl",
+        "handr",
+        "handslotl",
+        "handslotr",
+        "head",
+        "hips",
+        "lowerarml",
+        "lowerarmr",
+        "lowerlegl",
+        "lowerlegr",
+        "root",
+        "spine",
+        "toesl",
+        "toesr",
+        "upperarml",
+        "upperarmr",
+        "upperlegl",
+        "upperlegr",
+        "wristl",
+        "wristr"
+      ],
+      "bones": [
+        "chest",
+        "footl",
+        "footr",
+        "handl",
+        "handr",
+        "handslotl",
+        "handslotr",
+        "head",
+        "hips",
+        "lowerarml",
+        "lowerarmr",
+        "lowerlegl",
+        "lowerlegr",
+        "root",
+        "spine",
+        "toesl",
+        "toesr",
+        "upperarml",
+        "upperarmr",
+        "upperlegl",
+        "upperlegr",
+        "wristl",
+        "wristr"
+      ],
+      "animated_nodes": [
+        "chest",
+        "footl",
+        "footr",
+        "handl",
+        "handr",
+        "handslotl",
+        "handslotr",
+        "head",
+        "hips",
+        "lowerarml",
+        "lowerarmr",
+        "lowerlegl",
+        "lowerlegr",
+        "root",
+        "spine",
+        "toesl",
+        "toesr",
+        "upperarml",
+        "upperarmr",
+        "upperlegl",
+        "upperlegr",
+        "wristl",
+        "wristr"
+      ],
+      "clips": [
+        {
+          "name": "Melee_1H_Slash",
+          "duration_ms": 1567,
+          "track_count": 69,
+          "source": "Rig_Large_CombatMelee.glb"
+        },
+        {
+          "name": "Melee_1H_Stab",
+          "duration_ms": 1400,
+          "track_count": 69,
+          "source": "Rig_Large_CombatMelee.glb"
+        },
+        {
+          "name": "Melee_2H_Attack",
+          "duration_ms": 1333,
+          "track_count": 69,
+          "source": "Rig_Large_CombatMelee.glb"
+        },
+        {
+          "name": "Melee_2H_Idle",
+          "duration_ms": 1567,
+          "track_count": 69,
+          "source": "Rig_Large_CombatMelee.glb"
+        },
+        {
+          "name": "Melee_2H_Slam",
+          "duration_ms": 2833,
+          "track_count": 69,
+          "source": "Rig_Large_CombatMelee.glb"
+        },
+        {
+          "name": "Melee_Block",
+          "duration_ms": 1067,
+          "track_count": 69,
+          "source": "Rig_Large_CombatMelee.glb"
+        },
+        {
+          "name": "Melee_Block_Attack",
+          "duration_ms": 1033,
+          "track_count": 69,
+          "source": "Rig_Large_CombatMelee.glb"
+        },
+        {
+          "name": "Melee_Block_Hit",
+          "duration_ms": 667,
+          "track_count": 69,
+          "source": "Rig_Large_CombatMelee.glb"
+        },
+        {
+          "name": "Melee_Blocking",
+          "duration_ms": 1067,
+          "track_count": 69,
+          "source": "Rig_Large_CombatMelee.glb"
+        },
+        {
+          "name": "Melee_Dualwield_Slash",
+          "duration_ms": 1033,
+          "track_count": 57,
+          "source": "Rig_Large_CombatMelee.glb"
+        },
+        {
+          "name": "Melee_Dualwield_SlashCombo",
+          "duration_ms": 1600,
+          "track_count": 69,
+          "source": "Rig_Large_CombatMelee.glb"
+        },
+        {
+          "name": "Melee_Unarmed_Idle",
+          "duration_ms": 1067,
+          "track_count": 69,
+          "source": "Rig_Large_CombatMelee.glb"
+        },
+        {
+          "name": "Melee_Unarmed_Kick",
+          "duration_ms": 1700,
+          "track_count": 69,
+          "source": "Rig_Large_CombatMelee.glb"
+        },
+        {
+          "name": "Melee_Unarmed_Punch",
+          "duration_ms": 1233,
+          "track_count": 69,
+          "source": "Rig_Large_CombatMelee.glb"
+        },
+        {
+          "name": "Melee_Unarmed_Smash",
+          "duration_ms": 3467,
+          "track_count": 69,
+          "source": "Rig_Large_CombatMelee.glb"
+        },
+        {
+          "name": "T-Pose",
+          "duration_ms": 0,
+          "track_count": 46,
+          "source": "Rig_Large_CombatMelee.glb"
+        },
+        {
+          "name": "Death_A",
+          "duration_ms": 1667,
+          "track_count": 56,
+          "source": "Rig_Large_General.glb"
+        },
+        {
+          "name": "Death_A_Pose",
+          "duration_ms": 0,
+          "track_count": 47,
+          "source": "Rig_Large_General.glb"
+        },
+        {
+          "name": "Hit_A",
+          "duration_ms": 700,
+          "track_count": 52,
+          "source": "Rig_Large_General.glb"
+        },
+        {
+          "name": "Idle_A",
+          "duration_ms": 1967,
+          "track_count": 52,
+          "source": "Rig_Large_General.glb"
+        },
+        {
+          "name": "Idle_B",
+          "duration_ms": 6000,
+          "track_count": 52,
+          "source": "Rig_Large_General.glb"
+        },
+        {
+          "name": "T-Pose",
+          "duration_ms": 0,
+          "track_count": 69,
+          "source": "Rig_Large_General.glb"
+        },
+        {
+          "name": "Dodge_Backwards",
+          "duration_ms": 333,
+          "track_count": 52,
+          "source": "Rig_Large_MovementAdvanced.glb"
+        },
+        {
+          "name": "Dodge_Forward",
+          "duration_ms": 333,
+          "track_count": 52,
+          "source": "Rig_Large_MovementAdvanced.glb"
+        },
+        {
+          "name": "Dodge_Left",
+          "duration_ms": 333,
+          "track_count": 69,
+          "source": "Rig_Large_MovementAdvanced.glb"
+        },
+        {
+          "name": "Dodge_Right",
+          "duration_ms": 333,
+          "track_count": 52,
+          "source": "Rig_Large_MovementAdvanced.glb"
+        },
+        {
+          "name": "T-Pose",
+          "duration_ms": 0,
+          "track_count": 46,
+          "source": "Rig_Large_MovementAdvanced.glb"
+        },
+        {
+          "name": "Running_A",
+          "duration_ms": 1067,
+          "track_count": 47,
+          "source": "Rig_Large_MovementBasic.glb"
+        },
+        {
+          "name": "T-Pose",
+          "duration_ms": 0,
+          "track_count": 46,
+          "source": "Rig_Large_MovementBasic.glb"
+        },
+        {
+          "name": "Walking_A",
+          "duration_ms": 1067,
+          "track_count": 69,
+          "source": "Rig_Large_MovementBasic.glb"
+        },
+        {
+          "name": "Flexing",
+          "duration_ms": 4300,
+          "track_count": 54,
+          "source": "Rig_Large_Simulation.glb"
+        },
+        {
+          "name": "T-Pose",
+          "duration_ms": 0,
+          "track_count": 46,
+          "source": "Rig_Large_Simulation.glb"
+        },
+        {
+          "name": "EXPERIMENTAL_Large_Transform",
+          "duration_ms": 1667,
+          "track_count": 69,
+          "source": "Rig_Large_Special.glb"
+        },
+        {
+          "name": "T-Pose",
+          "duration_ms": 0,
+          "track_count": 69,
+          "source": "Rig_Large_Special.glb"
+        }
+      ]
+    }
+  },
+  "targets": {
+    "Animatronic_Creepy": {
+      "rig": "Medium",
+      "skeleton": "Rig_Medium",
+      "compatible": true,
+      "bone_aliases": {
+        "handslotl": "handslot.l",
+        "handslotr": "handslot.r"
+      },
+      "omitted_optional_nodes": [
+        "handslotl",
+        "handslotr"
+      ],
+      "missing_nodes": [
+        "Mannequin_ArmLeft",
+        "Mannequin_ArmRight",
+        "Mannequin_Body",
+        "Mannequin_Head",
+        "Mannequin_LegLeft",
+        "Mannequin_LegRight"
+      ],
+      "missing_bones": [],
+      "missing_animated_nodes": []
+    },
+    "Animatronic_Normal": {
+      "rig": "Medium",
+      "skeleton": "Rig_Medium",
+      "compatible": true,
+      "bone_aliases": {
+        "handslotl": "handslot.l",
+        "handslotr": "handslot.r"
+      },
+      "omitted_optional_nodes": [
+        "handslotl",
+        "handslotr"
+      ],
+      "missing_nodes": [
+        "Mannequin_ArmLeft",
+        "Mannequin_ArmRight",
+        "Mannequin_Body",
+        "Mannequin_Head",
+        "Mannequin_LegLeft",
+        "Mannequin_LegRight"
+      ],
+      "missing_bones": [],
+      "missing_animated_nodes": []
+    },
+    "Barbarian": {
+      "rig": "Medium",
+      "skeleton": "Rig_Medium",
+      "compatible": true,
+      "bone_aliases": {
+        "handslotl": "handslot.l",
+        "handslotr": "handslot.r"
+      },
+      "omitted_optional_nodes": [
+        "handslotl",
+        "handslotr"
+      ],
+      "missing_nodes": [
+        "Mannequin_ArmLeft",
+        "Mannequin_ArmRight",
+        "Mannequin_Body",
+        "Mannequin_Head",
+        "Mannequin_LegLeft",
+        "Mannequin_LegRight"
+      ],
+      "missing_bones": [],
+      "missing_animated_nodes": []
+    },
+    "Barbarian_Large": {
+      "rig": "Large",
+      "skeleton": "Rig_Large",
+      "compatible": true,
+      "bone_aliases": {},
+      "omitted_optional_nodes": [],
+      "missing_nodes": [
+        "MannequinLarge_ArmLeft",
+        "MannequinLarge_ArmRight",
+        "MannequinLarge_Body",
+        "MannequinLarge_Head",
+        "MannequinLarge_LegLeft",
+        "MannequinLarge_LegRight"
+      ],
+      "missing_bones": [],
+      "missing_animated_nodes": []
+    },
+    "BlackKnight": {
+      "rig": "Large",
+      "skeleton": "Rig_Large",
+      "compatible": true,
+      "bone_aliases": {},
+      "omitted_optional_nodes": [],
+      "missing_nodes": [
+        "MannequinLarge_ArmLeft",
+        "MannequinLarge_ArmRight",
+        "MannequinLarge_Body",
+        "MannequinLarge_Head",
+        "MannequinLarge_LegLeft",
+        "MannequinLarge_LegRight"
+      ],
+      "missing_bones": [],
+      "missing_animated_nodes": []
+    },
+    "Caveman": {
+      "rig": "Medium",
+      "skeleton": "Rig_Medium",
+      "compatible": true,
+      "bone_aliases": {
+        "handslotl": "handslot.l",
+        "handslotr": "handslot.r"
+      },
+      "omitted_optional_nodes": [
+        "handslotl",
+        "handslotr"
+      ],
+      "missing_nodes": [
+        "Mannequin_ArmLeft",
+        "Mannequin_ArmRight",
+        "Mannequin_Body",
+        "Mannequin_Head",
+        "Mannequin_LegLeft",
+        "Mannequin_LegRight"
+      ],
+      "missing_bones": [],
+      "missing_animated_nodes": []
+    },
+    "Clanker": {
+      "rig": "Large",
+      "skeleton": "Rig_Large",
+      "compatible": true,
+      "bone_aliases": {},
+      "omitted_optional_nodes": [],
+      "missing_nodes": [
+        "MannequinLarge_ArmLeft",
+        "MannequinLarge_ArmRight",
+        "MannequinLarge_Body",
+        "MannequinLarge_Head",
+        "MannequinLarge_LegLeft",
+        "MannequinLarge_LegRight"
+      ],
+      "missing_bones": [],
+      "missing_animated_nodes": []
+    },
+    "Clown": {
+      "rig": "Medium",
+      "skeleton": "Rig_Medium",
+      "compatible": true,
+      "bone_aliases": {
+        "handslotl": "handslot.l",
+        "handslotr": "handslot.r"
+      },
+      "omitted_optional_nodes": [
+        "handslotl",
+        "handslotr"
+      ],
+      "missing_nodes": [
+        "Mannequin_ArmLeft",
+        "Mannequin_ArmRight",
+        "Mannequin_Body",
+        "Mannequin_Head",
+        "Mannequin_LegLeft",
+        "Mannequin_LegRight"
+      ],
+      "missing_bones": [],
+      "missing_animated_nodes": []
+    },
+    "CombatMech": {
+      "rig": "Medium",
+      "skeleton": "Rig_Medium",
+      "compatible": true,
+      "bone_aliases": {
+        "handslotl": "handslot.l",
+        "handslotr": "handslot.r"
+      },
+      "omitted_optional_nodes": [
+        "handslotl",
+        "handslotr"
+      ],
+      "missing_nodes": [
+        "Mannequin_ArmLeft",
+        "Mannequin_ArmRight",
+        "Mannequin_Body",
+        "Mannequin_Head",
+        "Mannequin_LegLeft",
+        "Mannequin_LegRight"
+      ],
+      "missing_bones": [],
+      "missing_animated_nodes": []
+    },
+    "Druid": {
+      "rig": "Medium",
+      "skeleton": "Rig_Medium",
+      "compatible": true,
+      "bone_aliases": {
+        "handslotl": "handslot.l",
+        "handslotr": "handslot.r"
+      },
+      "omitted_optional_nodes": [
+        "handslotl",
+        "handslotr"
+      ],
+      "missing_nodes": [
+        "Mannequin_ArmLeft",
+        "Mannequin_ArmRight",
+        "Mannequin_Body",
+        "Mannequin_Head",
+        "Mannequin_LegLeft",
+        "Mannequin_LegRight"
+      ],
+      "missing_bones": [],
+      "missing_animated_nodes": []
+    },
+    "Engineer": {
+      "rig": "Medium",
+      "skeleton": "Rig_Medium",
+      "compatible": true,
+      "bone_aliases": {
+        "handslotl": "handslot.l",
+        "handslotr": "handslot.r"
+      },
+      "omitted_optional_nodes": [
+        "handslotl",
+        "handslotr"
+      ],
+      "missing_nodes": [
+        "Mannequin_ArmLeft",
+        "Mannequin_ArmRight",
+        "Mannequin_Body",
+        "Mannequin_Head",
+        "Mannequin_LegLeft",
+        "Mannequin_LegRight"
+      ],
+      "missing_bones": [],
+      "missing_animated_nodes": []
+    },
+    "FrostGolem": {
+      "rig": "Large",
+      "skeleton": "Rig_Large",
+      "compatible": true,
+      "bone_aliases": {},
+      "omitted_optional_nodes": [],
+      "missing_nodes": [
+        "MannequinLarge_ArmLeft",
+        "MannequinLarge_ArmRight",
+        "MannequinLarge_Body",
+        "MannequinLarge_Head",
+        "MannequinLarge_LegLeft",
+        "MannequinLarge_LegRight"
+      ],
+      "missing_bones": [],
+      "missing_animated_nodes": []
+    },
+    "Helper_A": {
+      "rig": "Medium",
+      "skeleton": "Rig_Medium",
+      "compatible": true,
+      "bone_aliases": {
+        "handslotl": "handslot.l",
+        "handslotr": "handslot.r"
+      },
+      "omitted_optional_nodes": [
+        "handslotl",
+        "handslotr"
+      ],
+      "missing_nodes": [
+        "Mannequin_ArmLeft",
+        "Mannequin_ArmRight",
+        "Mannequin_Body",
+        "Mannequin_Head",
+        "Mannequin_LegLeft",
+        "Mannequin_LegRight"
+      ],
+      "missing_bones": [],
+      "missing_animated_nodes": []
+    },
+    "Helper_B": {
+      "rig": "Medium",
+      "skeleton": "Rig_Medium",
+      "compatible": true,
+      "bone_aliases": {
+        "handslotl": "handslot.l",
+        "handslotr": "handslot.r"
+      },
+      "omitted_optional_nodes": [
+        "handslotl",
+        "handslotr"
+      ],
+      "missing_nodes": [
+        "Mannequin_ArmLeft",
+        "Mannequin_ArmRight",
+        "Mannequin_Body",
+        "Mannequin_Head",
+        "Mannequin_LegLeft",
+        "Mannequin_LegRight"
+      ],
+      "missing_bones": [],
+      "missing_animated_nodes": []
+    },
+    "Hiker": {
+      "rig": "Medium",
+      "skeleton": "Rig_Medium",
+      "compatible": true,
+      "bone_aliases": {
+        "handslotl": "handslot.l",
+        "handslotr": "handslot.r"
+      },
+      "omitted_optional_nodes": [
+        "handslotl",
+        "handslotr"
+      ],
+      "missing_nodes": [
+        "Mannequin_ArmLeft",
+        "Mannequin_ArmRight",
+        "Mannequin_Body",
+        "Mannequin_Head",
+        "Mannequin_LegLeft",
+        "Mannequin_LegRight"
+      ],
+      "missing_bones": [],
+      "missing_animated_nodes": []
+    },
+    "Mage": {
+      "rig": "Medium",
+      "skeleton": "Rig_Medium",
+      "compatible": true,
+      "bone_aliases": {
+        "handslotl": "handslot.l",
+        "handslotr": "handslot.r"
+      },
+      "omitted_optional_nodes": [
+        "handslotl",
+        "handslotr"
+      ],
+      "missing_nodes": [
+        "Mannequin_ArmLeft",
+        "Mannequin_ArmRight",
+        "Mannequin_Body",
+        "Mannequin_Head",
+        "Mannequin_LegLeft",
+        "Mannequin_LegRight"
+      ],
+      "missing_bones": [],
+      "missing_animated_nodes": []
+    },
+    "Mannequin_Large": {
+      "rig": "Large",
+      "skeleton": "Rig_Large",
+      "compatible": true,
+      "bone_aliases": {},
+      "omitted_optional_nodes": [],
+      "missing_nodes": [],
+      "missing_bones": [],
+      "missing_animated_nodes": []
+    },
+    "Mannequin_Medium": {
+      "rig": "Medium",
+      "skeleton": "Rig_Medium",
+      "compatible": true,
+      "bone_aliases": {
+        "handslotl": "handslot.l",
+        "handslotr": "handslot.r"
+      },
+      "omitted_optional_nodes": [
+        "handslotl",
+        "handslotr"
+      ],
+      "missing_nodes": [
+        "Mannequin_ArmLeft",
+        "Mannequin_ArmRight",
+        "Mannequin_Body",
+        "Mannequin_Head",
+        "Mannequin_LegLeft",
+        "Mannequin_LegRight",
+        "handslotl",
+        "handslotr"
+      ],
+      "missing_bones": [
+        "handslotl",
+        "handslotr"
+      ],
+      "missing_animated_nodes": []
+    },
+    "Necromancer": {
+      "rig": "Medium",
+      "skeleton": "Rig_Medium",
+      "compatible": true,
+      "bone_aliases": {
+        "handslotl": "handslot.l",
+        "handslotr": "handslot.r"
+      },
+      "omitted_optional_nodes": [
+        "handslotl",
+        "handslotr"
+      ],
+      "missing_nodes": [
+        "Mannequin_ArmLeft",
+        "Mannequin_ArmRight",
+        "Mannequin_Body",
+        "Mannequin_Head",
+        "Mannequin_LegLeft",
+        "Mannequin_LegRight"
+      ],
+      "missing_bones": [],
+      "missing_animated_nodes": []
+    },
+    "OrcRaider": {
+      "rig": "Medium",
+      "skeleton": "Rig_Medium",
+      "compatible": true,
+      "bone_aliases": {
+        "handslotl": "handslot.l",
+        "handslotr": "handslot.r"
+      },
+      "omitted_optional_nodes": [
+        "handslotl",
+        "handslotr"
+      ],
+      "missing_nodes": [
+        "Mannequin_ArmLeft",
+        "Mannequin_ArmRight",
+        "Mannequin_Body",
+        "Mannequin_Head",
+        "Mannequin_LegLeft",
+        "Mannequin_LegRight"
+      ],
+      "missing_bones": [],
+      "missing_animated_nodes": []
+    },
+    "Ranger": {
+      "rig": "Medium",
+      "skeleton": "Rig_Medium",
+      "compatible": true,
+      "bone_aliases": {
+        "handslotl": "handslot.l",
+        "handslotr": "handslot.r"
+      },
+      "omitted_optional_nodes": [
+        "handslotl",
+        "handslotr"
+      ],
+      "missing_nodes": [
+        "Mannequin_ArmLeft",
+        "Mannequin_ArmRight",
+        "Mannequin_Body",
+        "Mannequin_Head",
+        "Mannequin_LegLeft",
+        "Mannequin_LegRight"
+      ],
+      "missing_bones": [],
+      "missing_animated_nodes": []
+    },
+    "Robot_One": {
+      "rig": "Medium",
+      "skeleton": "Rig_Medium",
+      "compatible": true,
+      "bone_aliases": {
+        "handslotl": "handslot.l",
+        "handslotr": "handslot.r"
+      },
+      "omitted_optional_nodes": [
+        "handslotl",
+        "handslotr"
+      ],
+      "missing_nodes": [
+        "Mannequin_ArmLeft",
+        "Mannequin_ArmRight",
+        "Mannequin_Body",
+        "Mannequin_Head",
+        "Mannequin_LegLeft",
+        "Mannequin_LegRight"
+      ],
+      "missing_bones": [],
+      "missing_animated_nodes": []
+    },
+    "Robot_Two": {
+      "rig": "Medium",
+      "skeleton": "Rig_Medium",
+      "compatible": true,
+      "bone_aliases": {
+        "handslotl": "handslot.l",
+        "handslotr": "handslot.r"
+      },
+      "omitted_optional_nodes": [
+        "handslotl",
+        "handslotr"
+      ],
+      "missing_nodes": [
+        "Mannequin_ArmLeft",
+        "Mannequin_ArmRight",
+        "Mannequin_Body",
+        "Mannequin_Head",
+        "Mannequin_LegLeft",
+        "Mannequin_LegRight"
+      ],
+      "missing_bones": [],
+      "missing_animated_nodes": []
+    },
+    "Rogue": {
+      "rig": "Medium",
+      "skeleton": "Rig_Medium",
+      "compatible": true,
+      "bone_aliases": {
+        "handslotl": "handslot.l",
+        "handslotr": "handslot.r"
+      },
+      "omitted_optional_nodes": [
+        "handslotl",
+        "handslotr"
+      ],
+      "missing_nodes": [
+        "Mannequin_ArmLeft",
+        "Mannequin_ArmRight",
+        "Mannequin_Body",
+        "Mannequin_Head",
+        "Mannequin_LegLeft",
+        "Mannequin_LegRight"
+      ],
+      "missing_bones": [],
+      "missing_animated_nodes": []
+    },
+    "Rogue_Hooded": {
+      "rig": "Medium",
+      "skeleton": "Rig_Medium",
+      "compatible": true,
+      "bone_aliases": {
+        "handslotl": "handslot.l",
+        "handslotr": "handslot.r"
+      },
+      "omitted_optional_nodes": [
+        "handslotl",
+        "handslotr"
+      ],
+      "missing_nodes": [
+        "Mannequin_ArmLeft",
+        "Mannequin_ArmRight",
+        "Mannequin_Body",
+        "Mannequin_Head",
+        "Mannequin_LegLeft",
+        "Mannequin_LegRight"
+      ],
+      "missing_bones": [],
+      "missing_animated_nodes": []
+    },
+    "Skeleton_Golem": {
+      "rig": "Large",
+      "skeleton": "Rig_Large",
+      "compatible": true,
+      "bone_aliases": {},
+      "omitted_optional_nodes": [],
+      "missing_nodes": [
+        "MannequinLarge_ArmLeft",
+        "MannequinLarge_ArmRight",
+        "MannequinLarge_Body",
+        "MannequinLarge_Head",
+        "MannequinLarge_LegLeft",
+        "MannequinLarge_LegRight"
+      ],
+      "missing_bones": [],
+      "missing_animated_nodes": []
+    },
+    "Skeleton_Mage": {
+      "rig": "Medium",
+      "skeleton": "Rig_Medium",
+      "compatible": true,
+      "bone_aliases": {
+        "handslotl": "handslot.l",
+        "handslotr": "handslot.r"
+      },
+      "omitted_optional_nodes": [
+        "handslotl",
+        "handslotr"
+      ],
+      "missing_nodes": [
+        "Mannequin_ArmLeft",
+        "Mannequin_ArmRight",
+        "Mannequin_Body",
+        "Mannequin_Head",
+        "Mannequin_LegLeft",
+        "Mannequin_LegRight"
+      ],
+      "missing_bones": [],
+      "missing_animated_nodes": []
+    },
+    "Skeleton_Minion": {
+      "rig": "Medium",
+      "skeleton": "Rig_Medium",
+      "compatible": true,
+      "bone_aliases": {
+        "handslotl": "handslot.l",
+        "handslotr": "handslot.r"
+      },
+      "omitted_optional_nodes": [
+        "handslotl",
+        "handslotr"
+      ],
+      "missing_nodes": [
+        "Mannequin_ArmLeft",
+        "Mannequin_ArmRight",
+        "Mannequin_Body",
+        "Mannequin_Head",
+        "Mannequin_LegLeft",
+        "Mannequin_LegRight"
+      ],
+      "missing_bones": [],
+      "missing_animated_nodes": []
+    },
+    "Skeleton_Rogue": {
+      "rig": "Medium",
+      "skeleton": "Rig_Medium",
+      "compatible": true,
+      "bone_aliases": {
+        "handslotl": "handslot.l",
+        "handslotr": "handslot.r"
+      },
+      "omitted_optional_nodes": [
+        "handslotl",
+        "handslotr"
+      ],
+      "missing_nodes": [
+        "Mannequin_ArmLeft",
+        "Mannequin_ArmRight",
+        "Mannequin_Body",
+        "Mannequin_Head",
+        "Mannequin_LegLeft",
+        "Mannequin_LegRight"
+      ],
+      "missing_bones": [],
+      "missing_animated_nodes": []
+    },
+    "Skeleton_Warrior": {
+      "rig": "Medium",
+      "skeleton": "Rig_Medium",
+      "compatible": true,
+      "bone_aliases": {
+        "handslotl": "handslot.l",
+        "handslotr": "handslot.r"
+      },
+      "omitted_optional_nodes": [
+        "handslotl",
+        "handslotr"
+      ],
+      "missing_nodes": [
+        "Mannequin_ArmLeft",
+        "Mannequin_ArmRight",
+        "Mannequin_Body",
+        "Mannequin_Head",
+        "Mannequin_LegLeft",
+        "Mannequin_LegRight"
+      ],
+      "missing_bones": [],
+      "missing_animated_nodes": []
+    },
+    "SpaceRanger": {
+      "rig": "Medium",
+      "skeleton": "Rig_Medium",
+      "compatible": true,
+      "bone_aliases": {
+        "handslotl": "handslot.l",
+        "handslotr": "handslot.r"
+      },
+      "omitted_optional_nodes": [
+        "handslotl",
+        "handslotr"
+      ],
+      "missing_nodes": [
+        "Mannequin_ArmLeft",
+        "Mannequin_ArmRight",
+        "Mannequin_Body",
+        "Mannequin_Head",
+        "Mannequin_LegLeft",
+        "Mannequin_LegRight"
+      ],
+      "missing_bones": [],
+      "missing_animated_nodes": []
+    },
+    "SpaceRanger_FlightMode": {
+      "rig": "Medium",
+      "skeleton": "Rig_Medium",
+      "compatible": true,
+      "bone_aliases": {
+        "handslotl": "handslot.l",
+        "handslotr": "handslot.r"
+      },
+      "omitted_optional_nodes": [
+        "handslotl",
+        "handslotr"
+      ],
+      "missing_nodes": [
+        "Mannequin_ArmLeft",
+        "Mannequin_ArmRight",
+        "Mannequin_Body",
+        "Mannequin_Head",
+        "Mannequin_LegLeft",
+        "Mannequin_LegRight"
+      ],
+      "missing_bones": [],
+      "missing_animated_nodes": []
+    },
+    "Squire": {
+      "rig": "Medium",
+      "skeleton": "Rig_Medium",
+      "compatible": true,
+      "bone_aliases": {
+        "handslotl": "handslot.l",
+        "handslotr": "handslot.r"
+      },
+      "omitted_optional_nodes": [
+        "handslotl",
+        "handslotr"
+      ],
+      "missing_nodes": [
+        "Mannequin_ArmLeft",
+        "Mannequin_ArmRight",
+        "Mannequin_Body",
+        "Mannequin_Head",
+        "Mannequin_LegLeft",
+        "Mannequin_LegRight"
+      ],
+      "missing_bones": [],
+      "missing_animated_nodes": []
+    },
+    "Superhero": {
+      "rig": "Medium",
+      "skeleton": "Rig_Medium",
+      "compatible": true,
+      "bone_aliases": {
+        "handslotl": "handslot.l",
+        "handslotr": "handslot.r"
+      },
+      "omitted_optional_nodes": [
+        "handslotl",
+        "handslotr"
+      ],
+      "missing_nodes": [
+        "Mannequin_ArmLeft",
+        "Mannequin_ArmRight",
+        "Mannequin_Body",
+        "Mannequin_Head",
+        "Mannequin_LegLeft",
+        "Mannequin_LegRight"
+      ],
+      "missing_bones": [],
+      "missing_animated_nodes": []
+    },
+    "Survivor_B": {
+      "rig": "Medium",
+      "skeleton": "Rig_Medium",
+      "compatible": true,
+      "bone_aliases": {
+        "handslotl": "handslot.l",
+        "handslotr": "handslot.r"
+      },
+      "omitted_optional_nodes": [
+        "handslotl",
+        "handslotr"
+      ],
+      "missing_nodes": [
+        "Mannequin_ArmLeft",
+        "Mannequin_ArmRight",
+        "Mannequin_Body",
+        "Mannequin_Head",
+        "Mannequin_LegLeft",
+        "Mannequin_LegRight"
+      ],
+      "missing_bones": [],
+      "missing_animated_nodes": []
+    },
+    "Survivor_a": {
+      "rig": "Medium",
+      "skeleton": "Rig_Medium",
+      "compatible": true,
+      "bone_aliases": {
+        "handslotl": "handslot.l",
+        "handslotr": "handslot.r"
+      },
+      "omitted_optional_nodes": [
+        "handslotl",
+        "handslotr"
+      ],
+      "missing_nodes": [
+        "Mannequin_ArmLeft",
+        "Mannequin_ArmRight",
+        "Mannequin_Body",
+        "Mannequin_Head",
+        "Mannequin_LegLeft",
+        "Mannequin_LegRight"
+      ],
+      "missing_bones": [],
+      "missing_animated_nodes": []
+    },
+    "Tiefling": {
+      "rig": "Medium",
+      "skeleton": "Rig_Medium",
+      "compatible": true,
+      "bone_aliases": {
+        "handslotl": "handslot.l",
+        "handslotr": "handslot.r"
+      },
+      "omitted_optional_nodes": [
+        "handslotl",
+        "handslotr"
+      ],
+      "missing_nodes": [
+        "Mannequin_ArmLeft",
+        "Mannequin_ArmRight",
+        "Mannequin_Body",
+        "Mannequin_Head",
+        "Mannequin_LegLeft",
+        "Mannequin_LegRight"
+      ],
+      "missing_bones": [],
+      "missing_animated_nodes": []
+    },
+    "Vampire": {
+      "rig": "Medium",
+      "skeleton": "Rig_Medium",
+      "compatible": true,
+      "bone_aliases": {
+        "handslotl": "handslot.l",
+        "handslotr": "handslot.r"
+      },
+      "omitted_optional_nodes": [
+        "handslotl",
+        "handslotr"
+      ],
+      "missing_nodes": [
+        "Mannequin_ArmLeft",
+        "Mannequin_ArmRight",
+        "Mannequin_Body",
+        "Mannequin_Head",
+        "Mannequin_LegLeft",
+        "Mannequin_LegRight"
+      ],
+      "missing_bones": [],
+      "missing_animated_nodes": []
+    },
+    "Werewolf_Man": {
+      "rig": "Medium",
+      "skeleton": "Rig_Medium",
+      "compatible": true,
+      "bone_aliases": {
+        "handslotl": "handslot.l",
+        "handslotr": "handslot.r"
+      },
+      "omitted_optional_nodes": [
+        "handslotl",
+        "handslotr"
+      ],
+      "missing_nodes": [
+        "Mannequin_ArmLeft",
+        "Mannequin_ArmRight",
+        "Mannequin_Body",
+        "Mannequin_Head",
+        "Mannequin_LegLeft",
+        "Mannequin_LegRight"
+      ],
+      "missing_bones": [],
+      "missing_animated_nodes": []
+    },
+    "Werewolf_Wolf": {
+      "rig": "Medium",
+      "skeleton": "Rig_Medium",
+      "compatible": true,
+      "bone_aliases": {
+        "handslotl": "handslot.l",
+        "handslotr": "handslot.r"
+      },
+      "omitted_optional_nodes": [
+        "handslotl",
+        "handslotr"
+      ],
+      "missing_nodes": [
+        "Mannequin_ArmLeft",
+        "Mannequin_ArmRight",
+        "Mannequin_Body",
+        "Mannequin_Head",
+        "Mannequin_LegLeft",
+        "Mannequin_LegRight"
+      ],
+      "missing_bones": [],
+      "missing_animated_nodes": []
+    },
+    "White_Knight_with_helmet": {
+      "rig": "Medium",
+      "skeleton": "Rig_Medium",
+      "compatible": true,
+      "bone_aliases": {
+        "handslotl": "handslot.l",
+        "handslotr": "handslot.r"
+      },
+      "omitted_optional_nodes": [
+        "handslotl",
+        "handslotr"
+      ],
+      "missing_nodes": [
+        "Mannequin_ArmLeft",
+        "Mannequin_ArmRight",
+        "Mannequin_Body",
+        "Mannequin_Head",
+        "Mannequin_LegLeft",
+        "Mannequin_LegRight"
+      ],
+      "missing_bones": [],
+      "missing_animated_nodes": []
+    },
+    "White_knight": {
+      "rig": "Medium",
+      "skeleton": "Rig_Medium",
+      "compatible": true,
+      "bone_aliases": {
+        "handslotl": "handslot.l",
+        "handslotr": "handslot.r"
+      },
+      "omitted_optional_nodes": [
+        "handslotl",
+        "handslotr"
+      ],
+      "missing_nodes": [
+        "Mannequin_ArmLeft",
+        "Mannequin_ArmRight",
+        "Mannequin_Body",
+        "Mannequin_Head",
+        "Mannequin_LegLeft",
+        "Mannequin_LegRight"
+      ],
+      "missing_bones": [],
+      "missing_animated_nodes": []
+    },
+    "Witch": {
+      "rig": "Medium",
+      "skeleton": "Rig_Medium",
+      "compatible": true,
+      "bone_aliases": {
+        "handslotl": "handslot.l",
+        "handslotr": "handslot.r"
+      },
+      "omitted_optional_nodes": [
+        "handslotl",
+        "handslotr"
+      ],
+      "missing_nodes": [
+        "Mannequin_ArmLeft",
+        "Mannequin_ArmRight",
+        "Mannequin_Body",
+        "Mannequin_Head",
+        "Mannequin_LegLeft",
+        "Mannequin_LegRight"
+      ],
+      "missing_bones": [],
+      "missing_animated_nodes": []
+    }
+  }
+}

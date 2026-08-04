@@ -1,0 +1,1465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="./web/favicon.ico" type="image/x-icon">
+    <title>Pystral Gate — pg_rpg</title>
+    <script src="web/enable-threads.js"></script>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: black; color: white; font-family: sans-serif; }
+        #loading-panel { position: fixed; z-index: 300; inset: 20% auto auto 50%; transform: translateX(-50%); width: min(520px, calc(100vw - 32px)); max-height: calc(100vh - 40px); overflow-y: auto; box-sizing: border-box; padding: 18px; border: 1px solid #52749f; border-radius: 8px; background: #101b2df2; color: white; font: 14px/1.4 sans-serif; }
+        #loading-panel progress { width: 100%; margin: 12px 0 6px; }
+        #loading-error { color: #ffb4b4; }
+        body[data-loading-state="loading"] #hud-dock { pointer-events: none; visibility: hidden; }
+        body[data-loading-state="loading"] #canvas { visibility: hidden; }
+        canvas { width: 100vw; height: 100vh; display: block; }
+        #runtime-canvas { display: none; }
+        #history-log-camera-controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px 20px;
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+        }
+        input[type=range] { width: 300px; }
+        .controls-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 5px;
+        }
+        button {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            padding: 5px 10px;
+            cursor: pointer;
+            background: #444;
+            color: white;
+            border: 1px solid #666;
+            border-radius: 4px;
+        }
+        button:hover { background: #555; }
+        svg { width: 16px; height: 16px; }
+        .play-icon, .pause-icon { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+        #entity-viewer {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            width: 250px;
+            max-height: 80vh;
+            overflow-y: auto;
+            background: rgba(0, 0, 0, 0.8);
+            color: #00ff00;
+            font-family: monospace;
+            font-size: 11px;
+            padding: 10px;
+            border: 1px solid #444;
+            display: none;
+            pointer-events: auto;
+            z-index: 100;
+        }
+        #history-viewer {
+            position: absolute;
+            top: 10px;
+            right: 320px;
+            width: 250px;
+            max-height: 80vh;
+            overflow-y: auto;
+            background: rgba(0, 0, 0, 0.8);
+            color: #00ccff;
+            font-family: monospace;
+            font-size: 11px;
+            padding: 10px;
+            border: 1px solid #444;
+            display: none;
+            pointer-events: auto;
+            z-index: 100;
+        }
+        #heartbeat-panel {
+            position: absolute;
+            top: 10px;
+            right: 590px;
+            width: 220px;
+            background: rgba(0, 0, 0, 0.8);
+            color: #ffcc00;
+            font-family: monospace;
+            font-size: 11px;
+            padding: 10px;
+            border: 1px solid #665500;
+            display: none;
+            pointer-events: auto;
+            z-index: 100;
+        }
+        .history-entry {
+            padding: 2px 4px;
+            cursor: pointer;
+            border-bottom: 1px solid #222;
+        }
+        .history-entry:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        .history-entry.current {
+            background: rgba(0, 204, 255, 0.3);
+            font-weight: bold;
+        }
+        #hud-dock {
+            position: fixed;
+            left: 8px;
+            right: 8px;
+            bottom: 8px;
+            z-index: 150;
+            display: grid;
+            grid-template-columns: minmax(260px, 1fr) minmax(260px, 1fr) minmax(260px, 1fr);
+            grid-template-areas: "controls actions context";
+            gap: 8px;
+            align-items: end;
+            max-height: 42vh;
+            pointer-events: none;
+        }
+        #hud-dock > * { pointer-events: auto; }
+        #hud-dock > * { min-width: 0; }
+        #hud-dock .hud-scroll-region {
+            overflow-y: auto;
+            overscroll-behavior: contain;
+            scrollbar-gutter: stable;
+        }
+        #hud-dock #history-log-camera-controls {
+            grid-area: controls;
+            position: static;
+            transform: none;
+            max-height: 38vh;
+            overflow-y: auto;
+            display: none !important;
+        }
+        #hud-dock[data-hud-mode="play"] #history-log-camera-controls { display: block !important; }
+        #hud-dock #history-log-camera-controls {
+            position: fixed !important;
+            left: 8px !important;
+            bottom: 100px !important;
+            transform: none !important;
+            width: min(420px, calc(33vw - 16px));
+            max-width: 420px;
+            max-height: 30vh;
+            overflow-y: auto;
+            z-index: 160;
+        }
+        #hud-dock #action-stack {
+            position: fixed !important;
+            left: 8px !important;
+            bottom: 100px !important;
+            top: auto !important;
+            right: auto !important;
+            transform: none !important;
+            width: min(420px, calc(33vw - 16px));
+            max-width: 420px;
+            max-height: 38vh;
+            overflow-y: auto;
+            z-index: 160;
+            display: none !important;
+        }
+        #hud-dock #action-log-panel { grid-area: context; position: static !important; width: auto !important; max-width: none !important; max-height: 38vh; }
+        #hud-dock #diagnostics-panel,
+        #hud-dock #entity-viewer,
+        #hud-dock #history-viewer,
+        #hud-dock #heartbeat-panel {
+            position: static !important;
+            inset: auto !important;
+            width: auto !important;
+            max-height: 38vh;
+            overflow-y: auto;
+        }
+        /* The dock owns transient panel placement.  This also neutralizes the
+           legacy inline coordinates on panels that used to float independently
+           over the canvas. */
+        #hud-dock #action-stack,
+        #hud-dock #action-log-panel,
+        #hud-dock #diagnostics-panel,
+        #hud-dock #entity-viewer,
+        #hud-dock #history-viewer,
+        #hud-dock #heartbeat-panel { top: auto !important; right: auto !important; bottom: auto !important; left: auto !important; transform: none !important; }
+        #hud-dock #action-log-panel,
+        #hud-dock #history-viewer,
+        #hud-dock #diagnostics-panel,
+        #hud-dock #heartbeat-panel,
+        #hud-dock #entity-viewer { display: none !important; }
+        #hud-dock #action-stack {
+            position: fixed !important;
+            left: 8px !important;
+            right: auto !important;
+            top: auto !important;
+            bottom: 100px !important;
+            transform: none !important;
+        }
+        #hud-dock #action-log-panel {
+            position: fixed !important;
+            left: auto !important;
+            right: 8px !important;
+            top: 48px !important;
+            bottom: auto !important;
+            transform: none !important;
+            width: min(420px, calc(33vw - 16px)) !important;
+            max-width: 420px !important;
+            max-height: 24vh;
+            z-index: 160;
+        }
+        #hud-dock #history-viewer {
+            position: fixed !important;
+            left: auto !important;
+            right: 8px !important;
+            top: auto !important;
+            bottom: 100px !important;
+            transform: none !important;
+            width: min(420px, calc(33vw - 16px));
+            max-width: 420px;
+            max-height: 30vh;
+            overflow-y: auto;
+            z-index: 160;
+        }
+        #hud-dock #diagnostics-panel {
+            position: fixed !important;
+            left: auto !important;
+            right: 8px !important;
+            top: 48px !important;
+            bottom: auto !important;
+            transform: none !important;
+            width: min(420px, calc(33vw - 16px)) !important;
+            max-width: 420px !important;
+            max-height: 30vh !important;
+            z-index: 160;
+        }
+        #hud-dock[data-hud-mode="actions"] #action-log-panel,
+        #hud-dock[data-hud-mode="actions"] #action-stack,
+        #hud-dock[data-hud-mode="diagnostics"] #diagnostics-panel { display: block !important; }
+        #hud-dock[data-hud-mode="diagnostics"] #heartbeat-panel { display: none !important; }
+        #hud-dock #diagnostics-panel { max-height: 18vh !important; min-width: 0; }
+        #hud-dock[data-hud-mode="actions"] #action-stack { display: flex !important; }
+        #hud-dock #unit-state-panel { display: none !important; }
+        #hud-dock[data-hud-mode="actions"] #unit-state-panel,
+        #hud-dock[data-hud-mode="actions"] #action-menu { display: block !important; }
+        #hud-mode-bar { grid-column: 1 / -1; display: flex; gap: 4px; justify-content: center; flex-wrap: wrap; }
+        #hud-mode-bar button[aria-current="true"] { background: #1d6fa5; outline: 2px solid #8ecae6; }
+        #action-controls {
+            position: fixed !important;
+            left: 50% !important;
+            bottom: 52px !important;
+            transform: translateX(-50%) !important;
+            z-index: 170;
+            max-width: calc(100vw - 16px);
+            max-height: 15vh;
+            overflow: auto;
+            justify-content: center;
+            flex-wrap: wrap;
+            box-sizing: border-box;
+            pointer-events: auto;
+        }
+        #hud-mode-bar {
+            position: fixed;
+            left: 8px;
+            right: 8px;
+            bottom: 8px;
+            z-index: 170;
+        }
+        .hud-context-panel { min-height: 0; }
+        #hud-empty-state {
+            display: none;
+            padding: 8px;
+            color: #b8c7da;
+            font: 12px monospace;
+            text-align: center;
+        }
+        @media (max-width: 1024px) and (orientation: portrait), (max-width: 760px) {
+            nav[aria-label="Pystral Gate sections"] { top: 48px !important; z-index: 140 !important; }
+            body { overflow: hidden; }
+            #hud-dock { left: 4px; right: 4px; bottom: 4px; display: flex; flex-direction: column; align-items: stretch; max-height: 46vh; }
+            #hud-dock .hud-context-panel { display: none !important; }
+            #hud-dock[data-hud-mode="actions"] #action-stack,
+            #hud-dock[data-hud-mode="diagnostics"] #diagnostics-panel,
+            #hud-dock[data-hud-mode="diagnostics"] #heartbeat-panel,
+            #hud-dock[data-hud-mode="actions"] #action-log-panel { display: block !important; }
+            #hud-dock[data-hud-mode="actions"] #action-stack { display: flex !important; }
+            #hud-dock #history-log-camera-controls { order: 3; max-height: 22vh; }
+            #hud-dock #action-stack { order: 2; max-height: 30vh; }
+            #hud-dock #action-log-panel { order: 2; }
+            #hud-dock #entity-viewer { display: none !important; }
+            #hud-dock button, #hud-dock input { min-height: 32px; }
+        }
+        /* Compact perimeter mode: keep phone HUD footprints bounded so panels
+           cannot push content below the fold or cover the scene. */
+        @media (max-width: 1024px) and (orientation: portrait), (max-width: 760px) {
+            #hud-dock {
+                inset: 0;
+                width: auto;
+                height: 100vh;
+                max-height: none;
+                display: block;
+                pointer-events: none;
+            }
+            #hud-mode-bar {
+                position: absolute;
+                top: auto;
+                bottom: max(8px, env(safe-area-inset-bottom));
+                left: 8px;
+                right: 8px;
+                display: flex;
+                justify-content: space-between;
+                gap: 6px;
+                pointer-events: auto;
+            }
+            #hud-mode-bar button {
+                width: 36px;
+                height: 36px;
+                min-height: 36px;
+                padding: 0;
+                border-radius: 50%;
+                justify-content: center;
+                font-size: 0;
+                opacity: 0.78;
+            }
+            #hud-mode-bar button::before { font-size: 16px; }
+            #hud-mode-bar button[data-hud-mode="play"]::before { content: '▶'; }
+            #hud-mode-bar button[data-hud-mode="actions"]::before { content: '✦'; }
+            #hud-mode-bar button[data-hud-mode="diagnostics"]::before { content: '!'; }
+            #hud-mode-bar #history-download-context {
+                position: absolute;
+                top: 44px;
+                right: 0;
+                width: 30px;
+                height: 30px;
+                min-height: 30px;
+            }
+            #hud-mode-bar #history-download-context::before { content: '⇩'; font-size: 15px; }
+            #action-controls {
+                bottom: calc(48px + env(safe-area-inset-bottom));
+                width: 92vw;
+                max-width: 92vw;
+                max-height: 14vh;
+                padding: 4px;
+                gap: 3px;
+            }
+            #hud-dock #history-log-camera-controls {
+                position: absolute !important;
+                left: 50%;
+                bottom: calc(100px + env(safe-area-inset-bottom));
+                transform: translateX(-50%);
+                width: min(78vw, 300px);
+                max-height: 16vh;
+                overflow-y: auto;
+                overflow-x: hidden;
+                padding: 4px 6px;
+                gap: 2px;
+                border-radius: 8px;
+                opacity: 0.94;
+            }
+            #hud-dock #history-log-camera-controls .controls-row { gap: 4px; margin-bottom: 2px; flex-wrap: wrap; justify-content: center; }
+            #hud-dock #history-log-camera-controls input[type=range] { width: min(42vw, 150px); }
+            #hud-dock #history-log-camera-controls button { min-height: 26px; padding: 3px 6px; }
+            #hud-dock[data-hud-mode="play"] #playback-controls,
+            #hud-dock[data-hud-mode="actions"] #playback-controls,
+            #hud-dock[data-hud-mode="diagnostics"] #playback-controls { display: flex; }
+            #hud-dock #action-stack,
+            #hud-dock #action-log-panel,
+            #hud-dock #history-viewer,
+            #hud-dock #diagnostics-panel,
+            #hud-dock #heartbeat-panel,
+            #hud-dock #unit-state-panel,
+            #hud-dock #action-menu { display: none !important; }
+            #hud-dock[data-hud-mode="actions"] #action-log-panel,
+            #hud-dock[data-hud-mode="diagnostics"] #diagnostics-panel { display: block !important; }
+            /* Heartbeat is represented in diagnostics on compact screens so
+               two independently sized panels cannot consume the same slot. */
+            #hud-dock[data-hud-mode="diagnostics"] #heartbeat-panel { display: none !important; }
+            #hud-dock[data-hud-mode="actions"] #action-stack { display: flex !important; }
+            #hud-dock[data-hud-mode="actions"] #action-menu,
+            #hud-dock[data-hud-mode="actions"] #unit-state-panel { display: block !important; }
+            #hud-dock .hud-context-panel,
+            #hud-dock #action-stack,
+            #hud-dock #history-viewer,
+            #hud-dock #action-log-panel,
+            #hud-dock #diagnostics-panel,
+            #hud-dock #heartbeat-panel {
+                position: absolute !important;
+                left: 50% !important;
+                right: auto !important;
+                top: auto !important;
+                bottom: 15vh !important;
+                transform: translateX(-50%);
+                width: min(78vw, 300px);
+                max-width: 78vw;
+                max-height: 18vh;
+                min-height: 0;
+                overflow-y: auto;
+                box-sizing: border-box;
+                padding: 6px;
+                border-radius: 8px;
+                pointer-events: auto;
+            }
+            #hud-dock #action-log-panel,
+            #hud-dock #history-viewer,
+            #hud-dock #diagnostics-panel,
+            #hud-dock #heartbeat-panel,
+            #hud-dock #action-stack { transform: translateX(-50%) !important; }
+            #hud-dock #action-log-panel {
+                left: auto !important;
+                right: 4px !important;
+                top: 48px !important;
+                bottom: auto !important;
+                transform: none !important;
+                width: min(78vw, 300px) !important;
+                max-width: 78vw !important;
+            }
+            #hud-dock #action-stack { gap: 4px; }
+            #hud-dock #diagnostics-panel,
+            #hud-dock #heartbeat-panel { bottom: 15vh; max-height: 10vh; }
+            #hud-dock #heartbeat-panel { bottom: 26vh; }
+            #hud-dock #history-viewer .history-entry { padding: 1px 3px; }
+            #hud-dock #entity-viewer { display: none !important; }
+        }
+        @media (max-width: 400px) {
+            #hud-mode-bar { left: 4px; right: 4px; gap: 3px; }
+            #hud-mode-bar button { width: 32px; height: 32px; min-height: 32px; }
+            #hud-mode-bar button::before { font-size: 14px; }
+            #hud-dock #history-log-camera-controls { width: 82vw; max-height: 16vh; }
+            #hud-dock .hud-context-panel,
+            #hud-dock #action-stack { width: 82vw; max-width: 82vw; max-height: 17vh; }
+        }
+        /* Diagnostics, history, entity, and heartbeat share the same left
+           slot as Actions. The Debug checkbox controls collision rendering,
+           not whether these diagnostic surfaces exist. */
+        #hud-dock #diagnostics-stack {
+            position: fixed !important;
+            left: 8px !important;
+            right: auto !important;
+            top: auto !important;
+            bottom: 100px !important;
+            width: min(420px, calc(33vw - 16px));
+            max-width: 420px;
+            max-height: 38vh;
+            overflow-y: auto;
+            display: none !important;
+            flex-direction: column;
+            gap: 6px;
+            z-index: 160;
+            pointer-events: auto;
+        }
+        #hud-dock[data-hud-mode="diagnostics"] #diagnostics-stack { display: flex !important; }
+        #hud-dock #diagnostics-stack > #entity-viewer,
+        #hud-dock #diagnostics-stack > #history-viewer,
+        #hud-dock #diagnostics-stack > #heartbeat-panel,
+        #hud-dock #diagnostics-stack > #diagnostics-panel {
+            display: block !important;
+            position: static !important;
+            inset: auto !important;
+            width: auto !important;
+            max-width: none !important;
+            max-height: none !important;
+            transform: none !important;
+            overflow-y: visible !important;
+            box-sizing: border-box;
+        }
+        #hud-dock #diagnostics-stack > #diagnostics-panel {
+            position: relative !important;
+            z-index: 3;
+            pointer-events: auto;
+        }
+        #hud-dock #diagnostics-stack > #history-viewer,
+        #hud-dock #diagnostics-stack > #entity-viewer,
+        #hud-dock #diagnostics-stack > #heartbeat-panel {
+            position: relative !important;
+            z-index: 1;
+        }
+        @media (max-width: 1024px) and (orientation: portrait), (max-width: 760px) {
+            #hud-dock #diagnostics-stack {
+                left: 50% !important;
+                right: auto !important;
+                bottom: 15vh !important;
+                transform: translateX(-50%);
+                width: min(78vw, 300px);
+                max-width: 78vw;
+                max-height: 18vh;
+                padding: 6px;
+                border-radius: 8px;
+                box-sizing: border-box;
+            }
+        }
+    </style>
+</head>
+<body>
+<nav aria-label="Pystral Gate sections" style="position:fixed;top:8px;left:50%;transform:translateX(-50%);z-index:200;background:#101b2dcc;padding:6px 10px;border:1px solid #31415e;border-radius:5px;font:12px sans-serif;">
+    <a href="index.html" style="color:#cfe2ff;">Home</a> · <a href="editor.html" style="color:#cfe2ff;">Author Rhai</a>
+</nav>
+<section id="loading-panel" aria-labelledby="loading-heading" aria-busy="true">
+    <h1 id="loading-heading" style="font-size: 18px; margin: 0;">Loading game</h1>
+    <progress id="loading-progress" max="100" value="0" aria-label="Game loading progress"></progress>
+    <div id="loading-status" role="status" aria-live="polite">Starting game…</div>
+    <div id="loading-error" role="alert" hidden></div>
+    <button id="loading-retry" type="button" hidden>Retry</button>
+</section>
+<canvas id="canvas"></canvas>
+<canvas id="runtime-canvas" aria-hidden="true"></canvas>
+<div id="entity-viewer"></div>
+<div id="history-viewer"></div>
+<section id="heartbeat-panel" aria-label="Worker heartbeat">
+    <strong>Worker heartbeat</strong>
+    <div id="heartbeat-message" role="status" aria-live="polite">No heartbeat received.</div>
+    <div id="heartbeat-reason" role="status" aria-live="polite">Waiting for first probe response.</div>
+</section>
+<div id="hud-dock" data-hud-mode="play">
+<div id="hud-mode-bar" role="toolbar" aria-label="Game Boy HUD modes">
+    <button type="button" data-hud-mode="play" aria-current="true">Play</button>
+    <button type="button" data-hud-mode="actions" aria-current="false">Actions</button>
+    <button type="button" data-hud-mode="diagnostics" aria-current="false">Diagnostics</button>
+    <button type="button" id="history-download-context" title="Download replay history">Download History</button>
+</div>
+<div id="action-controls" class="controls-row" style="display: flex; background: rgba(0, 100, 200, 0.3); padding: 5px; border-radius: 5px;">
+    <button id="action-up">▲</button>
+    <button id="action-down">▼</button>
+    <button id="action-left">◀</button>
+    <button id="action-right">▶</button>
+    <button id="action-layer-up" title="Game layer up">Layer ▲</button>
+    <button id="action-layer-down" title="Game layer down">Layer ▼</button>
+    <button id="action-confirm" style="background: #228b22;">Action</button>
+    <button id="action-wait" style="background: #6a5acd;">End Turn</button>
+    <button class="action-face" data-facing="north" title="Face north">Face N</button>
+    <button class="action-face" data-facing="northeast" title="Face northeast">Face NE</button>
+    <button class="action-face" data-facing="southeast" title="Face southeast">Face SE</button>
+    <button class="action-face" data-facing="south" title="Face south">Face S</button>
+    <button class="action-face" data-facing="southwest" title="Face southwest">Face SW</button>
+    <button class="action-face" data-facing="northwest" title="Face northwest">Face NW</button>
+    <button id="action-return" style="background: #b22222;">Return</button>
+    <button id="test-occupy-destination" style="display: none;">Occupy selected destination</button>
+</div>
+<div id="history-log-camera-controls">
+    <div class="controls-row" id="playback-controls">
+        <label for="history-slider">History Log:</label>
+        <input type="range" id="history-slider" min="0" max="320" value="0">
+        <span id="slider-value">0</span>
+    </div>
+    <div class="controls-row">
+        <button id="play-log" title="Play/Pause Log Scrubbing">
+            <svg class="play-icon" viewBox="0 0 24 24">
+                <polygon points="5 3 19 12 5 21 5 3"></polygon>
+            </svg>
+            <svg class="pause-icon" viewBox="0 0 24 24" style="display:none;">
+                <rect x="6" y="4" width="4" height="16"></rect>
+                <rect x="14" y="4" width="4" height="16"></rect>
+            </svg>
+            Log
+        </button>
+        <button id="play-sim" title="Play/Pause Simulation (Animations & Camera)">
+            <svg class="play-icon" viewBox="0 0 24 24">
+                <polygon points="5 3 19 12 5 21 5 3"></polygon>
+            </svg>
+            <svg class="pause-icon" viewBox="0 0 24 24" style="display:none;">
+                <rect x="6" y="4" width="4" height="16"></rect>
+                <rect x="14" y="4" width="4" height="16"></rect>
+            </svg>
+            Sim
+        </button>
+        <div id="history-step-control" style="margin-left: 10px; display: none; align-items: center; gap: 5px;">
+            <label for="history-step-ms" style="font-size: 12px;">Step ms</label>
+            <input id="history-step-ms" type="number" min="1" max="10000" step="1" value="100" style="width: 65px;">
+        </div>
+        <div style="margin-left: 10px; display: flex; align-items: center; gap: 5px;">
+            <span id="error-display" style="font-size: 12px; cursor: pointer; color: white;">Error: 0</span>
+        </div>
+    </div>
+    <div class="controls-row">
+        <button id="nav-up" title="Camera Up">Up</button>
+        <button id="nav-down" title="Camera Down">Down</button>
+        <button id="nav-left" title="Camera Left">Left</button>
+        <button id="nav-right" title="Camera Right">Right</button>
+    </div>
+</div>
+<div id="action-stack" style="display: none; position: absolute; left: 16px; bottom: 92px; max-width: min(420px, calc(100vw - 32px)); max-height: calc(100vh - 110px); flex-direction: column; align-items: stretch; gap: 8px;">
+<div id="hud-empty-state" role="status" aria-live="polite"></div>
+<section id="unit-state-panel" class="hud-context-panel hud-scroll-region" aria-label="UnitState information" style="display: none; max-height: 42vh; padding: 10px; border: 1px solid rgba(255,255,255,0.45); border-radius: 6px; background: rgba(8, 14, 28, 0.94); color: white; font: 12px monospace;">
+    <strong>UnitState</strong>
+    <div id="unit-state-items"></div>
+</section>
+<section id="action-menu" class="hud-context-panel hud-scroll-region" role="region" aria-labelledby="action-menu-heading" aria-describedby="action-menu-status" style="display: none; min-width: 240px; max-width: 340px; max-height: 42vh; padding: 10px; border: 1px solid rgba(255,255,255,0.45); border-radius: 6px; background: rgba(8, 14, 28, 0.9); color: white; font: 14px monospace;">
+    <h2 id="action-menu-heading" tabindex="-1" style="font-size: 14px; margin: 0 0 6px;">Action menu</h2>
+    <div id="action-menu-status" role="status" aria-live="polite"></div>
+    <div id="action-menu-items"></div>
+</section>
+<div id="game-completed" role="status" aria-live="assertive" data-outcome="" hidden></div>
+</div>
+<div id="diagnostics-stack" aria-label="Diagnostics surfaces"></div>
+<section id="action-log-panel" class="hud-context-panel hud-scroll-region" aria-label="Action log" style="position: absolute; left: 16px; bottom: 16px; width: min(420px, calc(100vw - 32px)); max-height: 24vh; padding: 8px; box-sizing: border-box; border: 1px solid rgba(255,255,255,0.35); border-radius: 6px; background: rgba(8, 14, 28, 0.86); color: white; font: 12px monospace;">
+    <strong>Action log</strong>
+    <ol id="action-log" style="margin: 5px 0 0; padding-left: 22px;"></ol>
+</section>
+<section id="diagnostics-panel" aria-label="Diagnostics" style="position: absolute; top: 10px; right: 10px; width: 340px; max-height: 70vh; overflow-y: auto; background: rgba(0,0,0,0.78); font-size: 11px; padding: 8px; color: #ffcc00; font-family: monospace; z-index: 110;">
+    <strong>UI log</strong>
+    <label style="display: flex; align-items: center; gap: 5px; margin: 5px 0; cursor: pointer;">
+        <input type="checkbox" id="debug-checkbox">
+        Debug
+    </label>
+    <pre id="log-container" aria-label="UI log" style="max-height: 260px; overflow-y: auto; white-space: pre-wrap; margin: 5px 0;"></pre>
+    <textarea id="log-copy" aria-label="Copyable UI log" readonly style="width: 100%; height: 110px; box-sizing: border-box; color: white; background: #111; font: 11px monospace;">No UI log messages.</textarea>
+    <div style="display: flex; gap: 5px; margin-top: 5px;">
+        <button id="copy-ui-log" type="button">Copy UI log</button>
+        <button id="download-ui-log" type="button">Download UI log</button>
+        <button id="download-history" type="button">Download history</button>
+    </div>
+    <div id="diagnostics-download-status" aria-live="polite" style="margin-top: 5px; color: #aaa;"></div>
+    <pre id="renderer-fps" aria-label="Renderer FPS" style="margin: 8px 0 0; color: #9fe3ff; white-space: pre-wrap;">Renderer FPS: waiting for runtime status.</pre>
+</section>
+</div>
+<script type="module">
+    import init, { run_app } from './web/pystral_gate.js';
+    import { createThreePresentation } from './web/renderer.js';
+
+    document.body.dataset.loadingState = 'loading';
+    const loadingPanel = document.getElementById('loading-panel');
+    const loadingProgress = document.getElementById('loading-progress');
+    const loadingStatus = document.getElementById('loading-status');
+    const loadingError = document.getElementById('loading-error');
+    const loadingRetry = document.getElementById('loading-retry');
+    window.set_loading_state = (state, message, progress = null) => {
+        document.body.dataset.loadingState = state;
+        loadingPanel.hidden = state === 'ready';
+        loadingPanel.setAttribute('aria-busy', String(state === 'loading'));
+        loadingStatus.textContent = message;
+        loadingError.hidden = state !== 'error';
+        loadingRetry.hidden = state !== 'error';
+        if (progress !== null) {
+            loadingProgress.value = progress;
+            loadingProgress.setAttribute('aria-valuenow', String(progress));
+        }
+    };
+    // Render-frame ingress. Three.js consumes this presentation-only payload;
+    // Rust remains authoritative for simulation and resolved presentation data.
+    window.__pystralFrame = null;
+    window.publish_render_frame = (json) => {
+        try {
+            const frame = JSON.parse(json);
+            if (frame?.version !== 1 || !Array.isArray(frame.entities)) return;
+            window.__pystralFrame = frame;
+            window.dispatchEvent(new CustomEvent('pystral-render-frame', { detail: frame }));
+        } catch (error) {
+            console.error('Invalid render frame:', error);
+        }
+    };
+    window.set_loading_error = (message) => {
+        window.set_loading_state('error', 'Game could not be loaded.', 0);
+        loadingError.textContent = message.split('\n', 1)[0];
+        loadingRetry.focus();
+    };
+    let currentAttemptId = 0;
+    let wasmReady;
+    let threePresentation;
+    const currentApp = () => window.app;
+
+    function resetGameplayShell() {
+        document.body.dataset.loadingState = 'loading';
+        document.body.dataset.historyReady = 'false';
+        window.pendingActionFeedback = null;
+        document.getElementById('game-completed').dataset.outcome = '';
+        document.getElementById('heartbeat-message').textContent = 'No heartbeat received.';
+        document.getElementById('heartbeat-reason').textContent = 'Waiting for first probe response.';
+        document.getElementById('action-menu-status').textContent = 'Loading game…';
+        document.getElementById('game-completed').hidden = true;
+        document.getElementById('action-stack').dataset.playerDecision = 'false';
+        hudDock.dataset.actionContent = 'false';
+        hudDock.dataset.unitStateContent = 'false';
+        window.__pystralLastTransientState = null;
+        window.previewActive = false;
+        window.__pystralHistoryExportSource = null;
+        window.__pystralHeartbeatReceivedAt = 0;
+        threePresentation?.dispose();
+        threePresentation = null;
+        document.body.dataset.renderer = '';
+        window.refreshReplayExport?.();
+        window.set_loading_state('loading', 'Initializing runtime…', 10);
+    }
+
+    async function startAttempt() {
+        const attemptId = ++currentAttemptId;
+        window.__pystralAttemptId = attemptId;
+        window.__pystralRunAttempts = (window.__pystralRunAttempts || 0) + 1;
+        if (window.app) {
+            window.app.dispose();
+            window.app = null;
+        }
+        resetGameplayShell();
+        try {
+            wasmReady ||= init({ module_or_path: 'web/pystral_gate_bg.wasm' });
+            await wasmReady;
+            if (attemptId !== currentAttemptId) return;
+            window.set_loading_state('loading', 'Loading game assets…', 25);
+            threePresentation = createThreePresentation(
+                document.getElementById('canvas'),
+                document.getElementById('runtime-canvas'),
+                { native: true },
+            );
+            if (threePresentation.available) {
+                document.body.dataset.renderer = 'native';
+            } else {
+                throw new Error('WebGL2 is required by the native renderer.');
+            }
+            const app = await run_app();
+            if (attemptId !== currentAttemptId) {
+                app.dispose();
+                return;
+            }
+            window.app = app;
+            bindControlsOnce();
+        } catch (err) {
+            if (attemptId !== currentAttemptId) return;
+            console.error('Main thread initialization failed:', err);
+            window.set_loading_error(`Runtime initialization failed: ${err}`);
+        }
+    }
+
+    loadingRetry.addEventListener('click', () => startAttempt());
+
+    const hudDock = document.getElementById('hud-dock');
+    const diagnosticsStack = document.getElementById('diagnostics-stack');
+    ['entity-viewer', 'history-viewer', 'heartbeat-panel', 'diagnostics-panel']
+        .forEach((id) => {
+            const panel = document.getElementById(id);
+            panel.classList.add('hud-context-panel');
+            diagnosticsStack.appendChild(panel);
+        });
+    // Keep all transient panels inside one layout owner.
+
+    const hudModes = ['play', 'actions', 'diagnostics'];
+    const refreshHudEmptyState = () => {
+        const empty = document.getElementById('hud-empty-state');
+        const mode = hudDock.dataset.hudMode;
+        const messages = {
+            actions: 'No actions are available for the active unit.',
+        };
+        const hasContent = mode === 'actions'
+            ? hudDock.dataset.actionContent === 'true' || hudDock.dataset.unitStateContent === 'true'
+            : false;
+        empty.textContent = messages[mode] || '';
+        empty.style.display = messages[mode] && !hasContent ? 'block' : 'none';
+    };
+    window.setHudMode = (mode) => {
+        const next = hudModes.includes(mode) ? mode : 'play';
+        hudDock.dataset.hudMode = next;
+        document.querySelectorAll('[data-hud-mode]').forEach((button) => {
+            if (button.tagName === 'BUTTON') {
+                button.setAttribute('aria-current', button.dataset.hudMode === next ? 'true' : 'false');
+            }
+        });
+        const active = document.querySelector(`[data-hud-mode="${next}"]`);
+        if (active?.tagName === 'BUTTON') active.focus({ preventScroll: true });
+        refreshHudEmptyState();
+    };
+    document.querySelectorAll('#hud-mode-bar [data-hud-mode]').forEach((button) => {
+        button.addEventListener('click', () => window.setHudMode(button.dataset.hudMode));
+    });
+    document.getElementById('history-download-context').addEventListener('click', () => {
+        document.getElementById('download-history').click();
+    });
+    const panelFocusables = (panel) => [...panel.querySelectorAll('button, [tabindex="0"], .history-entry')];
+    const movePanelFocus = (direction) => {
+        const panelIds = {
+            play: 'action-log-panel',
+            actions: 'action-stack',
+            diagnostics: 'diagnostics-stack',
+        };
+        const activePanel = document.getElementById(panelIds[hudDock.dataset.hudMode]);
+        if (!activePanel) return false;
+        const focusables = panelFocusables(activePanel);
+        if (!focusables.length) {
+            activePanel.scrollBy({ top: direction * 48, behavior: 'smooth' });
+            return true;
+        }
+        const current = focusables.indexOf(document.activeElement);
+        const next = Math.max(0, Math.min(focusables.length - 1, current + direction));
+        focusables[next].focus();
+        focusables[next].scrollIntoView({ block: 'nearest' });
+        return true;
+    };
+    document.addEventListener('keydown', (event) => {
+        if (event.target.matches('input, textarea, select')) return;
+        if (event.key === 'ArrowDown' && ['actions', 'diagnostics'].includes(hudDock.dataset.hudMode)) {
+            if (movePanelFocus(1)) event.preventDefault();
+        }
+        if (event.key === 'ArrowUp' && ['actions', 'diagnostics'].includes(hudDock.dataset.hudMode)) {
+            if (movePanelFocus(-1)) event.preventDefault();
+        }
+        if (event.key === 'F1') { event.preventDefault(); window.setHudMode('play'); }
+        if (event.key === 'F2') { event.preventDefault(); window.setHudMode('actions'); }
+        if (event.key === 'F5') { event.preventDefault(); window.setHudMode('diagnostics'); }
+        if (event.key === 'Escape') window.setHudMode('play');
+    });
+
+    // Standard Game Boy-style mapping: D-pad navigates, A selects, B backs
+    // out, and Start cycles the contextual HUD modes. Keyboard navigation
+    // remains the test oracle and this adapter only emits the same actions.
+    const gamepadButtons = new Map();
+    let lastGamepadAxisX = 0;
+    let lastGamepadAxisY = 0;
+    const gamepadEdges = (gamepad) => {
+        const pressed = (index) => Boolean(gamepad.buttons[index]?.pressed);
+        const rising = (index) => {
+            const now = pressed(index);
+            const was = gamepadButtons.get(index) || false;
+            gamepadButtons.set(index, now);
+            return now && !was;
+        };
+        return { pressed, rising };
+    };
+    const pollGamepad = () => {
+        const gamepad = navigator.getGamepads?.().find(Boolean);
+        if (gamepad) {
+            const { rising } = gamepadEdges(gamepad);
+            const axisX = gamepad.axes[0] || 0;
+            const axisY = gamepad.axes[1] || 0;
+            const up = axisY < -0.7 && lastGamepadAxisY >= -0.7;
+            const down = axisY > 0.7 && lastGamepadAxisY <= 0.7;
+            const left = axisX < -0.7 && lastGamepadAxisX >= -0.7;
+            const right = axisX > 0.7 && lastGamepadAxisX <= 0.7;
+            lastGamepadAxisX = axisX;
+            lastGamepadAxisY = axisY;
+            if (rising(12) || up) window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp' }));
+            if (rising(13) || down) window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown' }));
+            if (rising(14) || left) window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft' }));
+            if (rising(15) || right) window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
+            if (rising(0)) document.activeElement?.click?.();
+            if (rising(1)) window.setHudMode('play');
+            if (rising(9)) {
+                const index = hudModes.indexOf(hudDock.dataset.hudMode);
+                window.setHudMode(hudModes[(index + 1) % hudModes.length]);
+            }
+        }
+        requestAnimationFrame(pollGamepad);
+    };
+    requestAnimationFrame(pollGamepad);
+
+    window.update_ui_slider = (index) => {
+        const slider = document.getElementById('history-slider');
+        slider.value = index;
+        document.getElementById('slider-value').innerText = index;
+        window.__pystralHistoryCurrentIndex = index;
+
+        // Highlight current history entry
+        document.querySelectorAll('.history-entry').forEach(el => el.classList.remove('current'));
+        const currentEntry = document.getElementById(`history-entry-${index}`);
+        if (currentEntry) {
+            currentEntry.classList.add('current');
+            currentEntry.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        }
+    };
+
+    window.update_entity_viewer = (json) => {
+        const entities = JSON.parse(json);
+        const viewer = document.getElementById('entity-viewer');
+        viewer.replaceChildren();
+        const title = document.createElement('strong');
+        title.textContent = 'Entities';
+        viewer.append(title, document.createElement('hr'));
+        entities.forEach(entity => {
+            const heading = document.createElement('div');
+            heading.textContent = `ID: ${entity.id} (${entity.kind})`;
+            heading.style.fontWeight = 'bold';
+            viewer.appendChild(heading);
+
+            const position = document.createElement('div');
+            position.textContent = `Pos: ${entity.hex.q},${entity.hex.r}`;
+            position.style.paddingLeft = '10px';
+            viewer.appendChild(position);
+
+            Object.entries(entity.properties).forEach(([key, value]) => {
+                const property = document.createElement('div');
+                property.textContent = `${key}: ${JSON.stringify(value)}`;
+                property.style.cssText = 'padding-left:10px;color:#aaa;';
+                viewer.appendChild(property);
+            });
+
+            const state = document.createElement('div');
+            state.textContent = `Animation: ${entity.animation_state}`;
+            state.style.paddingLeft = '10px';
+            viewer.appendChild(state);
+            viewer.appendChild(document.createElement('br'));
+        });
+    };
+
+    window.update_history_log = (json) => {
+        const log = JSON.parse(json);
+        const viewer = document.getElementById('history-viewer');
+
+        viewer.replaceChildren();
+        const title = document.createElement('strong');
+        title.textContent = 'History Log';
+        viewer.append(title, document.createElement('hr'));
+        log.forEach((entry, i) => {
+            const div = document.createElement('div');
+            div.className = 'history-entry';
+            div.id = `history-entry-${i}`;
+            div.textContent = `${i}: ${JSON.stringify(entry)}`;
+            div.onclick = () => {
+                if (window.app) {
+                    window.app.set_history_index(i);
+                }
+            };
+            viewer.appendChild(div);
+        });
+
+        // Re-apply highlight
+        const slider = document.getElementById('history-slider');
+        window.update_ui_slider(parseInt(slider.value, 10));
+    };
+
+    window.__pystralActionLogEvents = [];
+    window.update_action_log = (json) => {
+        document.body.dataset.historyReady = 'true';
+        const events = JSON.parse(json);
+        window.__pystralActionLogEvents = events;
+        const log = document.getElementById('action-log');
+        const format = (event) => {
+            if (event.Log) return event.Log.msg;
+            if (event.TurnStarted) return `Unit ${event.TurnStarted.unit_id} turn started`;
+            if (event.TurnCompleted) return `Unit ${event.TurnCompleted.unit_id} turn completed`;
+            if (event.DespawnEntity) return `Unit ${event.DespawnEntity.id} removed from the battlefield`;
+            if (event.GameCompleted) {
+                const outcome = event.GameCompleted.outcome || {};
+                const name = typeof outcome === 'string' ? outcome : Object.keys(outcome)[0] || 'Draw';
+                const team = outcome.winning_team ?? event.GameCompleted.winning_team;
+                return `${name}${team ? ` — Team ${team} wins` : ''}`;
+            }
+            if (event.MoveSprite) return `Unit ${event.MoveSprite.id} moved`;
+            return null;
+        };
+        log.replaceChildren(...events.map(format).filter(Boolean).slice(-32).map((message) => {
+            const item = document.createElement('li');
+            item.textContent = message;
+            return item;
+        }));
+    };
+
+    window.__pystralHistoryExportSource = null;
+    window.__pystralGameCompletedResponseCount = 0;
+    window.record_game_completed_response = () => {
+        window.__pystralGameCompletedResponseCount += 1;
+    };
+    window.__pystralHistoryExportUpdateCount = 0;
+    window.__pystralReplayInputs = [];
+    window.refreshReplayExport = () => {
+        window.__pystralHistoryExportUpdateCount += 1;
+        window.__pystralHistoryExportSource = JSON.stringify({
+            format: 'pystral-gate-replay-v1',
+            replay: {
+                entrypoint: 'web/scripts/pg_rpg.rhai',
+                actionInputs: window.__pystralReplayInputs,
+            },
+        });
+    };
+    window.refreshReplayExport();
+    window.sendActionInput = (direction) => {
+        if (document.body.dataset.loadingState !== 'ready' || !window.app) return;
+        window.__pystralReplayInputs.push(direction);
+        window.refreshReplayExport();
+        window.app.action_nav(direction);
+    };
+
+    window.set_ui_slider_max = (max) => {
+        const slider = document.getElementById('history-slider');
+        slider.max = max;
+    };
+
+    window.update_nav_buttons = (up, down, left, right) => {
+        document.getElementById('nav-up').style.display = up ? 'block' : 'none';
+        document.getElementById('nav-down').style.display = down ? 'block' : 'none';
+        document.getElementById('nav-left').style.display = left ? 'block' : 'none';
+        document.getElementById('nav-right').style.display = right ? 'block' : 'none';
+    };
+
+    window.update_action_buttons = (visible, up, down, left, right, layerUp, layerDown, confirm, ret, wait, face) => {
+        const container = document.getElementById('action-controls');
+        const previewActive = window.previewActive === true;
+        // This strip is independent of the history/camera panel and remains
+        // anchored above the HUD mode bar.
+        container.style.display = 'flex';
+        document.getElementById('action-up').style.display = (up || previewActive) ? 'block' : 'none';
+        document.getElementById('action-down').style.display = (down || previewActive) ? 'block' : 'none';
+        document.getElementById('action-left').style.display = (left || previewActive) ? 'block' : 'none';
+        document.getElementById('action-right').style.display = (right || previewActive) ? 'block' : 'none';
+        document.getElementById('action-layer-up').style.display = layerUp ? 'block' : 'none';
+        document.getElementById('action-layer-down').style.display = layerDown ? 'block' : 'none';
+        document.getElementById('action-confirm').style.display = (confirm || previewActive) ? 'block' : 'none';
+        document.getElementById('action-wait').style.display = (wait && !previewActive) ? 'block' : 'none';
+        document.querySelectorAll('.action-face').forEach((button) => {
+            button.style.display = (face && !previewActive) ? 'block' : 'none';
+        });
+        document.getElementById('action-return').style.display = (ret || previewActive) ? 'block' : 'none';
+    };
+
+    window.update_action_menu = (json) => {
+        const state = JSON.parse(json);
+        const stack = document.getElementById('action-stack');
+        const unitStatePanel = document.getElementById('unit-state-panel');
+        const unitStateItems = document.getElementById('unit-state-items');
+        const menu = document.getElementById('action-menu');
+        const actions = state.available_actions;
+        hudDock.dataset.actionContent = actions ? 'true' : 'false';
+        hudDock.dataset.unitStateContent = (state.unit_states || []).length ? 'true' : 'false';
+        stack.dataset.playerDecision = actions ? 'true' : 'false';
+        hudDock.dataset.playerDecision = actions ? 'true' : 'false';
+        if (actions) {
+            window.setHudMode('actions');
+        } else if (hudDock.dataset.hudMode === 'actions' && !state.game_completed) {
+            window.setHudMode('play');
+        }
+        const status = document.getElementById('action-menu-status');
+        const completion = document.getElementById('game-completed');
+        const items = document.getElementById('action-menu-items');
+        window.__pystralLastTransientState = state;
+        if (state.ability_targets) {
+            menu.dataset.targetSessionId = String(state.ability_targets.target_session_id);
+            menu.dataset.targetStateVersion = String(state.ability_targets.state_version);
+            menu.dataset.targetSnapshotFingerprint = String(state.ability_targets.snapshot_fingerprint);
+            menu.dataset.selectedTargetIndex = String(state.ability_targets.selected_index);
+        } else {
+            delete menu.dataset.targetSessionId;
+            delete menu.dataset.targetStateVersion;
+            delete menu.dataset.targetSnapshotFingerprint;
+            delete menu.dataset.selectedTargetIndex;
+        }
+        window.previewActive = Boolean(state.preview);
+        menu.dataset.gameCompleted = state.game_completed ? 'true' : 'false';
+        const outcome = state.completion_outcome;
+        // serde_wasm_bindgen represents unit-like Rust enum variants as their
+        // numeric discriminant, while data-bearing variants are keyed
+        // objects. Normalize both forms at the DOM boundary so the semantic
+        // completion contract is stable for Draw as well as Victory/Defeat.
+        const serializedOutcomeName = outcome ? (Object.keys(outcome)[0] || '') : '';
+        const outcomeName = outcome === false
+            ? 'Draw'
+            : typeof outcome === 'string'
+            ? (['Victory', 'Defeat', 'Draw'].includes(outcome)
+                ? outcome
+                : (Number(outcome) === 0 ? 'Draw' : ''))
+            : typeof outcome === 'number'
+            ? (outcome === 0 ? 'Draw' : '')
+            : (serializedOutcomeName === '0' ? 'Draw' : serializedOutcomeName);
+        completion.hidden = !state.game_completed;
+        completion.dataset.outcome = outcomeName;
+        completion.textContent = state.game_completed ? `${outcomeName} — Game completed.` : '';
+        if (state.action_feedback) {
+            window.pendingActionFeedback = state.action_feedback;
+        } else if (!state.action_pending && !state.wait_pending) {
+            window.pendingActionFeedback = '';
+        }
+        unitStateItems.replaceChildren();
+        unitStateItems.setAttribute('role', 'tree');
+        (state.unit_states || []).forEach(({ unit_id, state: unit }) => {
+            const details = document.createElement('details');
+            details.setAttribute('role', 'treeitem');
+            details.tabIndex = 0;
+            details.open = unit_id === state.active_unit_id;
+            const summary = document.createElement('summary');
+            summary.textContent = `Unit ${unit_id} · team ${unit.team_id} · HP ${unit.health} · MP ${unit.mana} · AP ${unit.action_points}`;
+            details.appendChild(summary);
+            const pre = document.createElement('pre');
+            pre.textContent = JSON.stringify(unit, null, 2);
+            pre.style.cssText = 'margin:4px 0 0 14px;white-space:pre-wrap;color:#bbb;font:11px monospace;';
+            details.appendChild(pre);
+            unitStateItems.appendChild(details);
+        });
+        unitStatePanel.style.display = 'block';
+        stack.style.display = (state.unit_states || []).length || state.available_actions ? 'flex' : 'none';
+        menu.dataset.actionPending = state.action_pending ? 'true' : 'false';
+        menu.dataset.animationPending = state.action_pending ? 'true' : 'false';
+        menu.dataset.waitPending = state.wait_pending ? 'true' : 'false';
+        menu.dataset.facingPending = state.facing_pending ? 'true' : 'false';
+        if (!window.previewActive && !state.action_pending && !state.wait_pending) {
+            window.previewLocation = '';
+            window.previewReachableCount = 0;
+        }
+        if (!actions) {
+            menu.style.display = state.game_completed ? 'block' : 'none';
+            status.textContent = state.game_completed ? 'Game completed.' : '';
+            items.replaceChildren();
+            refreshHudEmptyState();
+            return;
+        }
+
+        menu.style.display = 'block';
+        refreshHudEmptyState();
+        const activeUnit = (state.unit_states || []).find(unit => unit.unit_id === actions.unit_id);
+        const facing = activeUnit?.state?.facing;
+        const facingLabel = typeof facing === 'string'
+            ? facing
+            : (facing && typeof facing === 'object' ? Object.keys(facing)[0] : 'south');
+        document.getElementById('action-menu-heading').textContent =
+            `Unit ${actions.unit_id} action menu · Facing ${facingLabel}`;
+        items.replaceChildren();
+
+        const addEntry = (label, depth, detail = '', command = null, key = '', selected = false) => {
+            const row = command ? document.createElement('button') : document.createElement('div');
+            row.textContent = `${'  '.repeat(depth)}${label}${detail ? ` — ${detail}` : ''}`;
+            row.style.cssText = `display:block;width:100%;text-align:left;color:${depth === 0 ? '#8ecae6' : '#e0e0e0'};background:${selected ? 'rgba(40,120,180,0.45)' : 'transparent'};border:0;padding:3px;font:inherit;cursor:${command ? 'pointer' : 'default'};`;
+            if (command) {
+                row.type = 'button';
+                row.dataset.menuKey = key;
+                row.setAttribute('aria-current', selected ? 'true' : 'false');
+                row.onclick = () => window.sendActionInput(command);
+            }
+            items.appendChild(row);
+        };
+
+        const selectedPath = state.menu_path || [];
+        const selectedJob = selectedPath.find(path => path.startsWith('job:')) || '';
+        const selectedAbility = selectedPath.find(path => path.startsWith('ability:')) || '';
+        addEntry('Move', 0, `${actions.movement.length} reachable`, 'confirm', 'move', false);
+        const renderJob = (job, descriptor) => {
+            const selected = selectedJob === `job:${descriptor}`;
+            const affordance = selected ? '▾' : '▸';
+            addEntry(`${affordance} ${job.name}`, 0, `${job.abilities.length} abilities — press Enter to ${selected ? 'close' : 'open'}`, `menu-job:${descriptor}`, `job:${descriptor}`, selected);
+            const row = items.querySelector(`[data-menu-key="job:${descriptor}"]`);
+            if (row) {
+                row.setAttribute('aria-haspopup', 'true');
+                row.setAttribute('aria-expanded', selected ? 'true' : 'false');
+                row.setAttribute('aria-label', `${job.name}, ${job.abilities.length} abilities, ${selected ? 'expanded' : 'collapsed'}; press Enter to ${selected ? 'close' : 'open'}`);
+            }
+            if (selected && !state.ability_targets) {
+                job.abilities.forEach(ability => addEntry(
+                    ability.name,
+                    1,
+                    [
+                        ability.ap_discount > 0
+                            ? `${ability.base_ap_cost} AP -> ${ability.ap_cost} AP (${ability.discount_label || 'tag discount'})`
+                            : `${ability.ap_cost} AP`,
+                        ability.health_cost > 0 ? `${ability.health_cost} HP (floor ${ability.health_floor})` : '',
+                        ability.mana_cost > 0 ? `${ability.mana_cost} MP` : '',
+                        ability.affordable ? '' : 'unaffordable',
+                    ].filter(Boolean).join(', '),
+                    `menu-ability:${ability.id}`,
+                    `ability:${ability.id}`,
+                    selectedAbility === `ability:${ability.id}`,
+                ));
+            }
+        };
+        renderJob(actions.primary_job, 'primary');
+        actions.secondary_jobs.forEach((job, index) => renderJob(job, `secondary:${index}`));
+
+        const targetMenu = state.ability_targets;
+        if (targetMenu) {
+            targetMenu.targets.forEach((target, index) => addEntry(
+                target.label,
+                1,
+                index === targetMenu.selected_index ? 'selected' : '',
+                `menu-target:${index}`,
+                `target:${index}`,
+                index === targetMenu.selected_index,
+            ));
+        }
+
+        if (state.wait_pending) {
+            addEntry('End Turn', 0, 'implicit wait committed; awaiting action acknowledgment');
+        } else if (state.facing_pending) {
+            addEntry('Choose facing', 0, 'select a direction to complete the turn');
+        }
+
+        const preview = state.preview;
+        if (preview) {
+            const selected = preview.selected_destination || preview.source;
+            const location = selected
+                ? `q ${selected.hex.x}, r ${selected.hex.y}, layer ${selected.layer}`
+                : 'source cell';
+            const previewStatus = `Move preview: selected ${location}; ${preview.reachable.length} reachable destinations. Use directional controls to change selection.`;
+            window.previewLocation = location;
+            window.previewReachableCount = preview.reachable.length;
+            status.textContent = window.pendingActionFeedback
+                ? `${window.pendingActionFeedback} ${previewStatus}`
+                : previewStatus;
+        } else if (targetMenu) {
+            const selected = targetMenu.targets[targetMenu.selected_index];
+            const targetStatus = selected
+                ? `Ability target: selected ${selected.label}; ${targetMenu.targets.length} legal targets. Use directional controls to change selection.`
+                : (targetMenu.disabled_reason || 'No legal targets for this ability.');
+            status.textContent = targetStatus;
+        } else {
+            const refreshStatus = window.previewLocation
+                ? ` Move preview: selected ${window.previewLocation}; reachability refreshed.`
+                : '';
+                status.textContent = state.wait_pending
+                ? 'End Turn committed; awaiting action acknowledgment.'
+                : state.facing_pending
+                ? 'Choose a facing direction to complete the turn.'
+                : state.action_pending
+                ? (window.pendingActionFeedback
+                    ? `${window.pendingActionFeedback} Action committed; awaiting animation acknowledgment.`
+                    : 'Action committed; awaiting animation acknowledgment.')
+                : window.pendingActionFeedback
+                ? `${window.pendingActionFeedback}${refreshStatus}`
+                : 'Choose Move, Wait, or a job. Focus a job and press Enter to open its abilities.';
+        }
+
+        if (!state.action_pending && !state.wait_pending && !state.facing_pending) {
+            let focusKey = 'heading';
+            if (targetMenu) focusKey = `target:${targetMenu.selected_index}`;
+            else if (selectedAbility) focusKey = selectedAbility;
+            else if (selectedJob) focusKey = 'first-ability';
+            const focusTarget = (focusKey === 'first-ability'
+                ? items.querySelector('[data-menu-key^="ability:"]')
+                : items.querySelector(`[data-menu-key="${focusKey}"]`))
+                || document.getElementById('action-menu-heading');
+            queueMicrotask(() => focusTarget.focus());
+        }
+    };
+
+    window.update_action_feedback = (message) => {
+        const normalized = message.length
+            ? `${message[0].toUpperCase()}${message.slice(1)}`
+            : message;
+        window.pendingActionFeedback = normalized;
+        const status = document.getElementById('action-menu-status');
+        const fallback = window.previewLocation
+            ? ` Move preview: selected ${window.previewLocation}; ${window.previewReachableCount} reachable destinations.`
+            : ' Choose primary job, secondary job, Move, or Wait.';
+        const currentPreview = status.textContent.includes('Move preview: selected')
+            ? ` ${status.textContent}`
+            : fallback;
+        status.textContent = `${normalized}${currentPreview}`;
+        document.getElementById('action-menu-heading').focus();
+    };
+
+    window.__pystralDebugTraces = [];
+    window.__pystralAcceptedActionCounts = Object.create(null);
+    window.record_debug_trace = (message) => {
+        window.__pystralDebugTraces.push(message);
+        if (window.__pystralDebugTraces.length > 200) window.__pystralDebugTraces.shift();
+        const acceptedPrefix = 'unified worker accepted action input ';
+        if (message.startsWith(acceptedPrefix)) {
+            window.__pystralAcceptedActionCounts[message.slice(acceptedPrefix.length)] =
+                (window.__pystralAcceptedActionCounts[message.slice(acceptedPrefix.length)] || 0) + 1;
+        }
+        window.dispatchEvent(new CustomEvent('pystral-debug-trace', { detail: message }));
+        console.debug(message);
+    };
+
+    // Latest worker-output sequence observed by the main-thread replica.  This
+    // is intentionally separate from the transport watermark, which only
+    // acknowledges main->worker input delivery.
+    window.__pystralWorkerLatestSeq = 0;
+    window.update_worker_heartbeat = (latestSeq, latestInputSeq, status) => {
+        const seq = Number(latestSeq);
+        window.__pystralWorkerLatestSeq = Math.max(window.__pystralWorkerLatestSeq, seq);
+        window.__pystralWorkerLatestInputSeq = Math.max(
+            window.__pystralWorkerLatestInputSeq,
+            Number(latestInputSeq),
+        );
+        window.__pystralWorkerStatus = status;
+        window.__pystralHeartbeatReceivedAt = Date.now();
+        document.getElementById('heartbeat-reason').textContent =
+            `Worker responsive · ${status} · input seq ${window.__pystralWorkerLatestInputSeq}`;
+    };
+
+    // Heartbeats can arrive in bursts while the worker drains its queue. Keep
+    // the debug panel readable by publishing only the latest one once per
+    // second; the protocol still receives every heartbeat immediately.
+    window.__pystralHeartbeatReceivedAt = 0;
+    window.__pystralWorkerLatestInputSeq = 0;
+    window.__pystralWorkerStatus = 'Unknown';
+    const formatFpsBucket = (bucket) => bucket.frames
+        ? `${bucket.fps.toFixed(1)} fps (${bucket.frames}f, ${bucket.averageRenderMs.toFixed(2)}ms render)`
+        : 'no samples';
+    window.addEventListener('pystral-three-fps', (event) => {
+        const fps = event.detail;
+        document.getElementById('renderer-fps').textContent = [
+            'Renderer FPS (simulation / acquiescent)',
+            `simulation  static: ${formatFpsBucket(fps.simulation.static)}`,
+            `simulation  rotating: ${formatFpsBucket(fps.simulation.rotating)}`,
+            `acquiescent static: ${formatFpsBucket(fps.acquiescent.static)}`,
+            `acquiescent rotating: ${formatFpsBucket(fps.acquiescent.rotating)}`,
+        ].join('\n');
+    });
+    window.setInterval(() => {
+        const receivedAt = window.__pystralHeartbeatReceivedAt;
+        if (!receivedAt) return;
+        const age = Math.max(0, Math.round((Date.now() - receivedAt) / 1000));
+        document.getElementById('heartbeat-message').textContent =
+            `latest output seq: ${window.__pystralWorkerLatestSeq} · ${age}s ago`;
+        if (age >= 2) {
+            document.getElementById('heartbeat-reason').textContent =
+                `No probe response for ${age}s · last state ${window.__pystralWorkerStatus}`;
+        } else {
+            document.getElementById('heartbeat-reason').textContent =
+                `Worker responsive · ${window.__pystralWorkerStatus} · input seq ${window.__pystralWorkerLatestInputSeq}`;
+        }
+    }, 1000);
+
+    window.set_debug_panels_visible = (visible) => {
+        document.getElementById('heartbeat-panel').style.display = visible ? 'block' : 'none';
+    };
+
+    window.update_log_ui = (messages, totalErrors, totalInfo) => {
+        const logContainer = document.getElementById('log-container');
+        const text = messages.length ? messages.join('\n') : 'No UI log messages.';
+        logContainer.innerText = text;
+        document.getElementById('log-copy').value = text;
+        
+        const errorDisplay = document.getElementById('error-display');
+        if (totalInfo > 0 && totalErrors === 0) {
+            errorDisplay.innerText = `Info: ${totalInfo}`;
+            errorDisplay.style.color = 'white';
+        } else {
+            errorDisplay.innerText = `Error: ${totalErrors}`;
+            if (totalErrors > 0) {
+                errorDisplay.style.color = 'red';
+            } else {
+                errorDisplay.style.color = 'white';
+            }
+        }
+    };
+
+    function setDiagnosticsDownloadStatus(message) {
+        document.getElementById('diagnostics-download-status').textContent = message;
+    }
+
+    function downloadText(filename, text, mimeType) {
+        const blob = new Blob([text], { type: mimeType });
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = filename;
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 0);
+    }
+
+    document.getElementById('copy-ui-log').addEventListener('click', async () => {
+        const text = document.getElementById('log-copy').value;
+        try {
+            await navigator.clipboard.writeText(text);
+            setDiagnosticsDownloadStatus('UI log copied to clipboard.');
+        } catch (_) {
+            const textarea = document.getElementById('log-copy');
+            textarea.focus();
+            textarea.select();
+            document.execCommand('copy');
+            setDiagnosticsDownloadStatus('UI log selected for copying.');
+        }
+    });
+
+    document.getElementById('download-ui-log').addEventListener('click', () => {
+        downloadText('pystral-ui-log.txt', document.getElementById('log-copy').value, 'text/plain');
+        setDiagnosticsDownloadStatus('UI log download started.');
+    });
+
+    document.getElementById('download-history').addEventListener('click', () => {
+        if (!window.__pystralHistoryExportSource) {
+            setDiagnosticsDownloadStatus('History is not ready yet.');
+            return;
+        }
+        const replay = JSON.parse(window.__pystralHistoryExportSource).replay;
+        const exportText = JSON.stringify({
+            format: 'pystral-gate-replay-v1',
+            metadata: {
+                entrypoint: replay.entrypoint,
+                sourceFingerprint: window.__pystralSourceFingerprint || 'pg_rpg',
+                seed: window.__pystralMatchSeed ?? null,
+                outcome: document.getElementById('game-completed').dataset.outcome || null,
+            },
+            replay,
+        });
+        downloadText(
+            'pystral-replay-' + new Date().toISOString().replaceAll(':', '-') + '.json',
+            exportText,
+            'application/json',
+        );
+        setDiagnosticsDownloadStatus('Replay download started.');
+    });
+
+    function bindControlsOnce() {
+        if (window.__pystralControlsBound) return;
+        window.__pystralControlsBound = true;
+        const slider = document.getElementById('history-slider');
+        const valueDisplay = document.getElementById('slider-value');
+        
+        slider.addEventListener('input', (e) => {
+            const val = parseInt(e.target.value, 10);
+            valueDisplay.textContent = val;
+            currentApp()?.set_history_index(val);
+        });
+
+        const setupToggle = (btnId, toggleFn, autostart = false) => {
+            const btn = document.getElementById(btnId);
+            const playIcon = btn.querySelector('.play-icon');
+            const pauseIcon = btn.querySelector('.pause-icon');
+            let playing = autostart;
+            
+            if (playing) {
+                playIcon.style.display = 'none';
+                pauseIcon.style.display = 'block';
+            }
+
+            btn.addEventListener('click', () => {
+                playing = !playing;
+                toggleFn();
+                playIcon.style.display = playing ? 'none' : 'block';
+                pauseIcon.style.display = playing ? 'block' : 'none';
+            });
+        };
+
+        setupToggle('play-log', () => currentApp()?.toggle_play_log(), true);
+        setupToggle('play-sim', () => currentApp()?.toggle_play_animations(), true);
+
+        const cameraNav = (direction) => {
+            window.__pystralThreeMarkCameraMotion?.();
+            currentApp()?.camera_nav(direction);
+        };
+        document.getElementById('nav-up').addEventListener('click', () => cameraNav('up'));
+        document.getElementById('nav-down').addEventListener('click', () => cameraNav('down'));
+        document.getElementById('nav-left').addEventListener('click', () => cameraNav('left'));
+        document.getElementById('nav-right').addEventListener('click', () => cameraNav('right'));
+
+        document.getElementById('action-up').addEventListener('click', () => window.sendActionInput('up'));
+        document.getElementById('action-down').addEventListener('click', () => window.sendActionInput('down'));
+        document.getElementById('action-left').addEventListener('click', () => window.sendActionInput('left'));
+        document.getElementById('action-right').addEventListener('click', () => window.sendActionInput('right'));
+        document.getElementById('action-layer-up').addEventListener('click', () => window.sendActionInput('layer-up'));
+        document.getElementById('action-layer-down').addEventListener('click', () => window.sendActionInput('layer-down'));
+        document.getElementById('action-confirm').addEventListener('click', () => window.sendActionInput('confirm'));
+        document.getElementById('action-wait').addEventListener('click', () => window.sendActionInput('end-turn'));
+        document.querySelectorAll('.action-face').forEach((button) => {
+            button.addEventListener('click', () => window.sendActionInput(`face:${button.dataset.facing}`));
+        });
+        document.getElementById('action-return').addEventListener('click', () => window.sendActionInput('return'));
+
+        const testOccupy = document.getElementById('test-occupy-destination');
+        if (new URLSearchParams(window.location.search).has('test')) {
+            testOccupy.style.display = 'block';
+            testOccupy.addEventListener('click', () => currentApp()?.action_nav('test-occupy'));
+        }
+
+        const debugCheckbox = document.getElementById('debug-checkbox');
+        debugCheckbox.addEventListener('change', (e) => {
+            currentApp()?.set_debug_mode(e.target.checked);
+        });
+
+        document.getElementById('history-step-ms').addEventListener('change', (e) => {
+            currentApp()?.set_history_step_ms(Number(e.target.value));
+        });
+        
+        let errorMode = false;
+        const errorDisplay = document.getElementById('error-display');
+        errorDisplay.addEventListener('click', () => {
+            errorMode = !errorMode;
+            currentApp()?.set_broken_mode(errorMode);
+            if (errorMode) {
+                errorDisplay.style.border = "1px solid red";
+            } else {
+                errorDisplay.style.border = "none";
+            }
+        });
+    }
+    startAttempt().catch(console.error);
+</script>
+</body>
+</html>

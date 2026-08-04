@@ -1,0 +1,576 @@
+use npc_engine_core::{AgentId, Context, ContextMut, MCTS, MCTSConfiguration, StateDiffRefMut};
+use npc_engine_utils::GlobalDomain;
+use pystral_core::log::GameOutcome;
+use pystral_core::log::{AvailableAbility, AvailableActions, AvailableJobActions, AvailableMove};
+use pystral_games::*;
+use std::collections::{HashMap, HashSet, VecDeque};
+use std::hash::{Hash, Hasher};
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct NpcPlanningPolicy {
+    pub minimum_hit_probability: f32,
+    pub allow_desperation: bool,
+}
+
+impl Default for NpcPlanningPolicy {
+    fn default() -> Self {
+        Self {
+            minimum_hit_probability: 0.20,
+            allow_desperation: false,
+        }
+    }
+}
+
+#[derive(Clone)]
+pub struct TacticalSimulation {
+    pub state: TacticalState,
+    pub scheduler: CTScheduler,
+    pub config: MCTSConfiguration,
+    pub planning_policy: NpcPlanningPolicy,
+    pub maximum_turn_count: u32,
+    pub completed_rounds: u32,
+    completed_turns: HashSet<AgentId>,
+    ready_queue: VecDeque<AgentId>,
+    npc_facing_pending: HashSet<AgentId>,
+}
+
+#[cfg(test)]
+#[path = "simulation_tests.rs"]
+mod tests;
+impl TacticalSimulation {
+    pub fn is_player_controlled(&self, agent: AgentId) -> bool {
+        self.state.controllers.get(&agent) == Some(&UnitController::Player)
+    }
+
+    pub fn is_alive(&self, agent: AgentId) -> bool {
+        self.state
+            .agents
+            .get(&agent)
+            .is_some_and(|unit| unit.health > 0)
+    }
+
+    fn action_is_plannable(&self, agent: AgentId, action: &TacticalDisplayAction) -> bool {
+        match action {
+            TacticalDisplayAction::Ability { target, ability } => {
+                let probability =
+                    ability_success_probability(&self.state, agent, *target, *ability);
+                probability >= self.planning_policy.minimum_hit_probability
+                    || (self.planning_policy.allow_desperation
+                        && ability_can_kill_with_any_modifier(
+                            &self.state,
+                            agent,
+                            *target,
+                            *ability,
+                        ))
+            }
+            // Reactions are forced responses and must not be filtered by the
+            // ordinary attack policy.
+            TacticalDisplayAction::Reaction { .. }
+            | TacticalDisplayAction::Move { .. }
+            | TacticalDisplayAction::Wait
+            | TacticalDisplayAction::Face { .. } => true,
+        }
+    }
+
+    pub fn from_scenario(scenario: SkirmishConfig, config: MCTSConfiguration) -> Self {
+        let mut state = scenario
+            .build_state()
+            .expect("validated skirmish configuration");
+        let scheduler = CTScheduler::new(scenario.ct_threshold);
+        scheduler.initialize_ct(&mut state);
+
+        Self {
+            state,
+            scheduler,
+            config,
+            planning_policy: NpcPlanningPolicy::default(),
+            maximum_turn_count: scenario.maximum_turn_count,
+            completed_rounds: 0,
+            completed_turns: HashSet::new(),
+            ready_queue: VecDeque::new(),
+            npc_facing_pending: HashSet::new(),
+        }
+    }
+
+    /// Advance the scheduler to the next control boundary without choosing an
+    /// action. The runtime owns the decision that follows this boundary.
+    pub fn advance_to_boundary(&mut self) -> Result<Vec<AgentId>, String> {
+        loop {
+            if let Some(ready) = self.advance_to_boundary_budgeted(usize::MAX)? {
+                return Ok(ready);
+            }
+        }
+    }
+
+    pub fn advance_to_boundary_budgeted(
+        &mut self,
+        max_ticks: usize,
+    ) -> Result<Option<Vec<AgentId>>, String> {
+        if self.is_complete() {
+            return Ok(Some(Vec::new()));
+        }
+        while let Some(agent) = self.ready_queue.pop_front() {
+            if self.is_alive(agent) {
+                return Ok(Some(vec![agent]));
+            }
+        }
+        let ready_agents = self
+            .scheduler
+            .tick_until_ready_budgeted(&mut self.state, max_ticks);
+        let Some(ready_agents) = ready_agents else {
+            return Ok(None);
+        };
+        self.ready_queue.extend(ready_agents);
+        while let Some(agent) = self.ready_queue.pop_front() {
+            if self.is_alive(agent) {
+                return Ok(Some(vec![agent]));
+            }
+        }
+        Ok(None)
+    }
+
+    /// Return only a serializable gameplay action. Engine task objects never
+    /// cross the runtime/controller boundary.
+    pub fn request_npc_decision(&self, agent: AgentId) -> Option<TacticalDisplayAction> {
+        if self.npc_facing_pending.contains(&agent) {
+            let attacker = self.state.agents.get(&agent)?;
+            let facing = self
+                .state
+                .agents
+                .iter()
+                .filter(|(id, unit)| {
+                    **id != agent && unit.health > 0 && unit.team_id != attacker.team_id
+                })
+                .min_by_key(|(_, unit)| attacker.position.hex.distance_to(unit.position.hex))
+                .and_then(|(_, unit)| {
+                    Facing::direction_to(attacker.position.hex, unit.position.hex)
+                })
+                .unwrap_or(attacker.facing);
+            return Some(TacticalDisplayAction::Face { facing });
+        }
+        if self.state.controllers.get(&agent) == Some(&UnitController::WaitOnly) {
+            return Some(TacticalDisplayAction::Wait);
+        }
+        let diff = TacticalDiff::default();
+        let context = Context::with_state_and_diff(0, &self.state, &diff, agent);
+        let tasks = TacticalDomain::get_tasks(context);
+        let mut planning_tasks = tasks
+            .iter()
+            .filter(|task| {
+                task.is_valid(context) && self.action_is_plannable(agent, &task.display_action())
+            })
+            .collect::<Vec<_>>();
+        if planning_tasks.is_empty() {
+            // The runtime fallback still owns the final decision, but an
+            // empty legal root set is a state/protocol error rather than a
+            // reason to reintroduce invalid tasks into MCTS.
+            return None;
+        }
+        // Multiple engine tasks can represent the same gameplay action (for
+        // example, equivalent composite movement/action variants). MCTS only
+        // returns a display action and the runtime revalidates that action, so
+        // retaining duplicate display actions creates redundant root edges,
+        // task clones, and rollouts. Keep the first task to preserve the
+        // deterministic ordering supplied by TacticalDomain::get_tasks.
+        let mut seen_actions = HashSet::new();
+        planning_tasks.retain(|task| seen_actions.insert(task.display_action()));
+        let root_tasks = planning_tasks.iter().map(|task| task.box_clone()).collect();
+        // TODO: Late-game branching can otherwise monopolize the simulation worker?
+        // need to reduce symmetry of search options.
+        let mut search_config = self.config.clone();
+        let snapshot_seed = self.snapshot_fingerprint() ^ (agent.0 as u64).rotate_left(17);
+        search_config.seed = Some(search_config.seed.unwrap_or(0) ^ snapshot_seed);
+        if !self.completed_turns.is_empty() {
+            search_config.visits = search_config.visits.min(1);
+            search_config.depth = search_config.depth.min(1);
+        }
+        // A one-visit/one-ply late-turn search cannot learn anything beyond
+        // the immediate root-action heuristic below, but constructing MCTS
+        // still clones the complete state and allocates a search tree. Skip
+        // that setup in the explicitly capped mode. The root scorer remains
+        // deterministic and the same action validation/fallback path applies.
+        let candidate = if search_config.visits <= 1 && search_config.depth <= 1 {
+            None
+        } else {
+            let mut mcts = MCTS::<TacticalDomain>::new_with_root_tasks(
+                self.state.clone(),
+                agent,
+                root_tasks,
+                search_config,
+            );
+            mcts.run()
+        };
+        let score_after = |task: &Box<dyn npc_engine_core::Task<TacticalDomain>>| {
+            let mut task_diff = TacticalDiff::default();
+            task.execute(ContextMut {
+                tick: 0,
+                state_diff: StateDiffRefMut {
+                    initial_state: &self.state,
+                    diff: &mut task_diff,
+                },
+                agent,
+            });
+            // The value function reads through StateDiffRef, which overlays
+            // changed agents on the immutable snapshot. Applying the diff to
+            // a cloned TacticalState here duplicated that overlay work and
+            // cloned the grid, registries, collision map, RNG, and logger for
+            // every root task. Score directly against the diff instead.
+            TacticalDomain::get_current_value(
+                0,
+                Context::with_state_and_diff(0, &self.state, &task_diff, agent).state_diff,
+                agent,
+            )
+        };
+        let scored_tasks = planning_tasks
+            .iter()
+            .map(|task| (task.display_action(), score_after(task)))
+            .collect::<Vec<_>>();
+        let best = scored_tasks
+            .iter()
+            .max_by(|left, right| left.1.cmp(&right.1))?;
+        let baseline = best.1 - 5.0;
+        let candidate_action = candidate.as_ref().map(|task| task.display_action());
+        let current_root_task = candidate_action.as_ref().and_then(|action| {
+            planning_tasks
+                .iter()
+                .find(|task| task.display_action() == *action && task.is_valid(context))
+        });
+        let candidate_score = candidate_action.as_ref().and_then(|action| {
+            scored_tasks
+                .iter()
+                .find(|(legal_action, _)| legal_action == action)
+                .map(|(_, score)| score)
+        });
+        let candidate_is_acceptable =
+            current_root_task.is_some() && candidate_score.is_some_and(|score| *score >= baseline);
+        if candidate_is_acceptable {
+            // MCTS may return a task object reached through a deeper search
+            // node. Return the equivalent task from the immutable root task
+            // set so embedded state (notably projectile collision data) is
+            // from the snapshot that will be revalidated and committed.
+            current_root_task.map(|task| task.display_action())
+        } else {
+            Some(best.0.clone())
+        }
+    }
+
+    pub fn wait_decision(&self, _agent: AgentId) -> TacticalDisplayAction {
+        TacticalDisplayAction::Wait
+    }
+
+    /// Select a valid emergency action from the current snapshot. Reactions
+    /// must win over Wait because a unit with a pending reaction is not
+    /// allowed to advance its turn until that reaction is resolved.
+    pub fn fallback_npc_action(&self, agent: AgentId) -> Option<TacticalDisplayAction> {
+        let diff = TacticalDiff::default();
+        TacticalDomain::get_tasks(Context::with_state_and_diff(0, &self.state, &diff, agent))
+            .into_iter()
+            .find(|task| task.is_valid(Context::with_state_and_diff(0, &self.state, &diff, agent)))
+            .map(|task| task.display_action())
+    }
+
+    /// Stable fingerprint for the gameplay snapshot used by target queries.
+    /// Hash-map iteration order is excluded so menu/commit comparisons remain
+    /// deterministic across independently rebuilt snapshots.
+    pub fn snapshot_fingerprint(&self) -> u64 {
+        let mut agents = self.state.agents.iter().collect::<Vec<_>>();
+        agents.sort_by_key(|(id, _)| **id);
+        let mut hasher = std::collections::hash_map::DefaultHasher::new();
+        for (id, unit) in agents {
+            id.hash(&mut hasher);
+            unit.hash(&mut hasher);
+            self.state.controllers.get(id).hash(&mut hasher);
+            self.state.summons.get(id).hash(&mut hasher);
+        }
+        self.state.grid.tiles.len().hash(&mut hasher);
+        self.state.ability_registry.len().hash(&mut hasher);
+        let mut reactions = self.state.reaction_queue.clone();
+        reactions.sort_by_key(|(agent, reaction, target)| (agent.0, reaction.0, target.0));
+        reactions.hash(&mut hasher);
+        hasher.finish()
+    }
+
+    /// Rebuild and revalidate a typed candidate against the current state.
+    /// MCTS tasks are intentionally not transported across the runtime
+    /// boundary; the action is matched against the current legal task set.
+    pub fn apply_npc_action(
+        &mut self,
+        agent: AgentId,
+        action: TacticalDisplayAction,
+    ) -> Result<TacticalDisplayAction, String> {
+        if !self.is_alive(agent) {
+            return Err(format!("agent {} is dead", agent.0));
+        }
+        if let TacticalDisplayAction::Face { facing } = action {
+            if !self.npc_facing_pending.remove(&agent) {
+                return Err(format!(
+                    "agent {} cannot face outside its turn-ending action",
+                    agent.0
+                ));
+            }
+            self.state
+                .agents
+                .get_mut(&agent)
+                .expect("alive agent")
+                .facing = facing;
+            return Ok(action);
+        }
+        // Reactions are mandatory and this is the final authoritative action
+        // boundary.  Keep the invariant here as well as in controller
+        // adapters: an ordinary candidate must never be rejected merely
+        // because a reaction was queued between planning and commit.
+        if !matches!(action, TacticalDisplayAction::Reaction { .. }) {
+            let forced_reaction = self
+                .state
+                .reaction_queue
+                .iter()
+                .find(|(reaction_agent, _, _)| *reaction_agent == agent)
+                .map(|(_, reaction, target)| TacticalDisplayAction::Reaction {
+                    reaction: *reaction,
+                    target: *target,
+                });
+            if let Some(reaction) = forced_reaction {
+                let before_reaction = self.clone();
+                self.apply_npc_action(agent, reaction)?;
+                if let Err(error) = self.apply_npc_action(agent, action.clone()) {
+                    *self = before_reaction;
+                    return Err(error);
+                }
+                return Ok(action);
+            }
+        }
+        let mut diff = TacticalDiff::default();
+        let tasks =
+            TacticalDomain::get_tasks(Context::with_state_and_diff(0, &self.state, &diff, agent));
+        let context = Context::with_state_and_diff(0, &self.state, &diff, agent);
+        let legal_actions = tasks
+            .iter()
+            .filter(|task| task.is_valid(context))
+            .map(|task| task.display_action())
+            .collect::<Vec<_>>();
+        let Some(task) = tasks
+            .into_iter()
+            .find(|task| task.display_action() == action && task.is_valid(context))
+        else {
+            let actor = self
+                .state
+                .agents
+                .get(&agent)
+                .map(|unit| {
+                    format!(
+                        "position={:?}, layer={}, health={}, ap={}",
+                        unit.position.hex, unit.position.layer, unit.health, unit.action_points
+                    )
+                })
+                .unwrap_or_else(|| "missing actor".to_string());
+            return Err(format!(
+                "NPC candidate {:?} failed revalidation for agent {} (snapshot={}, {}, legal_actions={:?})",
+                action,
+                agent.0,
+                self.snapshot_fingerprint(),
+                actor,
+                legal_actions
+            ));
+        };
+        let context = ContextMut {
+            tick: 0,
+            state_diff: StateDiffRefMut {
+                initial_state: &self.state,
+                diff: &mut diff,
+            },
+            agent,
+        };
+        task.execute(context);
+        let previous = self.state.clone();
+        TacticalDomain::apply(&mut self.state, &previous, &diff);
+        if let (Some(before), Some(after)) = (
+            previous.agents.get(&agent),
+            self.state.agents.get_mut(&agent),
+        ) && let Some(facing) = Facing::from_step(before.position.hex, after.position.hex)
+        {
+            after.facing = facing;
+        }
+        self.state.cleanup_orphaned_summons();
+        // Every committed NPC action ends that unit's turn. Restricting this
+        // to Wait left move/ability turns out of the round ledger, so the
+        // late-turn MCTS cap never activated during real combat and the
+        // worker could monopolize the browser on repeated NPC actions.
+        self.record_completed_turn(agent);
+        if !matches!(action, TacticalDisplayAction::Reaction { .. }) {
+            self.npc_facing_pending.insert(agent);
+        }
+        Ok(action)
+    }
+
+    /// Resolve a cell-centered area ability atomically. The selected cell is
+    /// validated against the live snapshot before spending resources or
+    /// applying any affected-unit changes.
+    pub fn commit_area_ability(
+        &mut self,
+        agent: AgentId,
+        ability: AbilityId,
+        center: GridCell,
+    ) -> Result<Vec<AgentId>, String> {
+        let attacker = self
+            .state
+            .agents
+            .get(&agent)
+            .cloned()
+            .ok_or_else(|| format!("Unknown unit {}", agent.0))?;
+        let definition = self
+            .state
+            .ability_registry
+            .get(&ability)
+            .cloned()
+            .ok_or_else(|| format!("Unknown ability {}", ability.0))?;
+        if !matches!(
+            definition.target_rule,
+            AbilityTargetRule::AreaCell | AbilityTargetRule::EmptyCell
+        ) {
+            return Err(format!("Ability {} is not cell-targeted", ability.0));
+        }
+        if !self.state.grid.contains(center)
+            || attacker.position.layer.abs_diff(center.layer) > u32::from(definition.range)
+            || attacker.position.hex.distance_to(center.hex) > i32::from(definition.range)
+        {
+            return Err("Area center is outside the ability range".to_string());
+        }
+        let cost = definition.resolve_cost(&attacker.turn_tags);
+        if !cost.can_pay(&attacker) {
+            return Err("Insufficient resources".to_string());
+        }
+        let mut affected = self
+            .state
+            .agents
+            .iter()
+            .filter(|(id, unit)| {
+                matches!(definition.target_rule, AbilityTargetRule::AreaCell)
+                    && **id != agent
+                    && unit.health > 0
+                    && unit.team_id != attacker.team_id
+                    && unit.position.layer == center.layer
+                    && unit.position.hex.distance_to(center.hex)
+                        <= i32::from(definition.area_radius)
+            })
+            .map(|(id, _)| *id)
+            .collect::<Vec<_>>();
+        if matches!(definition.target_rule, AbilityTargetRule::AreaCell) && affected.is_empty() {
+            return Err("Area center has no legal enemy targets".to_string());
+        }
+        if matches!(definition.target_rule, AbilityTargetRule::EmptyCell)
+            && self
+                .state
+                .agents
+                .values()
+                .any(|unit| unit.health > 0 && unit.position == center)
+        {
+            return Err("Target cell is occupied".to_string());
+        }
+        let state_before = self.state.clone();
+        let mut rng = self.state.rng.clone();
+        let modifier = self
+            .state
+            .agents
+            .get_mut(&agent)
+            .expect("validated attacker");
+        cost.apply_to(modifier)?;
+        if matches!(definition.target_rule, AbilityTargetRule::AreaCell) {
+            let card = modifier.modifier_deck.draw(&mut rng);
+            self.state.rng = rng;
+            let attacker_snapshot = self.state.agents[&agent].clone();
+            let on_kill_heal = attacker_snapshot
+                .passive_abilities
+                .iter()
+                .filter_map(|id| self.state.passive_registry.get(id))
+                .map(|passive| passive.on_kill_heal)
+                .sum::<i32>();
+            for target in &affected {
+                let defender = self.state.agents[target].clone();
+                let mut logger = Logger::default();
+                let damage = calculate_damage(
+                    &attacker_snapshot,
+                    &defender,
+                    &definition,
+                    &self.state.passive_registry,
+                    card,
+                    &mut logger,
+                );
+                if let Some(unit) = self.state.agents.get_mut(target) {
+                    unit.apply_damage(damage);
+                }
+                if defender.health > 0 && self.state.agents[target].health == 0 && on_kill_heal > 0
+                {
+                    self.state
+                        .agents
+                        .get_mut(&agent)
+                        .expect("validated attacker")
+                        .apply_healing(on_kill_heal);
+                }
+            }
+        } else {
+            let spawn_result = definition
+                .programs
+                .get(&RPGHook::OnAbilityResolve)
+                .and_then(|programs| programs.first())
+                .ok_or_else(|| "Cell-targeted summon ability has no effect program".to_string())
+                .and_then(|program| {
+                    let mut spawned = None;
+                    for op in &program.ops {
+                        if let RPGBytecode::SpawnOwnedUnit {
+                            job,
+                            maximum_active,
+                        } = op
+                        {
+                            if spawned.is_some() {
+                                return Err(
+                                    "Cell-targeted ability may spawn only one unit".to_string()
+                                );
+                            }
+                            spawned = Some(self.state.spawn_owned_unit(
+                                agent,
+                                job,
+                                center,
+                                *maximum_active,
+                            )?);
+                        }
+                    }
+                    spawned.ok_or_else(|| {
+                        "Cell-targeted summon ability has no spawn operation".to_string()
+                    })
+                });
+            match spawn_result {
+                Ok(spawned) => affected.push(spawned),
+                Err(error) => {
+                    self.state = state_before;
+                    return Err(error);
+                }
+            }
+        }
+        self.state.cleanup_orphaned_summons();
+        Ok(affected)
+    }
+
+    pub fn is_complete(&self) -> bool {
+        self.living_team_count() <= 1 || self.turn_limit_reached()
+    }
+
+    pub fn outcome(&self) -> Option<GameOutcome> {
+        if !self.is_complete() {
+            return None;
+        }
+        Some(
+            if self.living_team_count() == 0 || self.turn_limit_reached() {
+                GameOutcome::Draw
+            } else if self.winning_team() == Some(1) {
+                GameOutcome::Victory { winning_team: 1 }
+            } else {
+                GameOutcome::Defeat {
+                    winning_team: self.winning_team().expect("one living team remains"),
+                }
+            },
+        )
+    }
+}
+
+include!("simulation_actions.rs");
+include!("simulation_state_access.rs");

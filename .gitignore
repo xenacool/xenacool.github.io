@@ -1,0 +1,30 @@
+.DS_STORE
+# Isolated reverse-proxy — its own nested git repo; keep out of pystral_gate
+/.harness-proxy/
+/.harness-proxy.git/
+/node_modules
+/reference
+# Rust builds
+/target
+# This file contains environment-specific configuration like linker settings
+.cargo/config.toml
+web/pystral_gate.js
+web/pystral_gate_bg.wasm
+/assets
+.make-test.log
+.make-server.log
+# runtime dev logs (e.g. _lan_proxy.log)
+*.log
+
+# python build artifacts
+__pycache__/
+*.pyc
+# TLA+/TLC local tools and generated model-checker output
+/spec/.tla-tools/
+/spec/_build/
+/spec/*.bin
+/spec/*_TTrace_*.tla
+*.class
+web/atlas.json
+web/spritesheet.png
+web/favicon.ico

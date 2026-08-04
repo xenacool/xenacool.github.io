@@ -1,0 +1,143 @@
+const { test, expect } = require('@playwright/test');
+const { loadWithFixture, waitForGameReady } = require('./helpers');
+
+test.setTimeout(60000);
+
+test('compact HUD uses perimeter mode circles and keeps the active panel bounded', async ({ page }) => {
+  await page.setViewportSize({ width: 383, height: 852 });
+  await page.goto('/game.html');
+  await waitForGameReady(page);
+  await expect(page.locator('#hud-mode-bar')).toBeVisible();
+
+  const modeBoxes = await page.locator('#hud-mode-bar button').evaluateAll((buttons) =>
+    buttons.map((button) => {
+      const box = button.getBoundingClientRect();
+      return { width: box.width, height: box.height, top: box.top, right: box.right };
+    }),
+  );
+  expect(modeBoxes.every(({ width, height, top, right }) =>
+    width <= 38 && height <= 38 && top >= 0 && right <= 383)).toBeTruthy();
+
+  const playControls = await page.locator('#history-log-camera-controls').evaluate((panel) => {
+    const box = panel.getBoundingClientRect();
+    return { top: box.top, bottom: box.bottom, height: box.height };
+  });
+  expect(playControls.top).toBeGreaterThanOrEqual(0);
+  expect(playControls.bottom).toBeLessThanOrEqual(852);
+
+  await page.locator('#hud-mode-bar button[data-hud-mode="diagnostics"]').click();
+  const state = await page.evaluate(() => {
+    const active = document.getElementById('diagnostics-stack').getBoundingClientRect();
+    const controls = document.getElementById('history-log-camera-controls').getBoundingClientRect();
+    const visible = (id) => getComputedStyle(document.getElementById(id)).display !== 'none';
+    return {
+      active: { top: active.top, bottom: active.bottom, left: active.left, right: active.right, height: active.height },
+      controls: { top: controls.top, bottom: controls.bottom },
+      controlsVisible: getComputedStyle(document.getElementById('history-log-camera-controls')).display !== 'none',
+      actionLogVisible: visible('action-log-panel'),
+    };
+  });
+  expect(state.active.left).toBeGreaterThanOrEqual(0);
+  expect(state.active.right).toBeLessThanOrEqual(383);
+  if (state.controlsVisible) expect(state.active.bottom).toBeLessThanOrEqual(state.controls.top);
+  expect(state.active.height).toBeLessThanOrEqual(852 * 0.4);
+  expect(state.actionLogVisible).toBeFalsy();
+});
+
+test('HUD mode buttons switch the primary open panel', async ({ page }) => {
+  await page.setViewportSize({ width: 1024, height: 768 });
+  await page.goto('/game.html');
+  await waitForGameReady(page);
+
+  const expectedPanels = {
+    play: 'history-log-camera-controls',
+    actions: 'action-stack',
+    diagnostics: 'diagnostics-stack',
+  };
+  for (const [mode, expectedPanel] of Object.entries(expectedPanels)) {
+    await page.locator(`#hud-mode-bar button[data-hud-mode="${mode}"]`).click();
+    await expect(page.locator(`#${expectedPanel}`)).toBeVisible();
+    const otherPanels = Object.values(expectedPanels).filter((id) => id !== expectedPanel);
+    for (const panel of [...new Set(otherPanels)]) {
+      await expect(page.locator(`#${panel}`)).not.toBeVisible();
+    }
+    const actionLog = page.locator('#action-log-panel');
+    if (mode === 'actions') await expect(actionLog).toBeVisible();
+    else await expect(actionLog).not.toBeVisible();
+  }
+});
+
+test('player-turn unit state stays bounded without pushing the HUD dock', async ({ page }) => {
+  await loadWithFixture(page, 'player_boundary');
+  await page.setViewportSize({ width: 1024, height: 768 });
+  await page.goto('/game.html');
+  await waitForGameReady(page);
+  await page.waitForFunction(() => document.getElementById('action-menu')?.style.display === 'block', null, {
+    timeout: 40000,
+  });
+  await expect(page.locator('.action-face')).toHaveCount(6);
+  await expect(page.getByRole('button', { name: 'Face N', exact: true })).not.toBeVisible();
+  await expect(page.getByRole('button', { name: 'End Turn', exact: true })).toBeVisible();
+  await expect(page.locator('#hud-mode-bar button[data-hud-mode="actions"]')).toHaveAttribute('aria-current', 'true');
+  await expect(page.locator('#history-log-camera-controls')).not.toBeVisible();
+
+  const state = await page.evaluate(() => {
+    const ids = ['hud-mode-bar', 'history-log-camera-controls', 'action-stack', 'unit-state-panel', 'action-menu'];
+    const boxes = Object.fromEntries(ids.map((id) => {
+      const element = document.getElementById(id);
+      const rect = element.getBoundingClientRect();
+      return [id, {
+        display: getComputedStyle(element).display,
+        position: getComputedStyle(element).position,
+        top: rect.top,
+        bottom: rect.bottom,
+        left: rect.left,
+        right: rect.right,
+      }];
+    }));
+    return { boxes, viewport: { width: innerWidth, height: innerHeight } };
+  });
+
+  for (const box of Object.values(state.boxes)) {
+    if (box.display === 'none') continue;
+    expect(box.left).toBeGreaterThanOrEqual(-1);
+    expect(box.top).toBeGreaterThanOrEqual(-1);
+    expect(box.right).toBeLessThanOrEqual(state.viewport.width + 1);
+    expect(box.bottom).toBeLessThanOrEqual(state.viewport.height + 1);
+  }
+  expect(state.boxes['action-stack'].position).toBe('fixed');
+});
+
+test('empty contextual modes explain their state and keep scrolling inside the panel', async ({ page }) => {
+  await page.setViewportSize({ width: 383, height: 852 });
+  await page.goto('/game.html');
+  await waitForGameReady(page);
+
+  await page.locator('#hud-mode-bar button[data-hud-mode="actions"]').click();
+  await expect(page.locator('#unit-state-panel')).toBeVisible();
+  await expect(page.locator('#unit-state-items').evaluate((element) => element.offsetParent !== null)).resolves.toBe(true);
+  await page.locator('#hud-mode-bar button[data-hud-mode="diagnostics"]').click();
+  await expect(page.locator('#unit-state-items').evaluate((element) => element.offsetParent !== null)).resolves.toBe(false);
+
+  const scrolling = await page.locator('#history-log-camera-controls').evaluate((panel) => ({
+    overflowY: getComputedStyle(panel).overflowY,
+    bodyOverflow: getComputedStyle(document.body).overflow,
+  }));
+  expect(scrolling.overflowY).toBe('auto');
+  expect(scrolling.bodyOverflow).toBe('hidden');
+});
+
+test('Game Boy keyboard controls change modes and activate the contextual history download', async ({ page }) => {
+  await page.setViewportSize({ width: 800, height: 600 });
+  await page.goto('/game.html');
+  await waitForGameReady(page);
+  const modeBar = page.locator('#hud-mode-bar');
+  await modeBar.focus();
+
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#hud-dock')).toHaveAttribute('data-hud-mode', 'play');
+  await page.keyboard.press('Escape');
+  await page.keyboard.press('F2');
+  await expect(page.locator('#hud-dock')).toHaveAttribute('data-hud-mode', 'actions');
+  await expect(page.locator('#unit-state-panel')).toBeVisible();
+});

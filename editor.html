@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pystral Gate — Rhai Authoring</title>
+    <style>
+        :root { color-scheme: dark; font-family: system-ui, sans-serif; }
+        body { margin: 0; min-height: 100vh; background: #08101c; color: #f3f6ff; }
+        header, main { width: min(1100px, calc(100% - 32px)); margin: 0 auto; }
+        header { padding: 24px 0 8px; display: flex; justify-content: space-between; gap: 16px; align-items: baseline; }
+        header a { color: #9dccff; }
+        main { padding-bottom: 32px; }
+        .workspace { display: grid; grid-template-columns: 190px 1fr; gap: 12px; }
+        .files, .editor-panel, .results { border: 1px solid #31415e; border-radius: 8px; background: #101b2d; }
+        .files { padding: 12px; }
+        .files button { width: 100%; text-align: left; margin-bottom: 8px; }
+        button { padding: 9px 12px; border: 1px solid #52749f; border-radius: 5px; background: #1c3556; color: white; cursor: pointer; }
+        button:hover { background: #28548a; }
+        .editor-panel { padding: 12px; }
+        label { display: block; margin-bottom: 6px; color: #c1cbe0; }
+        textarea { width: 100%; min-height: 430px; box-sizing: border-box; resize: vertical; padding: 14px; border: 1px solid #52749f; border-radius: 5px; background: #07101c; color: #e9f1ff; font: 14px/1.5 ui-monospace, SFMono-Regular, monospace; tab-size: 4; }
+        .toolbar { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+        .results { margin-top: 12px; padding: 12px; }
+        #result { white-space: pre-wrap; font: 13px/1.45 ui-monospace, monospace; color: #cfe2ff; }
+        .hint { color: #aab8cf; }
+        @media (max-width: 700px) { .workspace { grid-template-columns: 1fr; } .files { display: flex; gap: 8px; } .files button { width: auto; } }
+    </style>
+</head>
+<body>
+<header>
+    <h1>Rhai authoring</h1>
+    <nav><a href="index.html">Home</a> · <a href="game.html">Play pg_rpg</a></nav>
+</header>
+<main>
+    <p class="hint">Edit an isolated in-memory workspace. Run and Test never mutate an active game.</p>
+    <section class="workspace" aria-label="Rhai workspace editor">
+        <aside class="files" aria-label="Workspace files">
+            <strong>Files</strong>
+            <button type="button" data-file="main.rhai">main.rhai</button>
+            <button type="button" data-file="tests.rhai">tests.rhai</button>
+        </aside>
+        <section class="editor-panel">
+            <label for="source">Editing <span id="active-file">main.rhai</span></label>
+            <textarea id="source" spellcheck="false" aria-label="Rhai source"></textarea>
+            <div class="toolbar">
+                <button id="run" type="button">Run</button>
+                <button id="test" type="button">Test</button>
+                <button id="export" type="button">Export workspace</button>
+            </div>
+        </section>
+    </section>
+    <section class="results" aria-live="polite">
+        <strong>Result</strong>
+        <pre id="result">Loading Rhai runtime…</pre>
+    </section>
+</main>
+<script type="module">
+    import init from './web/pystral_gate.js';
+
+    const files = {
+        'main.rhai': `fn authored_case() { return #{ status: "passed", message: "Hello from pg_rpg" }; }`,
+        'tests.rhai': `fn authored_case() { return #{ status: "passed", test: "unit health remains inspectable" }; }`,
+    };
+    const source = document.getElementById('source');
+    const result = document.getElementById('result');
+    const activeFile = document.getElementById('active-file');
+    let currentFile = 'main.rhai';
+    let runtimeReady = false;
+    const rhaiWorker = new Worker('./rhai_worker.js', { type: 'module' });
+    let nextRequestId = 1;
+    const pending = new Map();
+    rhaiWorker.onmessage = ({ data }) => {
+        if (data.phase) return;
+        const request = pending.get(data.id);
+        if (!request) return;
+        pending.delete(data.id);
+        if (data.error) request.reject(new Error(data.error));
+        else request.resolve(JSON.parse(data.result));
+    };
+
+    function selectFile(path) {
+        files[currentFile] = source.value;
+        currentFile = path;
+        activeFile.textContent = path;
+        source.value = files[path];
+        document.querySelectorAll('[data-file]').forEach((button) => {
+            button.setAttribute('aria-pressed', String(button.dataset.file === path));
+        });
+    }
+
+    function workspace() {
+        files[currentFile] = source.value;
+        return { entrypoint: 'main.rhai', files: Object.entries(files).map(([path, contents]) => ({ path, contents })) };
+    }
+
+    async function execute(caseName) {
+        if (!runtimeReady) { result.textContent = 'Rhai runtime is still loading.'; return; }
+        result.textContent = `Running ${caseName} in a fresh isolated session…`;
+        const id = nextRequestId++;
+        const response = await new Promise((resolve, reject) => {
+            pending.set(id, { resolve, reject });
+            rhaiWorker.postMessage({ id, workspace: JSON.stringify(workspace()), caseName, seed: 42 });
+        });
+        result.textContent = JSON.stringify(response, null, 2);
+    }
+
+    document.querySelectorAll('[data-file]').forEach((button) => button.addEventListener('click', () => selectFile(button.dataset.file)));
+    const executeAndReport = (caseName) => execute(caseName).catch((error) => {
+        result.textContent = JSON.stringify({ status: 'error', error: String(error) }, null, 2);
+    });
+    document.getElementById('run').addEventListener('click', () => executeAndReport('authored_case'));
+    document.getElementById('test').addEventListener('click', () => executeAndReport('authored_case'));
+    document.getElementById('export').addEventListener('click', () => {
+        files[currentFile] = source.value;
+        const blob = new Blob([JSON.stringify(workspace(), null, 2)], { type: 'application/json' });
+        const anchor = document.createElement('a');
+        anchor.href = URL.createObjectURL(blob);
+        anchor.download = 'pg-rpg-workspace.json';
+        anchor.click();
+        URL.revokeObjectURL(anchor.href);
+        result.textContent = 'Workspace export started.';
+    });
+    source.value = files[currentFile];
+    selectFile('main.rhai');
+    try { await init({ module_or_path: 'web/pystral_gate_bg.wasm' }); runtimeReady = true; result.textContent = 'Ready. Edit source, then Run or Test.'; }
+    catch (error) { result.textContent = `Runtime failed to load: ${error}`; }
+</script>
+</body>
+</html>
