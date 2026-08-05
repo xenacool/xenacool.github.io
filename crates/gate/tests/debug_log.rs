@@ -1,13 +1,13 @@
 use pystral_core::history::HistoryManager;
 use pystral_compiler::demo::generate_demo_log;
-use pystral_gate::ui_log::get_log_messages;
 use pystral_gate::render::utils::{EntityExt, RenderResultExt};
-use pystral_core::communication::WorkerBus;
+use pystral_gate::WorkerInput;
+use futures::channel::mpsc;
+use futures::StreamExt;
 
 #[test]
 fn debug_ui_log_errors() {
-    let mut bus_data = vec![0u8; 1024 * 1024];
-    let bus = unsafe { WorkerBus::from_ptr(bus_data.as_mut_ptr(), bus_data.len()) };
+    let (tx, mut rx) = mpsc::unbounded::<WorkerInput>();
 
     let mut history = HistoryManager::new();
     generate_demo_log(&mut history);
@@ -23,30 +23,27 @@ fn debug_ui_log_errors() {
         println!("Index: {}, Entities: {}", i, state.entities.len());
         for entity in &state.entities {
             if entity.id == 0 {
-                let _ = entity.get_hex_map().log_fallback(&bus);
-                let _ = entity.get_lighting().log_fallback(&bus);
+                let _ = entity.get_hex_map().log_fallback(&tx);
+                let _ = entity.get_lighting().log_fallback(&tx);
             } else if entity.kind == "camera" || entity.kind == "camera_anchor" {
-                let _ = entity.get_float("angle", 0.0).log_fallback(&bus);
-                let _ = entity.get_float("distance", 0.0).log_fallback(&bus);
-                let _ = entity.get_float("height", 0.0).log_fallback(&bus);
+                let _ = entity.get_float("angle", 0.0).log_fallback(&tx);
+                let _ = entity.get_float("distance", 0.0).log_fallback(&tx);
+                let _ = entity.get_float("height", 0.0).log_fallback(&tx);
             } else {
-                let _ = entity.get_float("scale", 1.0).log_fallback(&bus);
-                let _ = entity.get_float("z", 0.0).log_fallback(&bus);
-                let _ = entity.get_material(&state.materials).log_fallback(&bus);
-                let _ = entity.get_sprite_parts().log_fallback(&bus);
+                let _ = entity.get_float("scale", 1.0).log_fallback(&tx);
+                let _ = entity.get_float("z", 0.0).log_fallback(&tx);
+                let _ = entity.get_material(&state.materials).log_fallback(&tx);
+                let _ = entity.get_sprite_parts().log_fallback(&tx);
                 
                 if entity.kind == "arrow" {
-                    let _ = entity.get_float("rotation_z", 0.0).log_fallback(&bus);
+                    let _ = entity.get_float("rotation_z", 0.0).log_fallback(&tx);
                 }
             }
         }
         
-        let errors = get_log_messages(&bus);
-        if !errors.is_empty() {
+        while let Ok(Some(WorkerInput::Log(msg))) = rx.try_next() {
             println!("Errors at index {}:", i);
-            for err in errors {
-                println!("  - {}", err);
-            }
+            println!("  - {}", msg);
         }
     }
 }

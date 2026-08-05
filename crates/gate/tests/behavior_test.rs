@@ -1,8 +1,9 @@
 use pystral_core::history::HistoryManager;
 use pystral_compiler::demo::generate_demo_log;
-use pystral_gate::ui_log::get_log_messages;
 use pystral_gate::render::utils::{EntityExt, RenderResultExt};
-use pystral_core::communication::WorkerBus;
+use pystral_gate::WorkerInput;
+use futures::channel::mpsc;
+use futures::StreamExt;
 
 #[test]
 fn test_history_behavior_at_boundaries() {
@@ -32,8 +33,7 @@ fn test_history_behavior_at_boundaries() {
 
 #[test]
 fn test_demo_log_rendering_behavior_strict() {
-    let mut bus_data = vec![0u8; 1024 * 1024];
-    let bus = unsafe { WorkerBus::from_ptr(bus_data.as_mut_ptr(), bus_data.len()) };
+    let (tx, mut rx) = mpsc::unbounded::<WorkerInput>();
 
     let mut history = HistoryManager::new();
     generate_demo_log(&mut history);
@@ -45,51 +45,53 @@ fn test_demo_log_rendering_behavior_strict() {
         let state = &history.current_state;
         for entity in &state.entities {
             if entity.id == 0 {
-                let _ = entity.get_hex_map().log_fallback(&bus);
-                let _ = entity.get_lighting().log_fallback(&bus);
+                let _ = entity.get_hex_map().log_fallback(&tx);
+                let _ = entity.get_lighting().log_fallback(&tx);
             } else if entity.kind == "camera" {
-                let _ = entity.get_float("angle", 0.0).log_fallback(&bus);
-                let _ = entity.get_float("distance", 0.0).log_fallback(&bus);
-                let _ = entity.get_float("height", 0.0).log_fallback(&bus);
-                let _ = entity.get_float("target_x", 0.0).log_fallback(&bus);
-                let _ = entity.get_float("target_y", 0.0).log_fallback(&bus);
-                let _ = entity.get_float("target_z", 0.0).log_fallback(&bus);
+                let _ = entity.get_float("angle", 0.0).log_fallback(&tx);
+                let _ = entity.get_float("distance", 0.0).log_fallback(&tx);
+                let _ = entity.get_float("height", 0.0).log_fallback(&tx);
+                let _ = entity.get_float("target_x", 0.0).log_fallback(&tx);
+                let _ = entity.get_float("target_y", 0.0).log_fallback(&tx);
+                let _ = entity.get_float("target_z", 0.0).log_fallback(&tx);
             } else {
-                let _ = entity.get_float("scale", 1.0).log_fallback(&bus);
-                let _ = entity.get_float("z", 0.0).log_fallback(&bus);
-                let _ = entity.get_float("rotation_z", 0.0).log_fallback(&bus);
-                let _ = entity.get_float("cam_offset_x", 0.0).log_fallback(&bus);
-                let _ = entity.get_float("cam_offset_y", 0.0).log_fallback(&bus);
-                let _ = entity.get_float("cam_offset_z", 0.0).log_fallback(&bus);
-                let _ = entity.get_material(&state.materials).log_fallback(&bus);
+                let _ = entity.get_float("scale", 1.0).log_fallback(&tx);
+                let _ = entity.get_float("z", 0.0).log_fallback(&tx);
+                let _ = entity.get_float("rotation_z", 0.0).log_fallback(&tx);
+                let _ = entity.get_float("cam_offset_x", 0.0).log_fallback(&tx);
+                let _ = entity.get_float("cam_offset_y", 0.0).log_fallback(&tx);
+                let _ = entity.get_float("cam_offset_z", 0.0).log_fallback(&tx);
+                let _ = entity.get_material(&state.materials).log_fallback(&tx);
                 
                 // Also check sprite parts and skeleton which are used in the renderer
-                let parts = entity.get_sprite_parts().log_fallback(&bus);
+                let parts = entity.get_sprite_parts().log_fallback(&tx);
                 for part in parts {
-                    let _ = entity.get_float(&part.x_prop, 0.0).log_fallback(&bus);
-                    let _ = entity.get_float(&part.y_prop, 0.0).log_fallback(&bus);
+                    let _ = entity.get_float(&part.x_prop, 0.0).log_fallback(&tx);
+                    let _ = entity.get_float(&part.y_prop, 0.0).log_fallback(&tx);
                     if let Some(rot_prop) = &part.rotation_prop {
-                        let _ = entity.get_float(rot_prop, 0.0).log_fallback(&bus);
+                        let _ = entity.get_float(rot_prop, 0.0).log_fallback(&tx);
                     }
                 }
                 
-                if let Some(skeleton) = entity.get_skeleton().log_fallback(&bus) {
+                if let Some(skeleton) = entity.get_skeleton().log_fallback(&tx) {
                     for bone in &skeleton.bones {
                         for joint in &[&bone.start, &bone.end] {
                             if let pystral_core::domain::Joint::Property(prop) = joint {
-                                let _ = entity.get_float(&format!("{}_x", prop), 0.0).log_fallback(&bus);
-                                let _ = entity.get_float(&format!("{}_y", prop), 0.0).log_fallback(&bus);
+                                let _ = entity.get_float(&format!("{}_x", prop), 0.0).log_fallback(&tx);
+                                let _ = entity.get_float(&format!("{}_y", prop), 0.0).log_fallback(&tx);
                             }
                         }
                     }
                 }
 
-                let _ = entity.get_collision().log_fallback(&bus);
+                let _ = entity.get_collision().log_fallback(&tx);
             }
         }
         
-        let errors = get_log_messages(&bus);
-        assert!(errors.is_empty(), "UI Log must be empty at index {}. Found: {:?}", i, errors);
+        // Check for errors in the channel
+        while let Ok(Some(WorkerInput::Log(msg))) = rx.try_next() {
+            panic!("UI Log error at index {}: {}", i, msg);
+        }
     }
 }
 
@@ -148,4 +150,39 @@ fn test_material_resolution_behavior() {
     let mat_res = arrow.get_material(&state.materials);
     
     assert!(mat_res.is_ok(), "Material arrow_mat should be resolved, but got: {:?}", mat_res.err().map(|e| e.message));
+}
+
+#[test]
+fn test_active_fsm_property_interpolation() {
+    use std::collections::HashMap;
+    use pystral_core::animation::{AnimationState, PropertyTrack, Keyframe, LoopBehavior, InactiveFSMDefinition, ActiveFSM};
+    use pystral_core::log::PropertyValue;
+
+    let mut states = HashMap::new();
+    states.insert("idle".to_string(), AnimationState {
+        name: "idle".to_string(),
+        tracks: vec![PropertyTrack {
+            property: "z".to_string(),
+            keyframes: vec![
+                Keyframe { time_ms: 0.0, value: PropertyValue::Float(0.0) },
+                Keyframe { time_ms: 1000.0, value: PropertyValue::Float(10.0) },
+            ],
+            loop_behavior: LoopBehavior::None,
+        }],
+    });
+    
+    let definition = InactiveFSMDefinition { states };
+    let mut fsm = ActiveFSM::new(definition, "idle".to_string(), 0.0);
+    
+    fsm.update(0.0);
+    assert_eq!(fsm.current_properties.get("z"), Some(&PropertyValue::Float(0.0)));
+    
+    fsm.update(500.0);
+    assert_eq!(fsm.current_properties.get("z"), Some(&PropertyValue::Float(5.0)));
+    
+    fsm.update(1000.0);
+    assert_eq!(fsm.current_properties.get("z"), Some(&PropertyValue::Float(10.0)));
+    
+    fsm.update(1500.0);
+    assert_eq!(fsm.current_properties.get("z"), Some(&PropertyValue::Float(10.0)));
 }

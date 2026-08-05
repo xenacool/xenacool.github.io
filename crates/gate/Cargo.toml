@@ -16,7 +16,6 @@ glam = { version = "0.30", features = ["serde"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 gloo-worker = { version = "0.6.0", features = ["futures"] }
-lazy_static = "1.4"
 wasm-bindgen-futures = "0.4"
 futures = "0.3"
 gloo-timers = { version = "0.3.0", features = ["futures"] }

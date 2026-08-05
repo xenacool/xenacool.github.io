@@ -1,12 +1,22 @@
 use hexx::Hex;
 use pystral_core::log::PropertyValue;
 
-#[derive(Default)]
 pub struct PlaybackState {
     pub playing_log: bool,
     pub playing_animations: bool,
     pub debug_mode: bool,
     pub last_tick_ms: f64,
+}
+
+impl Default for PlaybackState {
+    fn default() -> Self {
+        Self {
+            playing_log: true,
+            playing_animations: true,
+            debug_mode: false,
+            last_tick_ms: 0.0,
+        }
+    }
 }
 
 pub struct MovementTween {

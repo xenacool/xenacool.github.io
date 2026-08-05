@@ -138,21 +138,25 @@ impl LoopHandler {
         let current_idx = self.history_manager.current_index;
         let state = self.history_manager.current_state.clone();
         
-        let event = if self.ctx.last_index != current_idx && current_idx == self.ctx.last_index + 1 {
-            Some(self.history_manager.log[self.ctx.last_index].clone())
+        let event = if let Some(last_idx) = self.ctx.last_index {
+            if current_idx == last_idx + 1 {
+                Some(self.history_manager.log[last_idx].clone())
+            } else {
+                None
+            }
         } else {
             None
         };
 
-        if self.ctx.last_index != current_idx {
+        if self.ctx.last_index != Some(current_idx) {
             if let Some(e) = event {
-                let last_index = self.ctx.last_index;
+                let last_index = self.ctx.last_index.unwrap();
                 Self::handle_event_tweens_static(&mut self.ctx, &e, &self.history_manager, last_index, now);
             } else {
                 self.ctx.movement_tweens.clear();
                 self.ctx.property_tweens.clear();
             }
-            self.ctx.last_index = current_idx;
+            self.ctx.last_index = Some(current_idx);
             self.update_active_fsms(&state, now);
         }
 
