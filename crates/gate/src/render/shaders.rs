@@ -17,7 +17,7 @@ void main() {
     vFragPos = worldPos.xyz;
     vNormal = mat3(uModel) * aNormal;
     vUV = aUV;
-    vHeight = aPosition.y;
+    vHeight = worldPos.y;
     gl_Position = uProjection * uView * worldPos;
 }";
 
@@ -59,33 +59,36 @@ void main() {
         norm = normalize(mat3(uModel) * quadNormal);
     }
     vec3 viewDir = normalize(vec3(0.0, 1.0, 1.0)); // Fixed camera-ish
-
-    vec3 lighting = uAmbientColor * uAmbientIntensity;
+    
+    vec3 linearAmbient = pow(uAmbientColor, vec3(2.2));
+    vec3 lighting = linearAmbient * uAmbientIntensity;
 
     for (int i = 0; i < 4; i++) {
         vec3 L = normalize(uLights[i].direction);
+        vec3 linearLightColor = pow(uLights[i].color, vec3(2.2));
         // Diffuse
         float diff = max(dot(norm, L), 0.0);
         
         // Specular
         vec3 reflectDir = reflect(-L, norm);
         float spec = pow(max(dot(viewDir, reflectDir), 0.0), (1.0 - uRoughness) * 128.0);
-        vec3 specular = uMetalness * spec * uLights[i].color;
+        vec3 specular = uMetalness * spec * linearLightColor;
         
-        lighting += ((diff * uLights[i].color) + specular) * uLights[i].intensity;
+        lighting += ((diff * linearLightColor) + specular) * uLights[i].intensity;
     }
 
-    vec3 color = uObjectColor;
+    vec3 color = pow(uObjectColor, vec3(2.2));
     if (uUseTexture) {
         vec4 texColor = texture2D(uTexture, vUV);
         if (texColor.a < 0.01) discard;
-        color = mix(color, texColor.rgb, texColor.a);
+        vec3 linearTexColor = pow(texColor.rgb, vec3(2.2));
+        color = mix(color, linearTexColor, texColor.a);
     }
 
-    vec3 result = lighting * color * 0.8 + (uEmissive * color);
+    vec3 result = lighting * color + (uEmissive * color);
     
     // Height-based tint/fade
     result *= (0.9 + 0.2 * vHeight);
 
-    gl_FragColor = vec4(result, 1.0);
+    gl_FragColor = vec4(pow(result, vec3(1.0/2.2)), 1.0);
 }";

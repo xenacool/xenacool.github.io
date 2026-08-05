@@ -167,11 +167,11 @@ impl Default for LightingConfig {
     fn default() -> Self {
         Self {
             ambient_color: [1.0, 1.0, 1.0],
-            ambient_intensity: 0.1,
+            ambient_intensity: 0.2,
             lights: vec![Light {
                 direction: [-1.0, -2.0, -1.0],
                 color: [1.0, 1.0, 1.0],
-                intensity: 1.0,
+                intensity: 0.8,
             }],
         }
     }
