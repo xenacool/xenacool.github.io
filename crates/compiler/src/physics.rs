@@ -3,6 +3,9 @@ use rapier3d::na::Isometry3;
 use pystral_core::domain::HexMap;
 use glam::Vec3;
 
+use serde::{Serialize, Deserialize};
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TrajectoryRequest {
     pub start: Vec3,
     pub target: Vec3,
@@ -10,6 +13,7 @@ pub struct TrajectoryRequest {
     pub gravity: f32,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TrajectoryResponse {
     pub trajectory: Vec<Vec3>,
     pub rotations: Vec<f32>,

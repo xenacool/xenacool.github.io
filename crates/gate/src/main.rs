@@ -1,63 +1,54 @@
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::{WebGlRenderingContext as GL};
-use std::sync::{Mutex, Arc};
+use std::sync::mpsc::{channel, Sender};
 use pystral_core::history::HistoryManager;
-use pystral_gate::render::{compile_shader, link_program, create_sprite_mesh, start_render_loop, VERTEX_SHADER, FRAGMENT_SHADER, PlaybackState};
-use pystral_compiler::demo::generate_demo_log;
+use pystral_gate::render::{compile_shader, link_program, create_sprite_mesh, start_render_loop, VERTEX_SHADER, FRAGMENT_SHADER};
+use pystral_gate::{AppCommand, WorkerOutput, ReliableOutput, WorkerInput, ReliableInput, Envelope};
+use futures::StreamExt;
+use futures::SinkExt;
+use pystral_gate::worker::UnifiedWorker;
 
-lazy_static::lazy_static! {
-    static ref HISTORY: Arc<Mutex<Option<HistoryManager>>> = Arc::new(Mutex::new(None));
-    static ref PLAYBACK: Arc<Mutex<PlaybackState>> = Arc::new(Mutex::new(PlaybackState::default()));
+#[wasm_bindgen]
+pub struct AppHandle {
+    sender: Sender<AppCommand>,
 }
 
 #[wasm_bindgen]
-pub fn set_history_index(index: u32) {
-    if let Ok(mut history) = HISTORY.lock() {
-        if let Some(h) = history.as_mut() {
-            h.jump_to(index as usize);
+impl AppHandle {
+    pub fn set_history_index(&self, index: u32) {
+        let _ = self.sender.send(AppCommand::SetHistoryIndex(index));
+    }
+
+    pub fn toggle_play_log(&self) {
+        let _ = self.sender.send(AppCommand::TogglePlayLog);
+    }
+
+    pub fn toggle_play_animations(&self) {
+        let _ = self.sender.send(AppCommand::TogglePlayAnimations);
+    }
+
+    pub fn set_debug_mode(&self, enabled: bool) {
+        let _ = self.sender.send(AppCommand::SetDebugMode(enabled));
+    }
+
+    pub fn set_broken_mode(&self, enabled: bool) {
+        pystral_core::render::ERROR_MODE_ENABLED.store(enabled, std::sync::atomic::Ordering::Relaxed);
+    }
+
+    pub fn update_history(&self, json: String) {
+        if let Ok(history) = serde_json::from_str::<HistoryManager>(&json) {
+            let _ = self.sender.send(AppCommand::UpdateHistory(history));
         }
     }
-}
 
-#[wasm_bindgen]
-pub fn get_log_length() -> u32 {
-    if let Ok(history) = HISTORY.lock() {
-        if let Some(h) = history.as_ref() {
-            return h.log.len() as u32;
-        }
-    }
-    0
-}
-
-#[wasm_bindgen]
-pub fn toggle_play_log() {
-    if let Ok(mut pb) = PLAYBACK.lock() {
-        pb.playing_log = !pb.playing_log;
+    pub fn camera_nav(&self, direction: String) {
+        let _ = self.sender.send(AppCommand::CameraNav(direction));
     }
 }
 
 #[wasm_bindgen]
-pub fn toggle_play_animations() {
-    if let Ok(mut pb) = PLAYBACK.lock() {
-        pb.playing_animations = !pb.playing_animations;
-    }
-}
-
-#[wasm_bindgen]
-pub fn set_debug_mode(enabled: bool) {
-    if let Ok(mut pb) = PLAYBACK.lock() {
-        pb.debug_mode = enabled;
-    }
-}
-
-#[wasm_bindgen]
-pub fn set_broken_mode(enabled: bool) {
-    pystral_core::render::ERROR_MODE_ENABLED.store(enabled, std::sync::atomic::Ordering::Relaxed);
-}
-
-#[wasm_bindgen(start)]
-pub fn run() -> Result<(), JsValue> {
+pub fn run_app() -> Result<AppHandle, JsValue> {
     let document = web_sys::window().unwrap().document().unwrap();
     let canvas = document.get_element_by_id("canvas").unwrap()
         .dyn_into::<web_sys::HtmlCanvasElement>()?;
@@ -70,14 +61,11 @@ pub fn run() -> Result<(), JsValue> {
     let program = link_program(&gl, &vert_shader, &frag_shader)?;
     gl.use_program(Some(&program));
 
-    // Initialize history with some data
+    // Initialize history with empty data
     let mut history = HistoryManager::new();
-    generate_demo_log(&mut history);
     history.jump_to(0);
 
-    if let Ok(mut h) = HISTORY.lock() {
-        *h = Some(history);
-    }
+    pystral_gate::render::set_ui_slider_max(history.log.len() as u32);
 
     let sprite_mesh = create_sprite_mesh(&gl);
 
@@ -85,9 +73,66 @@ pub fn run() -> Result<(), JsValue> {
     gl.enable(GL::CULL_FACE);
     gl.clear_color(0.1, 0.1, 0.1, 1.0);
     
-    start_render_loop(gl, program, sprite_mesh, HISTORY.clone(), PLAYBACK.clone());
+    let (app_tx, app_rx) = channel();
+    let (worker_tx, mut worker_rx) = futures::channel::mpsc::unbounded::<WorkerInput>();
+    
+    // Request initial demo log with a delay to ensure worker is ready
+    let worker_tx_clone = worker_tx.clone();
+    wasm_bindgen_futures::spawn_local(async move {
+        gloo_timers::future::TimeoutFuture::new(2000).await;
+        let _ = worker_tx_clone.unbounded_send(WorkerInput::CompilerTask(pystral_compiler::task::CompilerTask::GenerateDemoLog));
+    });
 
-    Ok(())
+    let bridge = UnifiedWorker::spawn();
+    let (mut bridge_sender, mut bridge_listener) = bridge.split();
+    
+    let app_tx_clone = app_tx.clone();
+    wasm_bindgen_futures::spawn_local(async move {
+        use futures::StreamExt;
+        while let Some(output) = bridge_listener.next().await {
+            match output {
+                ReliableOutput::Msg(envelope) => {
+                    match envelope.msg {
+                        WorkerOutput::LogUpdate { messages, total_errors } => {
+                            update_log_ui(messages, total_errors);
+                        }
+                        WorkerOutput::CompilerResponse(res) => {
+                            match res {
+                                pystral_compiler::task::CompilerResponse::DemoLogGenerated(history) => {
+                                    let _ = app_tx_clone.send(AppCommand::UpdateHistory(history));
+                                }
+                                _ => {}
+                            }
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+    });
+
+    wasm_bindgen_futures::spawn_local(async move {
+        use futures::StreamExt;
+        let mut next_seq = 1u64;
+        while let Some(input) = worker_rx.next().await {
+            let envelope = Envelope {
+                seq: next_seq,
+                msg: input,
+            };
+            next_seq += 1;
+            let _ = bridge_sender.send(ReliableInput::Msg(envelope)).await;
+        }
+    });
+
+    start_render_loop(gl, program, sprite_mesh, history, app_rx, worker_tx);
+
+    Ok(AppHandle { sender: app_tx })
+}
+
+#[wasm_bindgen]
+extern "C" {
+    #[wasm_bindgen(js_namespace = window)]
+    fn update_log_ui(messages: Vec<String>, total_errors: u32);
 }
 
 fn main() {}

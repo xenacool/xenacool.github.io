@@ -19,20 +19,20 @@ pub fn update_canvas_size(ctx: &RenderContext) -> (u32, u32) {
     (width, height)
 }
 
-pub fn setup_camera(ctx: &RenderContext, state: &WorldState, width: u32, height: u32) -> (Mat4, Mat4, Vec3, Vec3, Vec3) {
+pub fn setup_camera(ctx: &mut RenderContext, worker_tx: &futures::channel::mpsc::UnboundedSender<crate::WorkerInput>, state: &WorldState, width: u32, height: u32) -> (Mat4, Mat4, Vec3, Vec3, Vec3) {
     let mut cam_dist = 20.0;
     let mut angle = 0.0;
     let mut height_val = 12.0;
     let mut target = Vec3::ZERO;
 
     if let Some(cam) = state.entities.iter().find(|e| e.kind == "camera") {
-        angle = cam.get_float("angle", 0.0).log_fallback();
-        cam_dist = cam.get_float("distance", 20.0).log_fallback();
-        height_val = cam.get_float("height", 12.0).log_fallback();
+        angle = cam.get_float("angle", 0.0).log_fallback(worker_tx);
+        cam_dist = cam.get_float("distance", 20.0).log_fallback(worker_tx);
+        height_val = cam.get_float("height", 12.0).log_fallback(worker_tx);
         target = Vec3::new(
-            cam.get_float("target_x", 0.0).log_fallback(),
-            cam.get_float("target_y", 0.0).log_fallback(),
-            cam.get_float("target_z", 0.0).log_fallback(),
+            cam.get_float("target_x", 0.0).log_fallback(worker_tx),
+            cam.get_float("target_y", 0.0).log_fallback(worker_tx),
+            cam.get_float("target_z", 0.0).log_fallback(worker_tx),
         );
     }
 

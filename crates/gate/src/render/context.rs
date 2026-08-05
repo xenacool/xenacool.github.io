@@ -60,6 +60,7 @@ pub struct RenderContext {
     pub bone_textures: HashMap<(u64, usize), (Vec<pystral_core::domain::PainterCommand>, TextureSet)>,
     pub spritestack_assets: HashMap<String, SpritestackTextures>,
     pub asset_collection_cache: HashMap<String, pystral_compiler::assets::AssetCollection>,
+    pub next_seq: u64,
 }
 
 impl RenderContext {
@@ -106,6 +107,7 @@ impl RenderContext {
             bone_textures: HashMap::new(),
             spritestack_assets: HashMap::new(),
             asset_collection_cache: HashMap::new(),
+            next_seq: 1,
         }
     }
 }

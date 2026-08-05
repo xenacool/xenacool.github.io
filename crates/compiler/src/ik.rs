@@ -10,6 +10,7 @@ pub struct Vec3 {
 }
 
 /// A request to solve an IK problem for a specific time or frame.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct IkRequest {
     pub rig_id: String,
     pub targets: HashMap<String, Vec3>,
@@ -17,6 +18,7 @@ pub struct IkRequest {
 }
 
 /// The result of an IK solver pass.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct IkResponse {
     pub joints: HashMap<String, Vec3>,
 }

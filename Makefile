@@ -1,4 +1,15 @@
-.PHONY: build-wasm run-web deploy test nuke-deploy
+.PHONY: build-wasm run-web deploy test nuke-deploy playwright-install playwright-test playwright
+
+playwright: playwright-install playwright-test
+
+playwright-install:
+	@echo "Installing Playwright and dependencies..."
+	npm install
+	npx playwright install --with-deps
+
+playwright-test: build-wasm
+	@echo "Running Playwright tests..."
+	npx playwright test
 
 FN_LIMIT := 200
 
@@ -69,7 +80,7 @@ test:
 
 
 run-web: build-wasm
-	python3 -m http.server -b 0.0.0.0 8000
+	python3 scripts/server.py 8000
 
 slice-demo:
 	@echo "Automation removed. Assets are now manually defined in pystral_compiler."

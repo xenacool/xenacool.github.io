@@ -71,6 +71,8 @@ fn setup_camera(history: &mut HistoryManager) {
     history.push_and_apply(Event::UpdateProperty { id: 2, property: "target_x".to_string(), value: PropertyValue::Float(0.0) });
     history.push_and_apply(Event::UpdateProperty { id: 2, property: "target_y".to_string(), value: PropertyValue::Float(0.0) });
     history.push_and_apply(Event::UpdateProperty { id: 2, property: "target_z".to_string(), value: PropertyValue::Float(0.0) });
+    history.push_and_apply(Event::UpdateProperty { id: 2, property: "neighbor_right".to_string(), value: PropertyValue::Float(2.0) });
+    history.push_and_apply(Event::UpdateProperty { id: 2, property: "neighbor_left".to_string(), value: PropertyValue::Float(2.0) });
 }
 
 fn setup_world(history: &mut HistoryManager) {

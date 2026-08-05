@@ -9,32 +9,43 @@ use crate::render::context::RenderContext;
 use crate::render::state::{PlaybackState, MovementTween, PropertyTween};
 use crate::render::update_ui_slider;
 use crate::render::utils::interpolate_property;
+use crate::AppCommand;
 use self::camera::{update_canvas_size, setup_camera};
 use self::scene::draw_scene;
+use crate::WorkerInput;
+use std::sync::mpsc::Receiver;
 
 pub struct LoopHandler {
     pub ctx: RenderContext,
-    pub history_manager: std::sync::Arc<std::sync::Mutex<Option<HistoryManager>>>,
-    pub playback_state: std::sync::Arc<std::sync::Mutex<PlaybackState>>,
+    pub history_manager: HistoryManager,
+    pub playback_state: PlaybackState,
+    pub app_rx: Receiver<AppCommand>,
+    pub worker_tx: futures::channel::mpsc::UnboundedSender<crate::WorkerInput>,
     pub accumulator: f64,
 }
 
 impl LoopHandler {
     pub fn new(
         ctx: RenderContext,
-        history_manager: std::sync::Arc<std::sync::Mutex<Option<HistoryManager>>>,
-        playback_state: std::sync::Arc<std::sync::Mutex<PlaybackState>>,
+        history_manager: HistoryManager,
+        app_rx: Receiver<AppCommand>,
+        worker_tx: futures::channel::mpsc::UnboundedSender<crate::WorkerInput>,
     ) -> Self {
         Self {
             ctx,
             history_manager,
-            playback_state,
+            playback_state: PlaybackState::default(),
+            app_rx,
+            worker_tx,
             accumulator: 0.0,
         }
     }
 
     pub fn tick(&mut self) {
         let now = web_sys::window().unwrap().performance().unwrap().now();
+
+        // 0. Process Commands
+        self.process_commands();
 
         // 1. Playback & History Update
         let (is_playing_anims, debug_mode, _delta) = self.update_playback_and_history(now);
@@ -48,61 +59,95 @@ impl LoopHandler {
             self.ctx.gl.clear(GL::COLOR_BUFFER_BIT | GL::DEPTH_BUFFER_BIT);
 
             // 5. Camera & View Matrices
-            let (_view, _proj, cam_right, cam_up, cam_forward) = setup_camera(&self.ctx, &state, width, height);
+            let (_view, _proj, cam_right, cam_up, cam_forward) = setup_camera(&mut self.ctx, &self.worker_tx, &state, width, height);
 
             // 6. Draw Scene
-            draw_scene(&mut self.ctx, state, cam_right, cam_up, cam_forward, debug_mode, now, is_playing_anims);
+            draw_scene(&mut self.ctx, &self.worker_tx, state, cam_right, cam_up, cam_forward, debug_mode, now, is_playing_anims);
         }
     }
 
-    fn update_playback_and_history(&mut self, now: f64) -> (bool, bool, f64) {
-        let mut is_playing_anims = false;
-        let mut debug_mode = false;
-        let mut delta = 0.0;
-
-        if let Ok(mut pb) = self.playback_state.lock() {
-            delta = now - pb.last_tick_ms;
-            pb.last_tick_ms = now;
-            is_playing_anims = pb.playing_animations;
-            debug_mode = pb.debug_mode;
-
-            if pb.playing_log {
-                if let Ok(mut history_lock) = self.history_manager.lock() {
-                    if let Some(history) = history_lock.as_mut() {
-                        self.accumulator += delta;
-                        if self.accumulator > 100.0 {
-                            let steps = (self.accumulator / 100.0) as usize;
-                            history.jump_to(history.current_index + steps);
-                            self.accumulator %= 100.0;
-                            update_ui_slider(history.current_index as u32);
+    fn process_commands(&mut self) {
+        // Process App Commands
+        while let Ok(cmd) = self.app_rx.try_recv() {
+            match cmd {
+                AppCommand::SetHistoryIndex(index) => {
+                    self.history_manager.jump_to(index as usize);
+                    update_ui_slider(index);
+                }
+                AppCommand::TogglePlayLog => {
+                    self.playback_state.playing_log = !self.playback_state.playing_log;
+                }
+                AppCommand::TogglePlayAnimations => {
+                    self.playback_state.playing_animations = !self.playback_state.playing_animations;
+                }
+                AppCommand::SetDebugMode(enabled) => {
+                    self.playback_state.debug_mode = enabled;
+                }
+                AppCommand::UpdateHistory(history) => {
+                    self.history_manager = history;
+                    crate::render::set_ui_slider_max(self.history_manager.log.len() as u32);
+                    crate::render::update_ui_slider(self.history_manager.current_index as u32);
+                }
+                AppCommand::CameraNav(direction) => {
+                    let mut target_cam_id = None;
+                    
+                    if let Some(cam) = self.history_manager.current_state.entities.iter().find(|e| e.kind == "camera") {
+                        let prop_name = format!("neighbor_{}", direction);
+                        if let Some(pystral_core::log::PropertyValue::Float(id)) = cam.properties.get(&prop_name) {
+                            target_cam_id = Some(*id as u64);
                         }
                     }
+
+                    if let Some(id) = target_cam_id {
+                        self.history_manager.push_and_apply(pystral_core::log::Event::TweenProperty {
+                            id,
+                            property: "angle".to_string(),
+                            value: pystral_core::log::PropertyValue::Float(0.0),
+                            duration_ms: 1000,
+                        });
+                        crate::render::set_ui_slider_max(self.history_manager.log.len() as u32);
+                    } else {
+                        let msg = format!("Camera navigation error: No {} neighbor found", direction);
+                        let _ = self.worker_tx.unbounded_send(WorkerInput::Log(msg));
+                    }
                 }
+            }
+        }
+    }
+
+
+    fn update_playback_and_history(&mut self, now: f64) -> (bool, bool, f64) {
+        let delta = now - self.playback_state.last_tick_ms;
+        self.playback_state.last_tick_ms = now;
+        let is_playing_anims = self.playback_state.playing_animations;
+        let debug_mode = self.playback_state.debug_mode;
+
+        if self.playback_state.playing_log {
+            self.accumulator += delta;
+            if self.accumulator > 100.0 {
+                let steps = (self.accumulator / 100.0) as usize;
+                self.history_manager.jump_to(self.history_manager.current_index + steps);
+                self.accumulator %= 100.0;
+                update_ui_slider(self.history_manager.current_index as u32);
             }
         }
         (is_playing_anims, debug_mode, delta)
     }
 
     fn get_current_state(&mut self, now: f64, is_playing_anims: bool) -> Option<WorldState> {
-        let (state, current_idx, event) = {
-            let history_lock = self.history_manager.lock().ok()?;
-            let history = history_lock.as_ref()?;
-            let state = history.current_state.clone();
-            let current_idx = history.current_index;
-            let event = if self.ctx.last_index != current_idx && current_idx == self.ctx.last_index + 1 {
-                Some(history.log[self.ctx.last_index].clone())
-            } else {
-                None
-            };
-            (state, current_idx, event)
+        let current_idx = self.history_manager.current_index;
+        let state = self.history_manager.current_state.clone();
+        
+        let event = if self.ctx.last_index != current_idx && current_idx == self.ctx.last_index + 1 {
+            Some(self.history_manager.log[self.ctx.last_index].clone())
+        } else {
+            None
         };
 
         if self.ctx.last_index != current_idx {
             if let Some(e) = event {
                 let last_index = self.ctx.last_index;
-                let history_lock = self.history_manager.lock().ok()?;
-                let history = history_lock.as_ref()?;
-                Self::handle_event_tweens_static(&mut self.ctx, &e, history, last_index, now);
+                Self::handle_event_tweens_static(&mut self.ctx, &e, &self.history_manager, last_index, now);
             } else {
                 self.ctx.movement_tweens.clear();
                 self.ctx.property_tweens.clear();
@@ -185,7 +230,8 @@ impl LoopHandler {
                         .and_modify(|f| f.transition_to(entity.animation_state.clone(), now))
                         .or_insert_with(|| ActiveFSM::new(fsm_def.clone(), entity.animation_state.clone(), now));
                 } else {
-                    crate::ui_log::ui_log(format!("FSM definition {} not found for entity {}", fsm_name, entity.id));
+                    let msg = format!("FSM definition {} not found for entity {}", fsm_name, entity.id);
+                    let _ = self.worker_tx.unbounded_send(WorkerInput::Log(msg));
                 }
             }
         }

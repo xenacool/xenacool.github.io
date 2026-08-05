@@ -1,7 +1,8 @@
 use pystral_core::history::HistoryManager;
 use pystral_compiler::demo::generate_demo_log;
-use pystral_gate::ui_log::{get_log_messages, reset_log};
+use pystral_gate::ui_log::get_log_messages;
 use pystral_gate::render::utils::{EntityExt, RenderResultExt};
+use pystral_core::communication::WorkerBus;
 
 #[test]
 fn test_history_behavior_at_boundaries() {
@@ -31,7 +32,9 @@ fn test_history_behavior_at_boundaries() {
 
 #[test]
 fn test_demo_log_rendering_behavior_strict() {
-    reset_log();
+    let mut bus_data = vec![0u8; 1024 * 1024];
+    let bus = unsafe { WorkerBus::from_ptr(bus_data.as_mut_ptr(), bus_data.len()) };
+
     let mut history = HistoryManager::new();
     generate_demo_log(&mut history);
     
@@ -42,50 +45,50 @@ fn test_demo_log_rendering_behavior_strict() {
         let state = &history.current_state;
         for entity in &state.entities {
             if entity.id == 0 {
-                let _ = entity.get_hex_map().log_fallback();
-                let _ = entity.get_lighting().log_fallback();
+                let _ = entity.get_hex_map().log_fallback(&bus);
+                let _ = entity.get_lighting().log_fallback(&bus);
             } else if entity.kind == "camera" {
-                let _ = entity.get_float("angle", 0.0).log_fallback();
-                let _ = entity.get_float("distance", 0.0).log_fallback();
-                let _ = entity.get_float("height", 0.0).log_fallback();
-                let _ = entity.get_float("target_x", 0.0).log_fallback();
-                let _ = entity.get_float("target_y", 0.0).log_fallback();
-                let _ = entity.get_float("target_z", 0.0).log_fallback();
+                let _ = entity.get_float("angle", 0.0).log_fallback(&bus);
+                let _ = entity.get_float("distance", 0.0).log_fallback(&bus);
+                let _ = entity.get_float("height", 0.0).log_fallback(&bus);
+                let _ = entity.get_float("target_x", 0.0).log_fallback(&bus);
+                let _ = entity.get_float("target_y", 0.0).log_fallback(&bus);
+                let _ = entity.get_float("target_z", 0.0).log_fallback(&bus);
             } else {
-                let _ = entity.get_float("scale", 1.0).log_fallback();
-                let _ = entity.get_float("z", 0.0).log_fallback();
-                let _ = entity.get_float("rotation_z", 0.0).log_fallback();
-                let _ = entity.get_float("cam_offset_x", 0.0).log_fallback();
-                let _ = entity.get_float("cam_offset_y", 0.0).log_fallback();
-                let _ = entity.get_float("cam_offset_z", 0.0).log_fallback();
-                let _ = entity.get_material(&state.materials).log_fallback();
+                let _ = entity.get_float("scale", 1.0).log_fallback(&bus);
+                let _ = entity.get_float("z", 0.0).log_fallback(&bus);
+                let _ = entity.get_float("rotation_z", 0.0).log_fallback(&bus);
+                let _ = entity.get_float("cam_offset_x", 0.0).log_fallback(&bus);
+                let _ = entity.get_float("cam_offset_y", 0.0).log_fallback(&bus);
+                let _ = entity.get_float("cam_offset_z", 0.0).log_fallback(&bus);
+                let _ = entity.get_material(&state.materials).log_fallback(&bus);
                 
                 // Also check sprite parts and skeleton which are used in the renderer
-                let parts = entity.get_sprite_parts().log_fallback();
+                let parts = entity.get_sprite_parts().log_fallback(&bus);
                 for part in parts {
-                    let _ = entity.get_float(&part.x_prop, 0.0).log_fallback();
-                    let _ = entity.get_float(&part.y_prop, 0.0).log_fallback();
+                    let _ = entity.get_float(&part.x_prop, 0.0).log_fallback(&bus);
+                    let _ = entity.get_float(&part.y_prop, 0.0).log_fallback(&bus);
                     if let Some(rot_prop) = &part.rotation_prop {
-                        let _ = entity.get_float(rot_prop, 0.0).log_fallback();
+                        let _ = entity.get_float(rot_prop, 0.0).log_fallback(&bus);
                     }
                 }
                 
-                if let Some(skeleton) = entity.get_skeleton().log_fallback() {
+                if let Some(skeleton) = entity.get_skeleton().log_fallback(&bus) {
                     for bone in &skeleton.bones {
                         for joint in &[&bone.start, &bone.end] {
                             if let pystral_core::domain::Joint::Property(prop) = joint {
-                                let _ = entity.get_float(&format!("{}_x", prop), 0.0).log_fallback();
-                                let _ = entity.get_float(&format!("{}_y", prop), 0.0).log_fallback();
+                                let _ = entity.get_float(&format!("{}_x", prop), 0.0).log_fallback(&bus);
+                                let _ = entity.get_float(&format!("{}_y", prop), 0.0).log_fallback(&bus);
                             }
                         }
                     }
                 }
 
-                let _ = entity.get_collision().log_fallback();
+                let _ = entity.get_collision().log_fallback(&bus);
             }
         }
         
-        let errors = get_log_messages();
+        let errors = get_log_messages(&bus);
         assert!(errors.is_empty(), "UI Log must be empty at index {}. Found: {:?}", i, errors);
     }
 }
@@ -134,7 +137,6 @@ fn test_arrow_trajectory_arc() {
 
 #[test]
 fn test_material_resolution_behavior() {
-    reset_log();
     let mut history = HistoryManager::new();
     generate_demo_log(&mut history);
     

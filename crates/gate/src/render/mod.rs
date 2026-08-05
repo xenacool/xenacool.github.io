@@ -23,8 +23,11 @@ use crate::render::loop_handler::LoopHandler;
 
 #[wasm_bindgen]
 extern "C" {
-    #[wasm_bindgen(js_name = update_ui_slider)]
-    fn update_ui_slider(index: u32);
+    #[wasm_bindgen(js_namespace = window)]
+    pub fn update_ui_slider(index: u32);
+    
+    #[wasm_bindgen(js_namespace = window)]
+    pub fn set_ui_slider_max(max: u32);
 }
 
 
@@ -65,14 +68,15 @@ pub fn start_render_loop(
     gl: GL, 
     program: WebGlProgram, 
     sprite_mesh: Mesh, 
-    history_manager: std::sync::Arc<std::sync::Mutex<Option<HistoryManager>>>,
-    playback_state: std::sync::Arc<std::sync::Mutex<PlaybackState>>
+    history_manager: HistoryManager,
+    app_rx: std::sync::mpsc::Receiver<crate::AppCommand>,
+    worker_tx: futures::channel::mpsc::UnboundedSender<crate::WorkerInput>,
 ) {
     let sphere_mesh = create_sphere_mesh(&gl, 16, 16);
     let cylinder_mesh = create_cylinder_mesh(&gl, 16);
     
     let ctx = RenderContext::new(gl, program, sprite_mesh, sphere_mesh, cylinder_mesh);
-    let handler = Rc::new(RefCell::new(LoopHandler::new(ctx, history_manager, playback_state)));
+    let handler = Rc::new(RefCell::new(LoopHandler::new(ctx, history_manager, app_rx, worker_tx)));
 
     let f = Rc::new(RefCell::new(None));
     let g = f.clone();

@@ -8,10 +8,10 @@ use crate::render::mesh::Mesh;
 use crate::render::draw_utils::{set_model_matrix, set_material};
 use crate::render::utils::{EntityExt, RenderResultExt};
 
-pub fn draw_scene(ctx: &mut RenderContext, state: WorldState, cam_right: Vec3, cam_up: Vec3, cam_forward: Vec3, debug_mode: bool, now: f64, _is_playing_anims: bool) {
-    apply_lighting(ctx, &state);
+pub fn draw_scene(ctx: &mut RenderContext, worker_tx: &futures::channel::mpsc::UnboundedSender<crate::WorkerInput>, state: WorldState, cam_right: Vec3, cam_up: Vec3, cam_forward: Vec3, debug_mode: bool, now: f64, _is_playing_anims: bool) {
+    apply_lighting(ctx, worker_tx, &state);
 
-    let layout = get_layout(&state);
+    let layout = get_layout(&state, worker_tx);
 
     if ctx.unit_hex_mesh_cache.is_none() {
         let unit_hex_info = ColumnMeshBuilder::new(&layout, 1.0).center_aligned().without_bottom_face().build();
@@ -21,7 +21,7 @@ pub fn draw_scene(ctx: &mut RenderContext, state: WorldState, cam_right: Vec3, c
 
     let mut current_map = None;
     if let Some(world) = state.entities.iter().find(|e| e.id == 0) {
-        current_map = Some(world.get_hex_map().log_fallback());
+        current_map = Some(world.get_hex_map().log_fallback(worker_tx));
     }
 
     if let Some(ref map) = current_map {
@@ -88,18 +88,18 @@ pub fn draw_scene(ctx: &mut RenderContext, state: WorldState, cam_right: Vec3, c
             }
         }
 
-        let entity_scale = entity.get_float("scale", 1.0).log_fallback();
-        let z_pos = entity.get_float("z", top_height).log_fallback();
-        let rotation_z = -entity.get_float("rotation_z", 0.0).log_fallback();
+        let entity_scale = entity.get_float("scale", 1.0).log_fallback(worker_tx);
+        let z_pos = entity.get_float("z", top_height).log_fallback(worker_tx);
+        let rotation_z = -entity.get_float("rotation_z", 0.0).log_fallback(worker_tx);
         
         let cam_rel_offset = Vec3::new(
-            entity.get_float("cam_offset_x", 0.0).log_fallback(),
-            entity.get_float("cam_offset_y", 0.0).log_fallback(),
-            entity.get_float("cam_offset_z", 0.0).log_fallback()
+            entity.get_float("cam_offset_x", 0.0).log_fallback(worker_tx),
+            entity.get_float("cam_offset_y", 0.0).log_fallback(worker_tx),
+            entity.get_float("cam_offset_z", 0.0).log_fallback(worker_tx)
         );
         let world_offset = cam_right * cam_rel_offset.x + cam_up * cam_rel_offset.y + cam_forward * cam_rel_offset.z;
 
-        let mat = entity.get_material(&state.materials).log_fallback();
+        let mat = entity.get_material(&state.materials).log_fallback(worker_tx);
         let (entity_color, roughness, metalness, emissive) = (mat.color, mat.roughness, mat.metalness, mat.emissive);
 
         let entity_pos = Vec3::new(current_hex_pos.x, z_pos, current_hex_pos.y);
@@ -125,18 +125,18 @@ pub fn draw_scene(ctx: &mut RenderContext, state: WorldState, cam_right: Vec3, c
         ctx.gl.disable(GL::CULL_FACE);
 
         // Draw Parts
-        draw_parts(ctx, entity, &state, sprite_pos, entity_pos, billboard_rot, entity_scale, cam_right, billboard_up, cam_forward, side, render_rotation_z);
+        draw_parts(ctx, worker_tx, entity, &state, sprite_pos, entity_pos, billboard_rot, entity_scale, cam_right, billboard_up, cam_forward, side, render_rotation_z);
 
         // Draw Skeleton
-        if let Some(skeleton) = entity.get_skeleton().log_fallback() {
-            draw_skeleton(ctx, entity, sprite_pos, entity_scale, cam_right, billboard_up, cam_forward, &skeleton, debug_mode, side, render_rotation_z);
+        if let Some(skeleton) = entity.get_skeleton().log_fallback(worker_tx) {
+            draw_skeleton(ctx, worker_tx, entity, sprite_pos, entity_scale, cam_right, billboard_up, cam_forward, &skeleton, debug_mode, side, render_rotation_z);
         }
 
         // Draw Spritestack
         draw_spritestack(ctx, entity, &state, entity_pos, billboard_rot, entity_scale, cam_forward, render_rotation_z);
 
         if debug_mode {
-            if let Some(shape) = entity.get_collision().log_fallback() {
+            if let Some(shape) = entity.get_collision().log_fallback(worker_tx) {
                 draw_collision(ctx, sprite_pos, rotation_z, &shape);
             }
         }
@@ -145,10 +145,10 @@ pub fn draw_scene(ctx: &mut RenderContext, state: WorldState, cam_right: Vec3, c
     }
 }
 
-fn apply_lighting(ctx: &RenderContext, state: &WorldState) {
+fn apply_lighting(ctx: &mut RenderContext, worker_tx: &futures::channel::mpsc::UnboundedSender<crate::WorkerInput>, state: &WorldState) {
     let mut lighting = pystral_core::domain::LightingConfig::default();
     if let Some(world) = state.entities.iter().find(|e| e.id == 0) {
-        lighting = world.get_lighting().log_fallback();
+        lighting = world.get_lighting().log_fallback(worker_tx);
     }
 
     ctx.gl.uniform3f(ctx.uniforms.u_ambient_color.as_ref(), lighting.ambient_color[0], lighting.ambient_color[1], lighting.ambient_color[2]);
@@ -168,30 +168,30 @@ fn apply_lighting(ctx: &RenderContext, state: &WorldState) {
     }
 }
 
-fn get_layout(state: &WorldState) -> hexx::HexLayout {
+fn get_layout(state: &WorldState, worker_tx: &futures::channel::mpsc::UnboundedSender<crate::WorkerInput>) -> hexx::HexLayout {
     if let Some(world) = state.entities.iter().find(|e| e.id == 0) {
-        world.get_hex_map().log_fallback().layout()
+        world.get_hex_map().log_fallback(worker_tx).layout()
     } else {
         hexx::HexLayout::default()
     }
 }
 
-fn draw_parts(ctx: &mut RenderContext, entity: &EntityState, state: &WorldState, sprite_pos: Vec3, entity_pos: Vec3, billboard_rot: Mat4, entity_scale: f32, cam_right: Vec3, billboard_up: Vec3, cam_forward: Vec3, side: crate::render::painter::ViewSide, render_rotation_z: f32) {
-    let parts = entity.get_sprite_parts().log_fallback();
+fn draw_parts(ctx: &mut RenderContext, worker_tx: &futures::channel::mpsc::UnboundedSender<crate::WorkerInput>, entity: &EntityState, state: &WorldState, sprite_pos: Vec3, entity_pos: Vec3, billboard_rot: Mat4, entity_scale: f32, cam_right: Vec3, billboard_up: Vec3, cam_forward: Vec3, side: crate::render::painter::ViewSide, render_rotation_z: f32) {
+    let parts = entity.get_sprite_parts().log_fallback(worker_tx);
     let cos_z = render_rotation_z.cos();
     let sin_z = render_rotation_z.sin();
 
     for (i, part) in parts.iter().enumerate() {
-        let jx = entity.get_float(&part.x_prop, 0.0).log_fallback();
-        let jy = entity.get_float(&part.y_prop, 0.0).log_fallback();
-        let jz = entity.get_float(&part.z_prop, 0.0).log_fallback();
+        let jx = entity.get_float(&part.x_prop, 0.0).log_fallback(worker_tx);
+        let jy = entity.get_float(&part.y_prop, 0.0).log_fallback(worker_tx);
+        let jz = entity.get_float(&part.z_prop, 0.0).log_fallback(worker_tx);
         
         let rx = jx * cos_z - jy * sin_z;
         let ry = jx * sin_z + jy * cos_z;
         let rz = jz;
 
         let prot = if let Some(rot_prop) = &part.rotation_prop {
-            -entity.get_float(rot_prop, 0.0).log_fallback()
+            -entity.get_float(rot_prop, 0.0).log_fallback(worker_tx)
         } else {
             0.0
         };
@@ -308,7 +308,7 @@ fn draw_parts(ctx: &mut RenderContext, entity: &EntityState, state: &WorldState,
     }
 }
 
-fn draw_skeleton(ctx: &mut RenderContext, entity: &EntityState, sprite_pos: Vec3, entity_scale: f32, cam_right: Vec3, billboard_up: Vec3, cam_forward: Vec3, skeleton: &pystral_core::domain::Skeleton, debug_mode: bool, side: crate::render::painter::ViewSide, render_rotation_z: f32) {
+fn draw_skeleton(ctx: &mut RenderContext, worker_tx: &futures::channel::mpsc::UnboundedSender<crate::WorkerInput>, entity: &EntityState, sprite_pos: Vec3, entity_scale: f32, cam_right: Vec3, billboard_up: Vec3, cam_forward: Vec3, skeleton: &pystral_core::domain::Skeleton, debug_mode: bool, side: crate::render::painter::ViewSide, render_rotation_z: f32) {
     set_material(&ctx.gl, &ctx.uniforms, [1.0, 1.0, 1.0], 0.0, 0.0, 1.0);
     
     if debug_mode {
@@ -326,9 +326,9 @@ fn draw_skeleton(ctx: &mut RenderContext, entity: &EntityState, sprite_pos: Vec3
                 let py = format!("{}_y", prop);
                 let pz = format!("{}_z", prop);
                 (
-                    entity.get_float(&px, 0.0).log_fallback(),
-                    entity.get_float(&py, 0.0).log_fallback(),
-                    entity.get_float(&pz, 0.0).log_fallback(),
+                    entity.get_float(&px, 0.0).log_fallback(worker_tx),
+                    entity.get_float(&py, 0.0).log_fallback(worker_tx),
+                    entity.get_float(&pz, 0.0).log_fallback(worker_tx),
                 )
             }
         };

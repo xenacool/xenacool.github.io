@@ -1,4 +1,5 @@
 use crate::log::{WorldState, EntityState, Event, Checkpoint};
+use serde::{Serialize, Deserialize};
 
 impl WorldState {
     pub fn apply_event(&mut self, event: &Event) {
@@ -116,6 +117,7 @@ impl WorldState {
     }
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct HistoryManager {
     pub current_state: WorldState,
     pub log: Vec<Event>,

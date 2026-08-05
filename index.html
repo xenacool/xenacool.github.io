@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Xenacool's Pystral Gate</title>
+    <script src="web/enable-threads.js"></script>
     <style>
         body { margin: 0; overflow: hidden; background-color: black; color: white; font-family: sans-serif; }
         canvas { width: 100vw; height: 100vh; display: block; }
@@ -80,13 +81,19 @@
             <span id="error-display" style="font-size: 12px; cursor: pointer; color: white;">Error: 0</span>
         </div>
     </div>
+    <div class="controls-row">
+        <button id="nav-up" title="Camera Up">Up</button>
+        <button id="nav-down" title="Camera Down">Down</button>
+        <button id="nav-left" title="Camera Left">Left</button>
+        <button id="nav-right" title="Camera Right">Right</button>
+    </div>
     <div style="font-size: 8px; color: #666; margin-top: 5px; text-align: center;">
         Icons by Lucide (lucide.dev)
     </div>
 </div>
 <div id="log-container" style="position: absolute; top: 10px; right: 10px; width: 300px; max-height: 400px; overflow-y: auto; background: rgba(0,0,0,0.5); font-size: 10px; pointer-events: none; padding: 5px; color: #ffcc00; font-family: monospace; white-space: pre-wrap;"></div>
 <script type="module">
-    import init, { set_history_index, get_log_length, toggle_play_log, toggle_play_animations, set_debug_mode, set_broken_mode } from './web/pystral_gate.js';
+    import init, { run_app } from './web/pystral_gate.js';
 
     window.update_ui_slider = (index) => {
         const slider = document.getElementById('history-slider');
@@ -94,20 +101,42 @@
         document.getElementById('slider-value').innerText = index;
     };
 
-    async function run() {
-        await init();
+    window.set_ui_slider_max = (max) => {
+        const slider = document.getElementById('history-slider');
+        slider.max = max;
+    };
+
+    window.update_log_ui = (messages, totalErrors) => {
+        const logContainer = document.getElementById('log-container');
+        logContainer.innerText = messages.join('\n');
         
+        const errorDisplay = document.getElementById('error-display');
+        errorDisplay.innerText = `Error: ${totalErrors}`;
+        if (totalErrors > 0) {
+            errorDisplay.style.color = 'red';
+        } else {
+            errorDisplay.style.color = 'white';
+        }
+    };
+
+    async function run() {
+        console.log('Main thread starting run()...');
+        
+        try {
+            await init('/web/pystral_gate_bg.wasm');
+            const app = await run_app();
+            window.app = app;
+        } catch (err) {
+            console.error('Main thread initialization failed:', err);
+        }
+
         const slider = document.getElementById('history-slider');
         const valueDisplay = document.getElementById('slider-value');
-        
-        const logLen = get_log_length();
-        slider.max = logLen;
-        console.log("Log length detected:", logLen);
         
         slider.addEventListener('input', (e) => {
             const val = parseInt(e.target.value, 10);
             valueDisplay.textContent = val;
-            set_history_index(val);
+            app.set_history_index(val);
         });
 
         const setupToggle = (btnId, toggleFn, autostart = false) => {
@@ -117,7 +146,6 @@
             let playing = autostart;
             
             if (playing) {
-                toggleFn();
                 playIcon.style.display = 'none';
                 pauseIcon.style.display = 'block';
             }
@@ -130,19 +158,24 @@
             });
         };
 
-        setupToggle('play-log', toggle_play_log, true);
-        setupToggle('play-sim', toggle_play_animations, true);
+        setupToggle('play-log', () => app.toggle_play_log(), true);
+        setupToggle('play-sim', () => app.toggle_play_animations(), true);
+
+        document.getElementById('nav-up').addEventListener('click', () => app.camera_nav('up'));
+        document.getElementById('nav-down').addEventListener('click', () => app.camera_nav('down'));
+        document.getElementById('nav-left').addEventListener('click', () => app.camera_nav('left'));
+        document.getElementById('nav-right').addEventListener('click', () => app.camera_nav('right'));
 
         const debugCheckbox = document.getElementById('debug-checkbox');
         debugCheckbox.addEventListener('change', (e) => {
-            set_debug_mode(e.target.checked);
+            app.set_debug_mode(e.target.checked);
         });
         
         let errorMode = false;
         const errorDisplay = document.getElementById('error-display');
         errorDisplay.addEventListener('click', () => {
             errorMode = !errorMode;
-            set_broken_mode(errorMode);
+            app.set_broken_mode(errorMode);
             if (errorMode) {
                 errorDisplay.style.border = "1px solid red";
             } else {

@@ -3,18 +3,20 @@ use pystral_core::domain::{SpritePart, Material};
 use pystral_core::render::{RenderError, ERROR_MODE_ENABLED};
 use std::sync::atomic::Ordering;
 
+use crate::WorkerInput;
+
 pub type RenderResult<T> = Result<T, RenderError<T>>;
 
 pub trait RenderResultExt<T> {
-    fn log_fallback(self) -> T;
+    fn log_fallback(self, worker_tx: &futures::channel::mpsc::UnboundedSender<crate::WorkerInput>) -> T;
 }
 
 impl<T> RenderResultExt<T> for RenderResult<T> {
-    fn log_fallback(self) -> T {
+    fn log_fallback(self, worker_tx: &futures::channel::mpsc::UnboundedSender<crate::WorkerInput>) -> T {
         match self {
             Ok(v) => v,
             Err(e) => {
-                crate::ui_log::ui_log(e.message);
+                let _ = worker_tx.unbounded_send(WorkerInput::Log(e.message));
                 e.fallback
             }
         }
