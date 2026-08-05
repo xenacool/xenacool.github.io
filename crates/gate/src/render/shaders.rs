@@ -53,9 +53,9 @@ void main() {
     vec3 norm = normalize(vNormal);
     if (uUseNormalMap) {
         vec3 normalSample = texture2D(uNormalMap, vUV).rgb * 2.0 - 1.0;
-        // Slicer Y is UP, slicer Z is depth. 
-        // Quad rotated -90 around X: Quad local Z is World UP, Quad local Y is World Z.
-        vec3 quadNormal = vec3(normalSample.x, normalSample.z, normalSample.y);
+        // Standard normal map: Z is UP (out of the slice).
+        // Quad rotated -90 around X: Quad local Z is World UP (+Y).
+        vec3 quadNormal = vec3(normalSample.x, normalSample.y, normalSample.z);
         norm = normalize(mat3(uModel) * quadNormal);
     }
     vec3 viewDir = normalize(vec3(0.0, 1.0, 1.0)); // Fixed camera-ish
