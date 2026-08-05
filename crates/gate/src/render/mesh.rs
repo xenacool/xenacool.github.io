@@ -101,17 +101,17 @@ impl Mesh {
 
 pub fn create_sprite_mesh(gl: &GL) -> Mesh {
     let vertices = vec![
-        Vec3::new(-0.5, 0.0, 0.0),
-        Vec3::new(0.5, 0.0, 0.0),
-        Vec3::new(0.5, 1.0, 0.0),
-        Vec3::new(-0.5, 1.0, 0.0),
+        Vec3::new(-0.5, -0.5, 0.0),
+        Vec3::new(0.5, -0.5, 0.0),
+        Vec3::new(0.5, 0.5, 0.0),
+        Vec3::new(-0.5, 0.5, 0.0),
     ];
     let normals = vec![Vec3::Z; 4];
     let uvs = vec![
-        Vec2::new(0.0, 1.0),
-        Vec2::new(1.0, 1.0),
-        Vec2::new(1.0, 0.0),
-        Vec2::new(0.0, 0.0),
+        Vec2::new(0.005, 0.995),
+        Vec2::new(0.995, 0.995),
+        Vec2::new(0.995, 0.005),
+        Vec2::new(0.005, 0.005),
     ];
     let indices = vec![0, 1, 2, 0, 2, 3];
 
@@ -177,7 +177,7 @@ pub fn create_cylinder_mesh(gl: &GL, sectors: u32) -> Mesh {
     let sector_step = 2.0 * std::f32::consts::PI / sectors as f32;
 
     for i in 0..=1 {
-        let h = i as f32;
+        let h = i as f32 - 0.5;
         for j in 0..=sectors {
             let angle = j as f32 * sector_step;
             let x = angle.cos();

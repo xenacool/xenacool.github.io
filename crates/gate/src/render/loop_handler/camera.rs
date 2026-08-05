@@ -39,7 +39,17 @@ pub fn setup_camera(ctx: &RenderContext, state: &WorldState, width: u32, height:
     let cam_x = cam_dist * angle.cos();
     let cam_z = cam_dist * angle.sin();
     let view = Mat4::look_at_rh(Vec3::new(cam_x + target.x, height_val + target.y, cam_z + target.z), target, Vec3::Y);
-    let proj = Mat4::perspective_rh(45.0f32.to_radians(), width as f32 / height as f32, 0.1, 100.0);
+    
+    let aspect = width as f32 / height as f32;
+    let ortho_size = cam_dist * 0.5;
+    let proj = Mat4::orthographic_rh(
+        -ortho_size * aspect,
+        ortho_size * aspect,
+        -ortho_size,
+        ortho_size,
+        -100.0,
+        100.0,
+    );
 
     let cam_right = Vec3::new(view.x_axis.x, view.y_axis.x, view.z_axis.x);
     let cam_up = Vec3::new(view.x_axis.y, view.y_axis.y, view.z_axis.y);

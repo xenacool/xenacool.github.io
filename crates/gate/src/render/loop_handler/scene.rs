@@ -102,7 +102,8 @@ pub fn draw_scene(ctx: &mut RenderContext, state: WorldState, cam_right: Vec3, c
         let mat = entity.get_material(&state.materials).log_fallback();
         let (entity_color, roughness, metalness, emissive) = (mat.color, mat.roughness, mat.metalness, mat.emissive);
 
-        let sprite_pos = Vec3::new(current_hex_pos.x, z_pos, current_hex_pos.y) + world_offset;
+        let entity_pos = Vec3::new(current_hex_pos.x, z_pos, current_hex_pos.y);
+        let sprite_pos = entity_pos + world_offset;
         
         let billboard_up = Vec3::Y;
         let billboard_right = cam_right;
@@ -116,7 +117,7 @@ pub fn draw_scene(ctx: &mut RenderContext, state: WorldState, cam_right: Vec3, c
             render_rotation_z = -rotation_z;
         }
 
-        let sprite_model = Mat4::from_translation(sprite_pos) * billboard_rot * Mat4::from_scale(Vec3::splat(entity_scale)) * Mat4::from_rotation_z(render_rotation_z);
+        let sprite_model = Mat4::from_translation(sprite_pos + billboard_up * (entity_scale * 0.5)) * billboard_rot * Mat4::from_scale(Vec3::splat(entity_scale)) * Mat4::from_rotation_z(render_rotation_z);
         
         set_model_matrix(&ctx.gl, &ctx.uniforms, &sprite_model);
         set_material(&ctx.gl, &ctx.uniforms, entity_color, roughness, metalness, emissive);
@@ -124,7 +125,7 @@ pub fn draw_scene(ctx: &mut RenderContext, state: WorldState, cam_right: Vec3, c
         ctx.gl.disable(GL::CULL_FACE);
 
         // Draw Parts
-        draw_parts(ctx, entity, &state, sprite_pos, billboard_rot, entity_scale, cam_right, billboard_up, cam_forward, side, render_rotation_z);
+        draw_parts(ctx, entity, &state, sprite_pos, entity_pos, billboard_rot, entity_scale, cam_right, billboard_up, cam_forward, side, render_rotation_z);
 
         // Draw Skeleton
         if let Some(skeleton) = entity.get_skeleton().log_fallback() {
@@ -132,7 +133,7 @@ pub fn draw_scene(ctx: &mut RenderContext, state: WorldState, cam_right: Vec3, c
         }
 
         // Draw Spritestack
-        draw_spritestack(ctx, entity, &state, sprite_pos, billboard_rot, entity_scale, cam_forward);
+        draw_spritestack(ctx, entity, &state, entity_pos, billboard_rot, entity_scale, cam_forward, render_rotation_z);
 
         if debug_mode {
             if let Some(shape) = entity.get_collision().log_fallback() {
@@ -175,7 +176,7 @@ fn get_layout(state: &WorldState) -> hexx::HexLayout {
     }
 }
 
-fn draw_parts(ctx: &mut RenderContext, entity: &EntityState, state: &WorldState, sprite_pos: Vec3, billboard_rot: Mat4, entity_scale: f32, cam_right: Vec3, billboard_up: Vec3, cam_forward: Vec3, side: crate::render::painter::ViewSide, render_rotation_z: f32) {
+fn draw_parts(ctx: &mut RenderContext, entity: &EntityState, state: &WorldState, sprite_pos: Vec3, entity_pos: Vec3, billboard_rot: Mat4, entity_scale: f32, cam_right: Vec3, billboard_up: Vec3, cam_forward: Vec3, side: crate::render::painter::ViewSide, render_rotation_z: f32) {
     let parts = entity.get_sprite_parts().log_fallback();
     let cos_z = render_rotation_z.cos();
     let sin_z = render_rotation_z.sin();
@@ -206,7 +207,7 @@ fn draw_parts(ctx: &mut RenderContext, entity: &EntityState, state: &WorldState,
         let bz = engine_offset.dot(cam_forward);
 
         let part_pos = sprite_pos + cam_right * (bx * entity_scale) + billboard_up * (by * entity_scale) + cam_forward * (bz * entity_scale - i as f32 * 0.001);
-        let part_model = Mat4::from_translation(part_pos) * billboard_rot * Mat4::from_rotation_z(render_rotation_z + render_prot) * Mat4::from_scale(Vec3::splat(part.scale * entity_scale));
+        let part_model = Mat4::from_translation(part_pos + billboard_up * (part.scale * entity_scale * 0.5)) * billboard_rot * Mat4::from_rotation_z(render_rotation_z + render_prot) * Mat4::from_scale(Vec3::splat(part.scale * entity_scale));
         set_model_matrix(&ctx.gl, &ctx.uniforms, &part_model);
         
         let mut use_tex = false;
@@ -275,13 +276,16 @@ fn draw_parts(ctx: &mut RenderContext, entity: &EntityState, state: &WorldState,
 
             if let Some(textures) = ctx.spritestack_assets.get(&cache_key) {
                 let spacing = textures.spacing;
-                let quad_scale = textures.width as f32 * spacing * part.scale * entity_scale;
+                let quad_scale = (textures.width as f32 - 0.5) * spacing * part.scale * entity_scale;
                 
                 for (i, (color_tex, normal_tex)) in textures.color_textures.iter().zip(textures.normal_textures.iter()).enumerate() {
                     let z_offset = (i as f32 - textures.color_textures.len() as f32 * 0.5) * spacing * entity_scale;
-                    let slice_pos = part_pos + Vec3::Y * z_offset;
-                    let slice_model = Mat4::from_translation(slice_pos) 
-                        * billboard_rot * Mat4::from_rotation_z(render_rotation_z + render_prot)
+                    
+                    let engine_world_offset = Vec3::new(rx, rz, ry) * entity_scale;
+                    let spritestack_part_pos = entity_pos + engine_world_offset + Vec3::Y * z_offset;
+
+                    let slice_model = Mat4::from_translation(spritestack_part_pos) 
+                        * Mat4::from_rotation_y(render_rotation_z + render_prot)
                         * Mat4::from_rotation_x(-std::f32::consts::FRAC_PI_2)
                         * Mat4::from_scale(Vec3::splat(quad_scale));
                     set_model_matrix(&ctx.gl, &ctx.uniforms, &slice_model);
@@ -393,7 +397,7 @@ fn draw_skeleton(ctx: &mut RenderContext, entity: &EntityState, sprite_pos: Vec3
             }
         } else if debug_mode && len > 0.001 {
             let rotation = glam::Quat::from_rotation_arc(Vec3::Z, dir / len);
-            let bone_model = Mat4::from_translation(start) * Mat4::from_quat(rotation) * Mat4::from_scale(Vec3::new(0.02 * entity_scale, 0.02 * entity_scale, len));
+            let bone_model = Mat4::from_translation(start + dir * 0.5) * Mat4::from_quat(rotation) * Mat4::from_scale(Vec3::new(0.02 * entity_scale, 0.02 * entity_scale, len));
             set_model_matrix(&ctx.gl, &ctx.uniforms, &bone_model);
             ctx.gl.uniform1i(ctx.uniforms.u_use_tex.as_ref(), 0);
             ctx.cylinder_mesh.draw_wireframe(&ctx.gl, ctx.attribs.pos);
@@ -405,7 +409,7 @@ fn draw_skeleton(ctx: &mut RenderContext, entity: &EntityState, sprite_pos: Vec3
     }
 }
 
-fn draw_spritestack(ctx: &mut RenderContext, entity: &EntityState, state: &WorldState, sprite_pos: Vec3, _billboard_rot: Mat4, entity_scale: f32, _cam_forward: Vec3) {
+fn draw_spritestack(ctx: &mut RenderContext, entity: &EntityState, state: &WorldState, sprite_pos: Vec3, _billboard_rot: Mat4, entity_scale: f32, _cam_forward: Vec3, rotation_z: f32) {
     if let Some(PropertyValue::AssetRef(collection_name)) = entity.properties.get("spritestack_collection") {
         let asset_name = if let Some(PropertyValue::String(name)) = entity.properties.get("spritestack_name") {
             name
@@ -447,13 +451,14 @@ fn draw_spritestack(ctx: &mut RenderContext, entity: &EntityState, state: &World
 
         if let Some(textures) = ctx.spritestack_assets.get(&cache_key) {
             let spacing = textures.spacing;
-            let quad_scale = textures.width as f32 * spacing * entity_scale;
+            let quad_scale = (textures.width as f32 - 0.5) * spacing * entity_scale;
             
             for (i, (color_tex, normal_tex)) in textures.color_textures.iter().zip(textures.normal_textures.iter()).enumerate() {
                 let z_offset = (i as f32 - textures.color_textures.len() as f32 * 0.5) * spacing * entity_scale;
                 let slice_pos = sprite_pos + Vec3::Y * z_offset; // Spritestacks are stacked vertically in world space
                 
                 let slice_model = Mat4::from_translation(slice_pos) 
+                    * Mat4::from_rotation_y(rotation_z)
                     * Mat4::from_rotation_x(-std::f32::consts::FRAC_PI_2) // Rotate to lay flat on XZ plane
                     * Mat4::from_scale(Vec3::splat(quad_scale));
                 
