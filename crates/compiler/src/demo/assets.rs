@@ -10,6 +10,8 @@ pub fn setup_spritestack_assets(history: &mut HistoryManager) {
     collection.add_cube("CubeBlue", 16, [50, 50, 255, 255], 0.05);
     collection.add_cube("CubeGreen", 16, [50, 255, 50, 255], 0.05);
     collection.add_cube("CubeGray", 16, [150, 150, 150, 255], 0.05);
+    collection.add_arrow("Arrow", [200, 100, 50, 255], 0.05);
+    collection.add_rock("Rock", 64, [100, 100, 100, 255], 0.05);
 
     history.push_and_apply(Event::DefineAssetCollection {
         name: "primitives".to_string(),

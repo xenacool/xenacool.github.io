@@ -61,6 +61,9 @@ impl LoopHandler {
             // 5. Camera & View Matrices
             let (_view, _proj, cam_right, cam_up, cam_forward) = setup_camera(&mut self.ctx, &self.worker_tx, &state, width, height);
 
+            // Update Nav Buttons based on current camera neighbors
+            self.sync_nav_buttons(&state);
+
             // 6. Draw Scene
             draw_scene(&mut self.ctx, &self.worker_tx, state, cam_right, cam_up, cam_forward, debug_mode, now, is_playing_anims);
         }
@@ -85,13 +88,20 @@ impl LoopHandler {
                 }
                 AppCommand::UpdateHistory(history) => {
                     self.history_manager = history;
+                    self.ctx.active_camera_id = None;
                     crate::render::set_ui_slider_max(self.history_manager.log.len() as u32);
                     crate::render::update_ui_slider(self.history_manager.current_index as u32);
                 }
                 AppCommand::CameraNav(direction) => {
                     let mut target_cam_id = None;
                     
-                    if let Some(cam) = self.history_manager.current_state.entities.iter().find(|e| e.kind == "camera") {
+                    let cam = if let Some(id) = self.ctx.active_camera_id {
+                        self.history_manager.current_state.entities.iter().find(|e| e.id == id && e.kind == "camera")
+                    } else {
+                        self.history_manager.current_state.entities.iter().find(|e| e.kind == "camera")
+                    };
+
+                    if let Some(cam) = cam {
                         let prop_name = format!("neighbor_{}", direction);
                         if let Some(pystral_core::log::PropertyValue::Float(id)) = cam.properties.get(&prop_name) {
                             target_cam_id = Some(*id as u64);
@@ -99,13 +109,7 @@ impl LoopHandler {
                     }
 
                     if let Some(id) = target_cam_id {
-                        self.history_manager.push_and_apply(pystral_core::log::Event::TweenProperty {
-                            id,
-                            property: "angle".to_string(),
-                            value: pystral_core::log::PropertyValue::Float(0.0),
-                            duration_ms: 1000,
-                        });
-                        crate::render::set_ui_slider_max(self.history_manager.log.len() as u32);
+                        self.ctx.active_camera_id = Some(id);
                     } else {
                         let msg = format!("Camera navigation error: No {} neighbor found", direction);
                         let _ = self.worker_tx.unbounded_send(WorkerInput::Log(msg));
@@ -132,6 +136,28 @@ impl LoopHandler {
             }
         }
         (is_playing_anims, debug_mode, delta)
+    }
+
+    fn sync_nav_buttons(&self, state: &WorldState) {
+        let mut up = false;
+        let mut down = false;
+        let mut left = false;
+        let mut right = false;
+
+        let cam = if let Some(id) = self.ctx.active_camera_id {
+            state.entities.iter().find(|e| e.id == id && e.kind == "camera")
+        } else {
+            state.entities.iter().find(|e| e.kind == "camera")
+        };
+
+        if let Some(cam) = cam {
+            up = cam.properties.contains_key("neighbor_up");
+            down = cam.properties.contains_key("neighbor_down");
+            left = cam.properties.contains_key("neighbor_left");
+            right = cam.properties.contains_key("neighbor_right");
+        }
+
+        crate::render::update_nav_buttons(up, down, left, right);
     }
 
     fn get_current_state(&mut self, now: f64, is_playing_anims: bool) -> Option<WorldState> {

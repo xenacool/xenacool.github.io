@@ -95,6 +95,8 @@ impl EntityState {
         } else if kind == "sprite" || kind == "arrow" || kind == "rock" {
             properties.insert("scale".to_string(), PropertyValue::Float(1.0));
             properties.insert("z".to_string(), PropertyValue::Float(0.0));
+            properties.insert("rotation_x".to_string(), PropertyValue::Float(0.0));
+            properties.insert("rotation_y".to_string(), PropertyValue::Float(0.0));
             properties.insert("rotation_z".to_string(), PropertyValue::Float(0.0));
             properties.insert("cam_offset_x".to_string(), PropertyValue::Float(0.0));
             properties.insert("cam_offset_y".to_string(), PropertyValue::Float(0.0));

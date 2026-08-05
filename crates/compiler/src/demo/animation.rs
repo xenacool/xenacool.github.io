@@ -53,7 +53,8 @@ pub fn generate_arrow_tracks(
             let mut x_keyframes = Vec::new();
             let mut y_keyframes = Vec::new();
             let mut z_keyframes = Vec::new();
-            let mut rot_keyframes = Vec::new();
+            let mut pitch_keyframes = Vec::new();
+            let mut yaw_keyframes = Vec::new();
             let duration = 2000.0;
             let num_points = response.trajectory.len();
 
@@ -63,14 +64,16 @@ pub fn generate_arrow_tracks(
                 y_keyframes.push(Keyframe { time_ms: t, value: PropertyValue::Float(pos.z) }); // 3D Z is Y in our engine
                 z_keyframes.push(Keyframe { time_ms: t, value: PropertyValue::Float(pos.y) }); // 3D Y is Z in our engine
                 
-                let angle = response.rotations[i];
-                rot_keyframes.push(Keyframe { time_ms: t, value: PropertyValue::Float(angle) });
+                let pitch = response.rotations[i];
+                pitch_keyframes.push(Keyframe { time_ms: t, value: PropertyValue::Float(-pitch) }); // Negative pitch to tilt up
+                yaw_keyframes.push(Keyframe { time_ms: t, value: PropertyValue::Float(response.yaw) });
             }
 
             tracks.push(PropertyTrack { property: "world_x".into(), keyframes: x_keyframes, loop_behavior: LoopBehavior::Loop });
             tracks.push(PropertyTrack { property: "world_y".into(), keyframes: y_keyframes, loop_behavior: LoopBehavior::Loop });
             tracks.push(PropertyTrack { property: "z".into(), keyframes: z_keyframes, loop_behavior: LoopBehavior::Loop });
-            tracks.push(PropertyTrack { property: "rotation_z".into(), keyframes: rot_keyframes, loop_behavior: LoopBehavior::Loop });
+            tracks.push(PropertyTrack { property: "rotation_y".into(), keyframes: pitch_keyframes, loop_behavior: LoopBehavior::Loop });
+            tracks.push(PropertyTrack { property: "rotation_z".into(), keyframes: yaw_keyframes, loop_behavior: LoopBehavior::Loop });
         }
         Err(_e) => {
             // Log to UI if we can't solve it

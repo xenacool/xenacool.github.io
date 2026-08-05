@@ -28,6 +28,9 @@ extern "C" {
     
     #[wasm_bindgen(js_namespace = window)]
     pub fn set_ui_slider_max(max: u32);
+
+    #[wasm_bindgen(js_namespace = window)]
+    pub fn update_nav_buttons(up: bool, down: bool, left: bool, right: bool);
 }
 
 

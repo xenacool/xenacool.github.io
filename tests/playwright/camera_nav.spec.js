@@ -10,6 +10,10 @@ test.describe('Camera Navigation and History Slider', () => {
   test('should have a working history slider', async ({ page }) => {
     const slider = page.locator('#history-slider');
     const valueDisplay = page.locator('#slider-value');
+    const playLogBtn = page.locator('#play-log');
+    
+    // Pause log playback to avoid slider moving on its own
+    await playLogBtn.click();
     
     // Check initial state
     await expect(valueDisplay).toHaveText('0');
@@ -42,9 +46,9 @@ test.describe('Camera Navigation and History Slider', () => {
     // Click navigation
     await navRight.click();
     
-    // Expect max duration to increase as a new tween event is added
+    // Expect max duration to NOT increase as navigation is now transient
     const newMax = await slider.getAttribute('max');
-    expect(Number(newMax)).toBeGreaterThan(Number(initialMax));
+    expect(Number(newMax)).toBe(Number(initialMax));
   });
 
   test('should not show errors in ui_log by default', async ({ page }) => {

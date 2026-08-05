@@ -106,6 +106,13 @@
         slider.max = max;
     };
 
+    window.update_nav_buttons = (up, down, left, right) => {
+        document.getElementById('nav-up').style.display = up ? 'block' : 'none';
+        document.getElementById('nav-down').style.display = down ? 'block' : 'none';
+        document.getElementById('nav-left').style.display = left ? 'block' : 'none';
+        document.getElementById('nav-right').style.display = right ? 'block' : 'none';
+    };
+
     window.update_log_ui = (messages, totalErrors) => {
         const logContainer = document.getElementById('log-container');
         logContainer.innerText = messages.join('\n');

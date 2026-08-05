@@ -71,8 +71,20 @@ fn setup_camera(history: &mut HistoryManager) {
     history.push_and_apply(Event::UpdateProperty { id: 2, property: "target_x".to_string(), value: PropertyValue::Float(0.0) });
     history.push_and_apply(Event::UpdateProperty { id: 2, property: "target_y".to_string(), value: PropertyValue::Float(0.0) });
     history.push_and_apply(Event::UpdateProperty { id: 2, property: "target_z".to_string(), value: PropertyValue::Float(0.0) });
-    history.push_and_apply(Event::UpdateProperty { id: 2, property: "neighbor_right".to_string(), value: PropertyValue::Float(2.0) });
-    history.push_and_apply(Event::UpdateProperty { id: 2, property: "neighbor_left".to_string(), value: PropertyValue::Float(2.0) });
+    history.push_and_apply(Event::UpdateProperty { id: 2, property: "neighbor_right".to_string(), value: PropertyValue::Float(3.0) });
+
+    history.push_and_apply(Event::SpawnEntity {
+        id: 3,
+        kind: "camera".to_string(),
+        hex: Hex::ZERO,
+    });
+    history.push_and_apply(Event::UpdateProperty { id: 3, property: "angle".to_string(), value: PropertyValue::Float(std::f32::consts::PI) });
+    history.push_and_apply(Event::UpdateProperty { id: 3, property: "distance".to_string(), value: PropertyValue::Float(25.0) });
+    history.push_and_apply(Event::UpdateProperty { id: 3, property: "height".to_string(), value: PropertyValue::Float(15.0) });
+    history.push_and_apply(Event::UpdateProperty { id: 3, property: "target_x".to_string(), value: PropertyValue::Float(0.0) });
+    history.push_and_apply(Event::UpdateProperty { id: 3, property: "target_y".to_string(), value: PropertyValue::Float(0.0) });
+    history.push_and_apply(Event::UpdateProperty { id: 3, property: "target_z".to_string(), value: PropertyValue::Float(0.0) });
+    history.push_and_apply(Event::UpdateProperty { id: 3, property: "neighbor_left".to_string(), value: PropertyValue::Float(2.0) });
 }
 
 fn setup_world(history: &mut HistoryManager) {
@@ -160,20 +172,20 @@ fn setup_arrow(history: &mut HistoryManager) {
         material: Material { color: [0.8, 0.4, 0.2], roughness: 0.5, metalness: 0.5, emissive: 0.0 },
     });
 
-    history.push_and_apply(Event::SpawnEntity { id: 3, kind: "arrow".to_string(), hex: Hex::ZERO });
-    history.push_and_apply(Event::UpdateProperty { id: 3, property: "material".to_string(), value: PropertyValue::String("arrow_mat".to_string()) });
-    history.push_and_apply(Event::UpdateProperty { id: 3, property: "scale".to_string(), value: PropertyValue::Float(0.5) });
-    history.push_and_apply(Event::UpdateProperty { id: 3, property: "rotation_z".to_string(), value: PropertyValue::Float(0.0) });
+    history.push_and_apply(Event::SpawnEntity { id: 4, kind: "arrow".to_string(), hex: Hex::ZERO });
+    history.push_and_apply(Event::UpdateProperty { id: 4, property: "material".to_string(), value: PropertyValue::String("arrow_mat".to_string()) });
+    history.push_and_apply(Event::UpdateProperty { id: 4, property: "scale".to_string(), value: PropertyValue::Float(0.5) });
+    history.push_and_apply(Event::UpdateProperty { id: 4, property: "rotation_x".to_string(), value: PropertyValue::Float(0.0) });
+    history.push_and_apply(Event::UpdateProperty { id: 4, property: "rotation_y".to_string(), value: PropertyValue::Float(0.0) });
+    history.push_and_apply(Event::UpdateProperty { id: 4, property: "rotation_z".to_string(), value: PropertyValue::Float(0.0) });
     
     // Initialize properties used by sprite parts first to satisfy renderer at every step
-    history.push_and_apply(Event::UpdateProperty { id: 3, property: "x_offset".to_string(), value: PropertyValue::Float(0.0) });
-    history.push_and_apply(Event::UpdateProperty { id: 3, property: "y_offset".to_string(), value: PropertyValue::Float(0.0) });
+    history.push_and_apply(Event::UpdateProperty { id: 4, property: "x_offset".to_string(), value: PropertyValue::Float(0.0) });
+    history.push_and_apply(Event::UpdateProperty { id: 4, property: "y_offset".to_string(), value: PropertyValue::Float(0.0) });
+    history.push_and_apply(Event::UpdateProperty { id: 4, property: "z_offset".to_string(), value: PropertyValue::Float(0.0) });
 
-    history.push_and_apply(Event::UpdateProperty { id: 3, property: "z_offset".to_string(), value: PropertyValue::Float(0.0) });
-
-    let arrow_color = [0.8, 0.4, 0.2, 1.0];
     history.push_and_apply(Event::UpdateProperty {
-        id: 3,
+        id: 4,
         property: "sprite_parts".to_string(),
         value: PropertyValue::SpriteParts(vec![
             pystral_core::domain::SpritePart {
@@ -181,20 +193,20 @@ fn setup_arrow(history: &mut HistoryManager) {
                 y_prop: "y_offset".into(),
                 z_prop: "z_offset".into(),
                 rotation_prop: None,
-                color: [arrow_color[0], arrow_color[1], arrow_color[2]],
+                color: [1.0, 1.0, 1.0],
                 scale: 1.0,
-                painter_commands: crate::character::make_arrow_commands(arrow_color),
-                spritestack: None,
+                painter_commands: Vec::new(),
+                spritestack: Some(("primitives".into(), "Arrow".into())),
             }
         ]),
     });
 
-    history.push_and_apply(Event::UpdateProperty { id: 3, property: "cam_offset_x".to_string(), value: PropertyValue::Float(0.0) });
-    history.push_and_apply(Event::UpdateProperty { id: 3, property: "cam_offset_y".to_string(), value: PropertyValue::Float(0.0) });
-    history.push_and_apply(Event::UpdateProperty { id: 3, property: "cam_offset_z".to_string(), value: PropertyValue::Float(0.0) });
-    history.push_and_apply(Event::UpdateProperty { id: 3, property: "world_x".to_string(), value: PropertyValue::Float(start.x) });
-    history.push_and_apply(Event::UpdateProperty { id: 3, property: "world_y".to_string(), value: PropertyValue::Float(start.z) });
-    history.push_and_apply(Event::UpdateProperty { id: 3, property: "z".to_string(), value: PropertyValue::Float(start.y) });
-    history.push_and_apply(Event::UpdateProperty { id: 3, property: "fsm".to_string(), value: PropertyValue::String("arrow_fsm".to_string()) });
-    history.push_and_apply(Event::SetAnimationState { id: 3, state: "flight".to_string() });
+    history.push_and_apply(Event::UpdateProperty { id: 4, property: "cam_offset_x".to_string(), value: PropertyValue::Float(0.0) });
+    history.push_and_apply(Event::UpdateProperty { id: 4, property: "cam_offset_y".to_string(), value: PropertyValue::Float(0.0) });
+    history.push_and_apply(Event::UpdateProperty { id: 4, property: "cam_offset_z".to_string(), value: PropertyValue::Float(0.0) });
+    history.push_and_apply(Event::UpdateProperty { id: 4, property: "world_x".to_string(), value: PropertyValue::Float(start.x) });
+    history.push_and_apply(Event::UpdateProperty { id: 4, property: "world_y".to_string(), value: PropertyValue::Float(start.z) });
+    history.push_and_apply(Event::UpdateProperty { id: 4, property: "z".to_string(), value: PropertyValue::Float(start.y) });
+    history.push_and_apply(Event::UpdateProperty { id: 4, property: "fsm".to_string(), value: PropertyValue::String("arrow_fsm".to_string()) });
+    history.push_and_apply(Event::SetAnimationState { id: 4, state: "flight".to_string() });
 }

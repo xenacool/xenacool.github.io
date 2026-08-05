@@ -17,6 +17,7 @@ pub struct TrajectoryRequest {
 pub struct TrajectoryResponse {
     pub trajectory: Vec<Vec3>,
     pub rotations: Vec<f32>,
+    pub yaw: f32,
 }
 
 pub struct TrajectorySystem {
@@ -78,7 +79,8 @@ impl TrajectorySystem {
                 }
 
                 if hit_target && !collided {
-                    return Ok(TrajectoryResponse { trajectory: points, rotations });
+                    let yaw = dir_h.z.atan2(dir_h.x);
+                    return Ok(TrajectoryResponse { trajectory: points, rotations, yaw });
                 }
             }
         }

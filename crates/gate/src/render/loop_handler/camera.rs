@@ -25,7 +25,13 @@ pub fn setup_camera(ctx: &mut RenderContext, worker_tx: &futures::channel::mpsc:
     let mut height_val = 12.0;
     let mut target = Vec3::ZERO;
 
-    if let Some(cam) = state.entities.iter().find(|e| e.kind == "camera") {
+    let cam = if let Some(id) = ctx.active_camera_id {
+        state.entities.iter().find(|e| e.id == id && e.kind == "camera")
+    } else {
+        state.entities.iter().find(|e| e.kind == "camera")
+    };
+
+    if let Some(cam) = cam {
         angle = cam.get_float("angle", 0.0).log_fallback(worker_tx);
         cam_dist = cam.get_float("distance", 20.0).log_fallback(worker_tx);
         height_val = cam.get_float("height", 12.0).log_fallback(worker_tx);

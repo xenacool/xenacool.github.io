@@ -2,7 +2,6 @@ use pystral_core::domain::SpritePart;
 use pystral_core::log::{Event, PropertyValue};
 use pystral_core::history::HistoryManager;
 use hexx::Hex;
-use crate::character::make_rect_commands;
 
 pub fn setup_rocks(history: &mut HistoryManager) {
     let rock_hexes = vec![
@@ -44,10 +43,10 @@ pub fn setup_rocks(history: &mut HistoryManager) {
                     y_prop: "y".into(), 
                     z_prop: "z".into(), 
                     rotation_prop: None, 
-                    color: [0.5, 0.5, 0.5], 
+                    color: [1.0, 1.0, 1.0], 
                     scale: 1.0, 
-                    painter_commands: make_rect_commands([0.4, 0.4, 0.4, 1.0], 64.0, 64.0, 128.0, 128.0),
-                    spritestack: None,
+                    painter_commands: Vec::new(),
+                    spritestack: Some(("primitives".into(), "Rock".into())),
                 },
             ]),
         });
