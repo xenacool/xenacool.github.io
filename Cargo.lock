@@ -998,7 +998,6 @@ dependencies = [
  "hexx",
  "png",
  "pystral_core",
- "pystral_macros",
  "rapier3d",
  "serde",
 ]
@@ -1080,6 +1079,7 @@ dependencies = [
  "pystral_compiler",
  "pystral_core",
  "pystral_games",
+ "pystral_macros",
  "serde",
  "wasm-bindgen",
 ]

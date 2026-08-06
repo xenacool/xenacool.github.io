@@ -13,6 +13,5 @@ rapier3d = "0.34.0"
 bincode = "1.3"
 byteorder = "1.5"
 png = "0.18.1"
-pystral_macros = { path = "../macros" }
 [lints]
 workspace = true

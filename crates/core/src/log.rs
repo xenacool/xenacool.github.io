@@ -92,7 +92,7 @@ impl EntityState {
         if kind == "world" {
             properties.insert("map".to_string(), PropertyValue::HexMap(crate::domain::HexMap::new()));
             properties.insert("lighting".to_string(), PropertyValue::Lighting(crate::domain::LightingConfig::default()));
-        } else if kind == "sprite" || kind == "arrow" || kind == "rock" || kind == "skeleton_minion" || kind == "spider" || kind == "character" {
+        } else if kind == "sprite" || kind == "arrow" || kind == "rock" || kind == "skeleton_minion" || kind == "necromancer" || kind == "caveman" || kind == "mage" || kind == "character" {
             properties.insert("scale".to_string(), PropertyValue::Float(1.0));
             properties.insert("z".to_string(), PropertyValue::Float(0.0));
             properties.insert("rotation_x".to_string(), PropertyValue::Float(0.0));

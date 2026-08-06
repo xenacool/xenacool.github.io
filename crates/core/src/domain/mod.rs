@@ -129,6 +129,20 @@ pub struct Bone {
     pub start: Joint,
     pub end: Joint,
     pub painter_commands: Vec<PainterCommand>,
+    pub spritestack: Option<(String, String)>,
+    pub scale: f32,
+}
+
+impl Bone {
+    pub fn new(start: Joint, end: Joint) -> Self {
+        Self {
+            start,
+            end,
+            painter_commands: Vec::new(),
+            spritestack: None,
+            scale: 1.0,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

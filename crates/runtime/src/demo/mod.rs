@@ -15,16 +15,24 @@ use pystral_compiler::physics::TrajectorySystem;
 use self::world::create_demo_world;
 use self::animation::generate_arrow_tracks;
 use self::entity::{setup_rocks, setup_spritestack_demo};
-use crate::character::setup_spider;
 
 pub fn generate_demo_log(history: &mut HistoryManager) {
     self::assets::setup_spritestack_assets(history);
     setup_camera(history);
     setup_world(history);
-    setup_spider(history);
     setup_rocks(history);
     setup_spritestack_demo(history);
-    setup_skeleton_minion(history);
+    
+    let characters = [
+        (20, "skeleton_minion", "SkeletonMinion", Vec3::new(-5.0, 0.0, 2.0)),
+        (21, "necromancer", "Necromancer", Vec3::new(-7.0, 0.0, 3.0)),
+        (22, "caveman", "Caveman", Vec3::new(-3.0, 0.0, 1.0)),
+        (23, "mage", "Mage", Vec3::new(-1.0, 0.0, 0.0)),
+    ];
+    for (id, kind, asset, pos) in characters {
+        setup_character(history, id, kind, asset, pos);
+    }
+
     setup_arrow(history);
     finalize_demo(history);
 }
@@ -211,20 +219,24 @@ fn setup_arrow(history: &mut HistoryManager) {
     history.push_and_apply(Event::SetAnimationState { id: 4, state: "flight".to_string() });
 }
 
-fn setup_skeleton_minion(history: &mut HistoryManager) {
-    let target = Vec3::new(-5.0, 2.0, 0.0);
-    let id = 20;
-
+fn setup_character(history: &mut HistoryManager, id: u64, kind: &str, asset_name: &str, pos: Vec3) {
     history.push_and_apply(Event::SpawnEntity {
         id,
-        kind: "skeleton_minion".to_string(),
+        kind: kind.to_string(),
         hex: Hex::ZERO,
     });
 
-    history.push_and_apply(Event::UpdateProperty { id, property: "world_x".to_string(), value: PropertyValue::Float(target.x) });
-    history.push_and_apply(Event::UpdateProperty { id, property: "world_y".to_string(), value: PropertyValue::Float(target.z) });
-    history.push_and_apply(Event::UpdateProperty { id, property: "z".to_string(), value: PropertyValue::Float(0.0) }); // On the ground
+    history.push_and_apply(Event::UpdateProperty { id, property: "world_x".to_string(), value: PropertyValue::Float(pos.x) });
+    history.push_and_apply(Event::UpdateProperty { id, property: "world_y".to_string(), value: PropertyValue::Float(pos.z) });
+    history.push_and_apply(Event::UpdateProperty { id, property: "z".to_string(), value: PropertyValue::Float(pos.y) });
     history.push_and_apply(Event::UpdateProperty { id, property: "scale".to_string(), value: PropertyValue::Float(1.0) });
+    history.push_and_apply(Event::UpdateProperty { id, property: "rotation_x".to_string(), value: PropertyValue::Float(0.0) });
+    history.push_and_apply(Event::UpdateProperty { id, property: "rotation_y".to_string(), value: PropertyValue::Float(0.0) });
+    history.push_and_apply(Event::UpdateProperty { id, property: "rotation_z".to_string(), value: PropertyValue::Float(0.0) });
+    history.push_and_apply(Event::UpdateProperty { id, property: "cam_offset_x".to_string(), value: PropertyValue::Float(0.0) });
+    history.push_and_apply(Event::UpdateProperty { id, property: "cam_offset_y".to_string(), value: PropertyValue::Float(0.0) });
+    history.push_and_apply(Event::UpdateProperty { id, property: "cam_offset_z".to_string(), value: PropertyValue::Float(0.0) });
+    history.push_and_apply(Event::UpdateProperty { id, property: "material".to_string(), value: PropertyValue::String("rock".to_string()) });
     
     history.push_and_apply(Event::UpdateProperty { id, property: "x_offset".to_string(), value: PropertyValue::Float(0.0) });
     history.push_and_apply(Event::UpdateProperty { id, property: "y_offset".to_string(), value: PropertyValue::Float(0.0) });
@@ -242,8 +254,9 @@ fn setup_skeleton_minion(history: &mut HistoryManager) {
                 color: [1.0, 1.0, 1.0],
                 scale: 1.0,
                 painter_commands: Vec::new(),
-                spritestack: Some(("primitives".into(), "SkeletonMinion".into())),
+                spritestack: Some(("primitives".into(), asset_name.into())),
             }
         ]),
     });
 }
+
