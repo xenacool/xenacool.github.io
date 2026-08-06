@@ -15,13 +15,13 @@ use crate::physics::TrajectorySystem;
 use self::world::create_demo_world;
 use self::animation::generate_arrow_tracks;
 use self::entity::{setup_rocks, setup_spritestack_demo};
-use crate::character::setup_character;
+use crate::character::setup_spider;
 
 pub fn generate_demo_log(history: &mut HistoryManager) {
     self::assets::setup_spritestack_assets(history);
     setup_camera(history);
     setup_world(history);
-    setup_character(history);
+    setup_spider(history);
     setup_rocks(history);
     setup_spritestack_demo(history);
     setup_arrow(history);

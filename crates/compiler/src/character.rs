@@ -2,10 +2,11 @@
 use pystral_core::domain::{PainterCommand, SpritePart, Bone, Joint};
 use pystral_core::log::{Event, PropertyValue};
 use pystral_core::history::HistoryManager;
-use hexx::Hex;
+use hexx::{Hex, ColumnMeshBuilder, HexLayout};
 use crate::demo::animation::generate_ik_tracks;
 use crate::ik::{IkSystem, Rig, Exp, length_eq};
 use std::collections::HashMap;
+use glam::Vec2;
 
 fn color_pair(c: [f32; 4]) -> ([f32; 4], [f32; 4]) {
     let mut mirrored = c;
@@ -186,75 +187,200 @@ pub fn create_rat_rig() -> Rig {
     }
 }
 
-pub fn setup_character(history: &mut HistoryManager) {
-    let mut ik_system = IkSystem::new();
-    ik_system.add_rig("knight", create_rat_rig()); // Reusing rat rig for now as it matches humanoid enough for this demo
+pub fn create_spider_rig() -> Rig {
+    let mut eqs = Vec::new();
+    let mut vars = Vec::new();
+    let mut targets = Vec::new();
 
-    let idle_tracks = generate_ik_tracks(&mut ik_system, 20, 100.0, |i, phase| {
-        let mut targets = HashMap::new();
-        if i == 0 {
-            targets.insert("target_head".to_string(), crate::ik::Vec3 { x: 1.2, y: 0.0, z: 0.3 });
-            targets.insert("target_tail".to_string(), crate::ik::Vec3 { x: -1.5, y: 0.0, z: 0.2 });
-            targets.insert("target_l_hand".to_string(), crate::ik::Vec3 { x: 0.8, y: -0.2, z: 0.0 });
-            targets.insert("target_r_hand".to_string(), crate::ik::Vec3 { x: 0.9, y: 0.2, z: 0.0 });
-            targets.insert("target_l_foot".to_string(), crate::ik::Vec3 { x: -0.6, y: -0.2, z: 0.0 });
-            targets.insert("target_r_foot".to_string(), crate::ik::Vec3 { x: -0.5, y: 0.2, z: 0.0 });
-        } else {
-            targets.insert("target_head".to_string(), crate::ik::Vec3 { x: 1.2 + (phase.cos() * 0.05) as f32, y: (phase.sin() * 0.05) as f32, z: 0.3 + (phase.sin() * 0.05) as f32 });
-            targets.insert("target_tail".to_string(), crate::ik::Vec3 { x: -1.5, y: (phase.cos() * 0.1) as f32, z: 0.2 + (phase.sin() * 0.15) as f32 });
-            targets.insert("target_l_hand".to_string(), crate::ik::Vec3 { x: 0.8 + (phase.cos() * 0.02) as f32, y: -0.2, z: (phase.sin().abs() * 0.05) as f32 });
-            targets.insert("target_r_hand".to_string(), crate::ik::Vec3 { x: 0.9 + (phase.sin() * 0.02) as f32, y: 0.2, z: (phase.cos().abs() * 0.05) as f32 });
-            targets.insert("target_l_foot".to_string(), crate::ik::Vec3 { x: -0.6 + (phase.sin() * 0.02) as f32, y: -0.2, z: (phase.cos().abs() * 0.02) as f32 });
-            targets.insert("target_r_foot".to_string(), crate::ik::Vec3 { x: -0.5 + (phase.cos() * 0.02) as f32, y: 0.2, z: (phase.sin().abs() * 0.02) as f32 });
+    // Thorax (Base)
+    let tx = Exp::var("thorax_x");
+    let ty = Exp::var("thorax_y");
+    let tz = Exp::var("thorax_z");
+    vars.push("thorax".to_string());
+
+    let ttx = Exp::var("target_thorax_x");
+    let tty = Exp::var("target_thorax_y");
+    let ttz = Exp::var("target_thorax_z");
+    targets.push("target_thorax".to_string());
+    eqs.push(Exp::sub(tx.clone(), ttx.clone()));
+    eqs.push(Exp::sub(ty.clone(), tty.clone()));
+    eqs.push(Exp::sub(tz.clone(), ttz.clone()));
+
+    // Abdomen
+    let ax = Exp::var("abdomen_x");
+    let ay = Exp::var("abdomen_y");
+    let az = Exp::var("abdomen_z");
+    vars.push("abdomen".to_string());
+    eqs.push(length_eq(&tx, &ty, &tz, &ax, &ay, &az, 0.4)); // Distance thorax-abdomen
+
+    // Legs
+    for side in &["l", "r"] {
+        for i in 1..=4 {
+            let prefix = format!("{}_{}", side, i);
+            
+            let hx = Exp::var(&format!("{}_hip_x", prefix));
+            let hy = Exp::var(&format!("{}_hip_y", prefix));
+            let hz = Exp::var(&format!("{}_hip_z", prefix));
+            vars.push(format!("{}_hip", prefix));
+            eqs.push(length_eq(&tx, &ty, &tz, &hx, &hy, &hz, 0.15));
+
+            let kx = Exp::var(&format!("{}_knee_x", prefix));
+            let ky = Exp::var(&format!("{}_knee_y", prefix));
+            let kz = Exp::var(&format!("{}_knee_z", prefix));
+            vars.push(format!("{}_knee", prefix));
+            eqs.push(length_eq(&hx, &hy, &hz, &kx, &ky, &kz, 0.3));
+
+            let fx = Exp::var(&format!("{}_foot_x", prefix));
+            let fy = Exp::var(&format!("{}_foot_y", prefix));
+            let fz = Exp::var(&format!("{}_foot_z", prefix));
+            vars.push(format!("{}_foot", prefix));
+            
+            let tfx = Exp::var(&format!("target_{}_foot_x", prefix));
+            let tfy = Exp::var(&format!("target_{}_foot_y", prefix));
+            let tfz = Exp::var(&format!("target_{}_foot_z", prefix));
+            targets.push(format!("target_{}_foot", prefix));
+            
+            eqs.push(Exp::sub(fx.clone(), tfx.clone()));
+            eqs.push(Exp::sub(fy.clone(), tfy.clone()));
+            eqs.push(Exp::sub(fz.clone(), tfz.clone()));
+            eqs.push(length_eq(&kx, &ky, &kz, &fx, &fy, &fz, 0.4));
         }
+    }
+
+    let mut solver_vars = Vec::new();
+    for v in &vars {
+        solver_vars.push(format!("{}_x", v));
+        solver_vars.push(format!("{}_y", v));
+        solver_vars.push(format!("{}_z", v));
+    }
+    let solver_vars_ref: Vec<&str> = solver_vars.iter().map(|s| s.as_str()).collect();
+
+    let compiled = crate::ik::Compiler::compile(&eqs).expect("spider rig compile");
+    let solver = crate::ik::NewtonRaphsonSolver::new_with_variables(compiled, &solver_vars_ref).expect("expected solver");
+
+    let rig = Rig {
+        solver,
+        variable_names: vars,
+        target_names: targets,
+    };
+
+    // Assertion on bounding box fitting in hexx's mesh top
+    // We assume the spider is centered at (0,0) in its local space.
+    // The max extent of the spider in the XY plane is roughly the body size + leg lengths.
+    // Thorax-hip (0.15) + hip-knee (0.3) + knee-foot (0.4) = 0.85.
+    let max_radius = 0.85f32;
+    
+    let layout = HexLayout::default();
+    let mesh_info = ColumnMeshBuilder::new(&layout, 1.0).build();
+    
+    // Get the hex's bounding box in the XY plane
+    let mut hex_min = Vec2::splat(f32::INFINITY);
+    let mut hex_max = Vec2::splat(f32::NEG_INFINITY);
+    for v in &mesh_info.vertices {
+        // hexx ColumnMeshBuilder: x, y (height), z
+        let pos = Vec2::new(v[0], v[2]);
+        hex_min = hex_min.min(pos);
+        hex_max = hex_max.max(pos);
+    }
+    
+    let spider_min = Vec2::splat(-max_radius);
+    let spider_max = Vec2::splat(max_radius);
+    
+    assert!(spider_min.x >= hex_min.x && spider_max.x <= hex_max.x, "Spider bounding box X out of hex bounds");
+    assert!(spider_min.y >= hex_min.y && spider_max.y <= hex_max.y, "Spider bounding box Y out of hex bounds");
+
+    rig
+}
+
+pub fn setup_spider(history: &mut HistoryManager) {
+    let mut ik_system = IkSystem::new();
+    ik_system.add_rig("spider", create_spider_rig());
+
+    let idle_tracks = generate_ik_tracks(&mut ik_system, "spider", 40, 100.0, |_i, phase| {
+        let mut targets = HashMap::new();
+        let breathing = (phase.sin() * 0.05) as f32;
+        
+        targets.insert("target_thorax".to_string(), crate::ik::Vec3 { x: 0.0, y: 0.0, z: 0.4 + breathing });
+
+        for side in &["l", "r"] {
+            for j in 1..=4 {
+                let prefix = format!("{}_{}", side, j);
+                let angle = match (side, j) {
+                    (&"l", 1) => 150.0f32,
+                    (&"l", 2) => 170.0f32,
+                    (&"l", 3) => 190.0f32,
+                    (&"l", 4) => 210.0f32,
+                    (&"r", 1) => 30.0f32,
+                    (&"r", 2) => 10.0f32,
+                    (&"r", 3) => 350.0f32,
+                    (&"r", 4) => 330.0f32,
+                    _ => 0.0,
+                }.to_radians();
+                
+                let r = 0.7 + (breathing * 0.2); // Legs move slightly with breathing
+                targets.insert(format!("target_{}_foot", prefix), crate::ik::Vec3 { 
+                    x: angle.cos() * r, 
+                    y: angle.sin() * r, 
+                    z: 0.0 
+                });
+            }
+        }
+        
+        // Add thorax movement for breathing
+        // The IK system currently doesn't support targets for all variables easily if not defined as targets,
+        // but we can influence it by changing initial guesses or adding a thorax target.
+        // For now, let's just move the feet targets.
+        
         targets
     });
 
     history.push_and_apply(Event::SpawnEntity {
-        id: 1,
+        id: 5,
         kind: "sprite".to_string(),
-        hex: Hex::new(3, -2),
+        hex: Hex::new(3, -1),
     });
 
-    let _rat_color = [0.4, 0.4, 0.4, 1.0];
-    let _belly_color = [0.6, 0.6, 0.6, 1.0];
-    let _tail_color = [0.8, 0.6, 0.6, 1.0];
-    let _joint_color = [0.3, 0.3, 0.3, 1.0];
-
     let mut initial_props = vec![
-        ("scale".to_string(), PropertyValue::Float(2.0)),
+        ("scale".to_string(), PropertyValue::Float(1.5)),
         ("z".to_string(), PropertyValue::Float(1.0)),
-        ("rotation_z".to_string(), PropertyValue::Float(0.0)),
-        ("cam_offset_x".to_string(), PropertyValue::Float(0.0)),
-        ("cam_offset_y".to_string(), PropertyValue::Float(0.0)),
-        ("cam_offset_z".to_string(), PropertyValue::Float(0.0)),
         ("material".to_string(), PropertyValue::String("rock".to_string())),
-        ("sprite_parts".to_string(), PropertyValue::SpriteParts(vec![
-            SpritePart { x_prop: "l_foot_x".into(), y_prop: "l_foot_y".into(), z_prop: "l_foot_z".into(), rotation_prop: None, color: [1.0, 1.0, 1.0], scale: 1.0, painter_commands: Vec::new(), spritestack: Some(("primitives".into(), "CubeGray".into())) },
-            SpritePart { x_prop: "r_foot_x".into(), y_prop: "r_foot_y".into(), z_prop: "r_foot_z".into(), rotation_prop: None, color: [1.0, 1.0, 1.0], scale: 1.0, painter_commands: Vec::new(), spritestack: Some(("primitives".into(), "CubeGray".into())) },
-            SpritePart { x_prop: "l_hand_x".into(), y_prop: "l_hand_y".into(), z_prop: "l_hand_z".into(), rotation_prop: None, color: [1.0, 1.0, 1.0], scale: 1.0, painter_commands: Vec::new(), spritestack: Some(("primitives".into(), "CubeRed".into())) },
-            SpritePart { x_prop: "r_hand_x".into(), y_prop: "r_hand_y".into(), z_prop: "r_hand_z".into(), rotation_prop: None, color: [1.0, 1.0, 1.0], scale: 1.0, painter_commands: Vec::new(), spritestack: Some(("primitives".into(), "CubeRed".into())) },
-            SpritePart { x_prop: "pelvis_x".into(), y_prop: "pelvis_y".into(), z_prop: "pelvis_z".into(), rotation_prop: None, color: [1.0, 1.0, 1.0], scale: 1.0, painter_commands: Vec::new(), spritestack: Some(("primitives".into(), "CubeBlue".into())) },
-            SpritePart { x_prop: "head_x".into(), y_prop: "head_y".into(), z_prop: "head_z".into(), rotation_prop: None, color: [1.0, 1.0, 1.0], scale: 1.0, painter_commands: Vec::new(), spritestack: Some(("primitives".into(), "CubeGreen".into())) },
-        ])),
     ];
 
-    // Initialize all joint properties to avoid "not found" errors before FSM kicks in
-    let joints = vec![
-        "chest", "neck", "head", "spine_1", "pelvis",
-        "tail_1", "tail_2", "tail_3", "tail_4",
-        "l_shoulder", "r_shoulder", "l_hand", "r_hand",
-        "l_hip", "r_hip", "l_foot", "r_foot"
-    ];
+    let mut joints = vec!["thorax".to_string(), "abdomen".to_string()];
+    for side in &["l", "r"] {
+        for i in 1..=4 {
+            let prefix = format!("{}_{}", side, i);
+            joints.push(format!("{}_hip", prefix));
+            joints.push(format!("{}_knee", prefix));
+            joints.push(format!("{}_foot", prefix));
+        }
+    }
+    
     for j in joints {
         initial_props.push((format!("{}_x", j), PropertyValue::Float(0.0)));
         initial_props.push((format!("{}_y", j), PropertyValue::Float(0.0)));
         initial_props.push((format!("{}_z", j), PropertyValue::Float(0.0)));
     }
 
+    let mut sprite_parts = vec![
+        SpritePart { x_prop: "thorax_x".into(), y_prop: "thorax_y".into(), z_prop: "thorax_z".into(), rotation_prop: None, color: [1.0, 1.0, 1.0], scale: 1.0, painter_commands: Vec::new(), spritestack: Some(("primitives".into(), "SpiderThorax".into())) },
+        SpritePart { x_prop: "abdomen_x".into(), y_prop: "abdomen_y".into(), z_prop: "abdomen_z".into(), rotation_prop: None, color: [1.0, 1.0, 1.0], scale: 1.0, painter_commands: Vec::new(), spritestack: Some(("primitives".into(), "SpiderAbdomen".into())) },
+    ];
+    
+    for side in &["l", "r"] {
+        for i in 1..=4 {
+            let prefix = format!("{}_{}", side, i);
+            sprite_parts.push(SpritePart { x_prop: format!("{}_hip_x", prefix), y_prop: format!("{}_hip_y", prefix), z_prop: format!("{}_hip_z", prefix), rotation_prop: None, color: [1.0, 1.0, 1.0], scale: 1.0, painter_commands: Vec::new(), spritestack: Some(("primitives".into(), "SpiderJoint".into())) });
+            sprite_parts.push(SpritePart { x_prop: format!("{}_knee_x", prefix), y_prop: format!("{}_knee_y", prefix), z_prop: format!("{}_knee_z", prefix), rotation_prop: None, color: [1.0, 1.0, 1.0], scale: 1.0, painter_commands: Vec::new(), spritestack: Some(("primitives".into(), "SpiderJoint".into())) });
+            sprite_parts.push(SpritePart { x_prop: format!("{}_foot_x", prefix), y_prop: format!("{}_foot_y", prefix), z_prop: format!("{}_foot_z", prefix), rotation_prop: None, color: [1.0, 1.0, 1.0], scale: 1.0, painter_commands: Vec::new(), spritestack: Some(("primitives".into(), "SpiderJoint".into())) });
+        }
+    }
+    
+    initial_props.push(("sprite_parts".to_string(), PropertyValue::SpriteParts(sprite_parts)));
+
     for (prop, val) in initial_props {
         history.push_and_apply(Event::UpdateProperty {
-            id: 1,
+            id: 5,
             property: prop,
             value: val,
         });
@@ -272,46 +398,39 @@ pub fn setup_character(history: &mut HistoryManager) {
     states.insert("idle".to_string(), pystral_core::animation::AnimationState { name: "idle".to_string(), tracks: idle_state_tracks });
 
     history.push_and_apply(Event::DefineFSM {
-        name: "character_fsm".to_string(),
+        name: "spider_fsm".to_string(),
         definition: pystral_core::animation::InactiveFSMDefinition {
             states,
         },
     });
 
     history.push_and_apply(Event::UpdateProperty {
-        id: 1,
+        id: 5,
         property: "fsm".to_string(),
-        value: PropertyValue::String("character_fsm".to_string()),
+        value: PropertyValue::String("spider_fsm".to_string()),
     });
 
     history.push_and_apply(Event::SetAnimationState {
-        id: 1,
+        id: 5,
         state: "idle".to_string(),
     });
 
+    let mut bones = vec![
+        Bone { start: Joint::Property("thorax".to_string()), end: Joint::Property("abdomen".to_string()), painter_commands: make_bone_commands(8.0) },
+    ];
+    for side in &["l", "r"] {
+        for i in 1..=4 {
+            let prefix = format!("{}_{}", side, i);
+            bones.push(Bone { start: Joint::Property("thorax".to_string()), end: Joint::Property(format!("{}_hip", prefix)), painter_commands: make_bone_commands(8.0) });
+            bones.push(Bone { start: Joint::Property(format!("{}_hip", prefix)), end: Joint::Property(format!("{}_knee", prefix)), painter_commands: make_bone_commands(8.0) });
+            bones.push(Bone { start: Joint::Property(format!("{}_knee", prefix)), end: Joint::Property(format!("{}_foot", prefix)), painter_commands: make_bone_commands(8.0) });
+        }
+    }
+
     history.push_and_apply(Event::UpdateProperty {
-        id: 1,
+        id: 5,
         property: "skeleton".to_string(),
-        value: PropertyValue::Skeleton(pystral_core::domain::Skeleton {
-            bones: vec![
-                Bone { start: Joint::Property("neck".to_string()), end: Joint::Property("head".to_string()), painter_commands: make_bone_commands(12.0) },
-                Bone { start: Joint::Property("chest".to_string()), end: Joint::Property("neck".to_string()), painter_commands: make_bone_commands(15.0) },
-                Bone { start: Joint::Property("chest".to_string()), end: Joint::Property("spine_1".to_string()), painter_commands: make_bone_commands(20.0) },
-                Bone { start: Joint::Property("spine_1".to_string()), end: Joint::Property("pelvis".to_string()), painter_commands: make_bone_commands(20.0) },
-                Bone { start: Joint::Property("pelvis".to_string()), end: Joint::Property("tail_1".to_string()), painter_commands: make_bone_commands(10.0) },
-                Bone { start: Joint::Property("tail_1".to_string()), end: Joint::Property("tail_2".to_string()), painter_commands: make_bone_commands(8.0) },
-                Bone { start: Joint::Property("tail_2".to_string()), end: Joint::Property("tail_3".to_string()), painter_commands: make_bone_commands(6.0) },
-                Bone { start: Joint::Property("tail_3".to_string()), end: Joint::Property("tail_4".to_string()), painter_commands: make_bone_commands(4.0) },
-                Bone { start: Joint::Property("chest".to_string()), end: Joint::Property("l_shoulder".to_string()), painter_commands: make_bone_commands(10.0) },
-                Bone { start: Joint::Property("l_shoulder".to_string()), end: Joint::Property("l_hand".to_string()), painter_commands: make_bone_commands(8.0) },
-                Bone { start: Joint::Property("chest".to_string()), end: Joint::Property("r_shoulder".to_string()), painter_commands: make_bone_commands(10.0) },
-                Bone { start: Joint::Property("r_shoulder".to_string()), end: Joint::Property("r_hand".to_string()), painter_commands: make_bone_commands(8.0) },
-                Bone { start: Joint::Property("pelvis".to_string()), end: Joint::Property("l_hip".to_string()), painter_commands: make_bone_commands(12.0) },
-                Bone { start: Joint::Property("l_hip".to_string()), end: Joint::Property("l_foot".to_string()), painter_commands: make_bone_commands(10.0) },
-                Bone { start: Joint::Property("pelvis".to_string()), end: Joint::Property("r_hip".to_string()), painter_commands: make_bone_commands(12.0) },
-                Bone { start: Joint::Property("r_hip".to_string()), end: Joint::Property("r_foot".to_string()), painter_commands: make_bone_commands(10.0) },
-            ]
-        }),
+        value: PropertyValue::Skeleton(pystral_core::domain::Skeleton { bones }),
     });
 }
 

@@ -7,6 +7,7 @@ use std::collections::HashMap;
 
 pub fn generate_ik_tracks(
     ik_system: &mut IkSystem,
+    rig_id: &str,
     num_steps: usize,
     step_duration_ms: f32,
     target_fn: impl Fn(usize, f64) -> HashMap<String, IkVec3>,
@@ -18,7 +19,7 @@ pub fn generate_ik_tracks(
         let targets = target_fn(i, phase);
         
         let request = IkRequest {
-            rig_id: "rat".to_string(),
+            rig_id: rig_id.to_string(),
             targets,
             initial_guesses: HashMap::new(),
         };
