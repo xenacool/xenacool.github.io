@@ -4,6 +4,7 @@ members = [
     "crates/gate",
     "crates/core",
     "crates/compiler",
+    "crates/runtime",
 ]
 
 [profile.dev]
@@ -18,3 +19,37 @@ debug-assertions = false
 [profile.release]
 codegen-units = 1
 lto = "thin"
+
+[workspace.lints.rust]
+dead_code = "deny"
+
+[workspace.lints.clippy]
+# Cognitive load savers
+enum_glob_use = "deny"
+wildcard_imports = "deny"
+match_like_matches_macro = "warn"
+if_not_else = "warn"
+manual_let_else = "warn"
+needless_pass_by_value = "warn"
+similar_names = "warn"
+# Use pedantic but allow very noisy or stylistic ones
+pedantic = { level = "warn", priority = -1 }
+must_use_candidate = "allow"
+many_single_char_names = "allow"
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+module_name_repetitions = "allow"
+uninlined_format_args = "allow"
+# Robustness
+unwrap_used = "warn"
+panic = "warn"
+todo = "warn"
+# Math/Casting (can be noisy in games/graphics)
+cast_possible_truncation = "allow"
+cast_precision_loss = "allow"
+cast_lossless = "allow"
+cast_sign_loss = "allow"
+# Overrides for common game engine patterns
+too_many_arguments = "allow"
+type_complexity = "allow"
+too_many_lines = "warn"

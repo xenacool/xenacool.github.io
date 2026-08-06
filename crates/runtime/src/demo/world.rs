@@ -3,12 +3,12 @@ use hexx::Hex;
 
 pub fn create_demo_world() -> HexMap {
     let mut map = HexMap::new();
-    let width = 11;
-    let height_grid = 12;
+    let width: i32 = 11;
+    let height_grid: i32 = 12;
     
     for q in 0..width {
         for r in 0..height_grid {
-            let hex = Hex::new(q as i32 - width as i32 / 2, r as i32 - height_grid as i32 / 2);
+            let hex = Hex::new(q - width / 2, r - height_grid / 2);
             
             // 4 different minor height variations
             let base_height = ((q + r) % 4) as f32 * 0.05;

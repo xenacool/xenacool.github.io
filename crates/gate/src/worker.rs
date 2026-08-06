@@ -5,18 +5,13 @@ use std::pin::Pin;
 use std::task::{Context, Poll};
 use std::collections::VecDeque;
 use futures::{StreamExt, SinkExt};
-use pystral_compiler::task::{CompilerTask, CompilerResponse};
-use pystral_compiler::ik::IkSystem;
-use pystral_compiler::physics::TrajectorySystem;
-use pystral_compiler::demo::generate_demo_log;
-use pystral_core::history::HistoryManager;
+use pystral_runtime::Runtime;
 use wasm_bindgen::prelude::*;
 
 pub struct UnifiedWorker {
     scope: ReactorScope<ReliableInput, ReliableOutput>,
     logger: pystral_core::ui_log::Logger,
-    ik_system: IkSystem,
-    trajectory_system: TrajectorySystem,
+    runtime: Runtime,
     next_output_seq: u64,
     last_received_seq: u64,
     outbox: VecDeque<ReliableOutput>,
@@ -29,8 +24,7 @@ impl Reactor for UnifiedWorker {
         Self {
             scope,
             logger: pystral_core::ui_log::Logger::new(),
-            ik_system: IkSystem::new(),
-            trajectory_system: TrajectorySystem::new(),
+            runtime: Runtime::new(),
             next_output_seq: 0,
             last_received_seq: 0,
             outbox: VecDeque::new(),
@@ -45,10 +39,10 @@ impl Future for UnifiedWorker {
         // web_sys::console::log_1(&"Worker polling...".into());
 
         // Drain outbox
-        while let Some(_) = self.outbox.front() {
+        while self.outbox.front().is_some() {
             match self.scope.poll_ready_unpin(cx) {
                 Poll::Ready(Ok(())) => {
-                    let msg = self.outbox.pop_front().unwrap();
+                    let msg = self.outbox.pop_front().expect("Outbox should not be empty");
                     let _ = self.scope.start_send_unpin(msg);
                 }
                 Poll::Ready(Err(_)) => {
@@ -83,27 +77,12 @@ impl Future for UnifiedWorker {
                                 total_errors: self.logger.total_errors as u32,
                             })
                         }
-                        WorkerInput::CompilerTask(task) => {
-                            let res = match task {
-                                CompilerTask::SolveIk(req) => {
-                                    match self.ik_system.solve(req) {
-                                        Ok(res) => CompilerResponse::IkSolved(res),
-                                        Err(e) => CompilerResponse::Error(e),
-                                    }
-                                }
-                                CompilerTask::SolveTrajectory(req, map) => {
-                                    match self.trajectory_system.solve(req, &map) {
-                                        Ok(res) => CompilerResponse::TrajectorySolved(res),
-                                        Err(e) => CompilerResponse::Error(e),
-                                    }
-                                }
-                                CompilerTask::GenerateDemoLog => {
-                                    let mut history = HistoryManager::new();
-                                    generate_demo_log(&mut history);
-                                    CompilerResponse::DemoLogGenerated(history)
-                                }
-                            };
-                            Some(WorkerOutput::CompilerResponse(res))
+                        WorkerInput::RuntimeRequest(task) => {
+                            let (res, logs) = self.runtime.process_request(task);
+                            for log in logs {
+                                self.logger.apply_command(pystral_core::ui_log::LogCommand::Log(log));
+                            }
+                            Some(WorkerOutput::RuntimeResponse(Box::new(res)))
                         }
                     };
                     
@@ -113,7 +92,7 @@ impl Future for UnifiedWorker {
                             msg,
                         };
                         self.next_output_seq += 1;
-                        self.outbox.push_back(ReliableOutput::Msg(out_envelope));
+                        self.outbox.push_back(ReliableOutput::Msg(Box::new(out_envelope)));
                     }
                     
                     let ack_seq = self.last_received_seq;
@@ -127,10 +106,10 @@ impl Future for UnifiedWorker {
         
         if received_any {
             // Re-drain outbox if anything was added
-            while let Some(_) = self.outbox.front() {
+            while self.outbox.front().is_some() {
                 match self.scope.poll_ready_unpin(cx) {
                     Poll::Ready(Ok(())) => {
-                        let msg = self.outbox.pop_front().unwrap();
+                        let msg = self.outbox.pop_front().expect("Outbox should not be empty");
                         let _ = self.scope.start_send_unpin(msg);
                     }
                     Poll::Ready(Err(_)) => {

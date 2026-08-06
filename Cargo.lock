@@ -853,6 +853,7 @@ dependencies = [
  "proptest",
  "pystral_compiler",
  "pystral_core",
+ "pystral_runtime",
  "serde",
  "serde_json",
  "tiny-skia",
@@ -860,6 +861,18 @@ dependencies = [
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
+]
+
+[[package]]
+name = "pystral_runtime"
+version = "0.1.0"
+dependencies = [
+ "glam 0.30.10",
+ "hexx",
+ "pystral_compiler",
+ "pystral_core",
+ "serde",
+ "wasm-bindgen",
 ]
 
 [[package]]

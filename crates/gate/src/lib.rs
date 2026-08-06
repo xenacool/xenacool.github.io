@@ -1,4 +1,4 @@
-use pystral_compiler::task::{CompilerTask, CompilerResponse};
+use pystral_runtime::{RuntimeRequest, RuntimeResponse};
 use pystral_core::history::HistoryManager;
 use serde::{Deserialize, Serialize};
 
@@ -19,7 +19,7 @@ pub enum ReliableInput {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum ReliableOutput {
-    Msg(Envelope<WorkerOutput>),
+    Msg(Box<Envelope<WorkerOutput>>),
     Watermark(u64),
 }
 
@@ -27,13 +27,13 @@ pub enum ReliableOutput {
 pub enum WorkerInput {
     Log(String),
     ResetLog,
-    CompilerTask(CompilerTask),
+    RuntimeRequest(RuntimeRequest),
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum WorkerOutput {
     LogUpdate { messages: Vec<String>, total_errors: u32 },
-    CompilerResponse(CompilerResponse),
+    RuntimeResponse(Box<RuntimeResponse>),
 }
 
 pub enum AppCommand {
@@ -41,6 +41,6 @@ pub enum AppCommand {
     TogglePlayLog,
     TogglePlayAnimations,
     SetDebugMode(bool),
-    UpdateHistory(HistoryManager),
+    UpdateHistory(Box<HistoryManager>),
     CameraNav(String),
 }

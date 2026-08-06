@@ -17,10 +17,8 @@ pub fn check_camera_symmetry(history: &HistoryManager) -> Result<(), Vec<String>
     for camera in &cameras {
         let mut cam_neighbors = HashMap::new();
         for (prop, val) in &camera.properties {
-            if prop.starts_with("neighbor_") {
-                if let PropertyValue::Float(target_id) = val {
-                    cam_neighbors.insert(prop.clone(), *target_id as u64);
-                }
+            if prop.starts_with("neighbor_") && let PropertyValue::Float(target_id) = val {
+                cam_neighbors.insert(prop.clone(), *target_id as u64);
             }
         }
         neighbors.insert(camera.id, cam_neighbors);
@@ -38,13 +36,12 @@ pub fn check_camera_symmetry(history: &HistoryManager) -> Result<(), Vec<String>
 
             let is_symmetric = neighbors.get(&target_id)
                 .and_then(|target_neighbors| target_neighbors.get(opposite_dir))
-                .map(|&back_id| back_id == cam_id)
-                .unwrap_or(false);
+                .is_some_and(|&back_id| back_id == cam_id);
 
             if !is_symmetric {
                 let target_neighbor_id = neighbors.get(&target_id)
                     .and_then(|target_neighbors| target_neighbors.get(opposite_dir))
-                    .cloned();
+                    .copied();
 
                 let error_msg = if let Some(back_id) = target_neighbor_id {
                     format!(
@@ -88,7 +85,7 @@ mod tests {
         generate_asymmetric_camera_log(&mut history);
         let result = check_camera_symmetry(&history);
         assert!(result.is_err());
-        let errs = result.unwrap_err();
+        let errs = result.expect_err("should be error");
         assert_eq!(errs.len(), 1);
         assert!(errs[0].contains("Camera 20 has neighbor_right pointing to 21, but Camera 21 has no neighbor_left pointing back to 20"));
     }
@@ -99,7 +96,7 @@ mod tests {
         generate_broken_chain_camera_log(&mut history);
         let result = check_camera_symmetry(&history);
         assert!(result.is_err());
-        let errs = result.unwrap_err();
+        let errs = result.expect_err("should be error");
         // 30 -> 31 (OK)
         // 31 -> 30 (OK)
         // 31 -> 32 (OK)

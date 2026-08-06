@@ -1,9 +1,10 @@
+#![allow(clippy::panic, clippy::unwrap_used, clippy::never_loop)]
+
 use pystral_core::history::HistoryManager;
-use pystral_compiler::demo::generate_demo_log;
 use pystral_gate::render::utils::{EntityExt, RenderResultExt};
 use pystral_gate::WorkerInput;
 use futures::channel::mpsc;
-use futures::StreamExt;
+use pystral_runtime::demo::generate_demo_log;
 
 #[test]
 fn test_history_behavior_at_boundaries() {
@@ -89,8 +90,10 @@ fn test_demo_log_rendering_behavior_strict() {
         }
         
         // Check for errors in the channel
-        while let Ok(Some(WorkerInput::Log(msg))) = rx.try_next() {
-            panic!("UI Log error at index {}: {}", i, msg);
+        while let Ok(msg) = rx.try_recv() {
+            if let WorkerInput::Log(msg) = msg {
+                panic!("UI Log error at index {}: {}", i, msg);
+            }
         }
     }
 }
@@ -146,7 +149,7 @@ fn test_material_resolution_behavior() {
     history.jump_to(history.log.len());
     
     let state = &history.current_state;
-    let arrow = state.entities.iter().find(|e| e.id == 3).expect("Arrow should exist");
+    let arrow = state.entities.iter().find(|e| e.id == 4).expect("Arrow should exist");
     let mat_res = arrow.get_material(&state.materials);
     
     assert!(mat_res.is_ok(), "Material arrow_mat should be resolved, but got: {:?}", mat_res.err().map(|e| e.message));

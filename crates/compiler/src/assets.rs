@@ -2,16 +2,14 @@ use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
 use pystral_core::domain::{Spritestack, SpritestackSlice};
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Default)]
 pub struct AssetCollection {
     pub spritestacks: HashMap<String, Spritestack>,
 }
 
 impl AssetCollection {
     pub fn new() -> Self {
-        Self {
-            spritestacks: HashMap::new(),
-        }
+        Self::default()
     }
 
     pub fn add_arrow(&mut self, name: &str, color: [u8; 4], spacing: f32) {
@@ -39,7 +37,7 @@ impl AssetCollection {
                     let mut current_color = color;
 
                     // Shaft: along X axis
-                    if cx >= -0.4 && cx <= 0.2 && cy.abs() < 0.03 && ci.abs() < 0.03 {
+                    if (-0.4..=0.2).contains(&cx) && cy.abs() < 0.03 && ci.abs() < 0.03 {
                         in_shape = true;
                     }
                     
@@ -53,7 +51,7 @@ impl AssetCollection {
                     }
 
                     // Tail (fletching)
-                    if cx >= -0.5 && cx < -0.3 {
+                    if (-0.5..-0.3).contains(&cx) {
                         if ci.abs() < 0.01 && cy.abs() < 0.12 {
                              in_shape = true;
                              current_color = [200, 200, 200, 255];

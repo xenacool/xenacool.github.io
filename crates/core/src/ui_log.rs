@@ -6,6 +6,7 @@ pub struct LogEntry {
     pub count: usize,
 }
 
+#[derive(Clone, Default)]
 pub struct Logger {
     pub entries: VecDeque<LogEntry>,
     pub total_errors: usize,
@@ -13,10 +14,7 @@ pub struct Logger {
 
 impl Logger {
     pub fn new() -> Self {
-        Self {
-            entries: VecDeque::new(),
-            total_errors: 0,
-        }
+        Self::default()
     }
 
     pub fn get_messages(&self) -> Vec<String> {
@@ -53,6 +51,7 @@ impl Logger {
         }
     }
 }
+
 
 pub enum LogCommand {
     Log(String),

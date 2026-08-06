@@ -24,14 +24,14 @@ impl Mesh {
             interleaved_data.push(info.uvs[i].y);
         }
 
-        let vertex_buffer = gl.create_buffer().unwrap();
+        let vertex_buffer = gl.create_buffer().expect("Failed to create vertex buffer");
         gl.bind_buffer(GL::ARRAY_BUFFER, Some(&vertex_buffer));
         unsafe {
             let view = js_sys::Float32Array::view(&interleaved_data);
             gl.buffer_data_with_array_buffer_view(GL::ARRAY_BUFFER, &view, GL::STATIC_DRAW);
         }
 
-        let index_buffer = gl.create_buffer().unwrap();
+        let index_buffer = gl.create_buffer().expect("Failed to create index buffer");
         gl.bind_buffer(GL::ELEMENT_ARRAY_BUFFER, Some(&index_buffer));
         unsafe {
             let view = js_sys::Uint16Array::view(&info.indices);
@@ -51,7 +51,7 @@ impl Mesh {
             }
         }
 
-        let wire_index_buffer = gl.create_buffer().unwrap();
+        let wire_index_buffer = gl.create_buffer().expect("Failed to create wireframe index buffer");
         gl.bind_buffer(GL::ELEMENT_ARRAY_BUFFER, Some(&wire_index_buffer));
         unsafe {
             let view = js_sys::Uint16Array::view(&wire_indices);
@@ -62,7 +62,9 @@ impl Mesh {
             vertex_buffer,
             index_buffer,
             wire_index_buffer,
+            #[allow(clippy::cast_possible_wrap)]
             index_count: info.indices.len() as i32,
+            #[allow(clippy::cast_possible_wrap)]
             wire_index_count: wire_indices.len() as i32,
         }
     }

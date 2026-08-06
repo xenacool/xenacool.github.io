@@ -6,6 +6,7 @@ edition = "2024"
 [dependencies]
 pystral_core = { path = "../core" }
 pystral_compiler = { path = "../compiler" }
+pystral_runtime = { path = "../runtime" }
 wasm-bindgen = "0.2.126"
 js-sys = "0.3"
 log = { version = "0.4", features = ["max_level_debug", "release_max_level_warn"] }
@@ -28,10 +29,9 @@ proptest = "1.0"
 version = "0.3"
 features = ["Window", "Document", "HtmlCanvasElement", "HtmlElement", "CssStyleDeclaration", "CanvasRenderingContext2d", "WebGlRenderingContext", "WebGlProgram", "WebGlShader", "WebGlBuffer", "WebGlUniformLocation", "WebGlTexture", "Performance", "DedicatedWorkerGlobalScope", "console"]
 
-[lints.clippy]
-too_many_arguments = "allow"
-type_complexity = "allow"
-
 [target.'cfg(all(target_family = "wasm", any(target_os = "unknown", target_os = "none")))'.dependencies]
 getrandom = { version = "0.3", features = ["wasm_js"] }
 getrandom_02 = { version = "0.2", features = ["js"], package = "getrandom" }
+
+[lints]
+workspace = true

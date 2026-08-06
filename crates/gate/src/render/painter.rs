@@ -1,5 +1,5 @@
 use pystral_core::domain::PainterCommand;
-use tiny_skia::*;
+use tiny_skia::{Pixmap, Paint, Stroke, PathBuilder, FillRule, Transform};
 use web_sys::{WebGlRenderingContext as GL, WebGlTexture};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -14,8 +14,7 @@ pub fn render_commands_to_texture(gl: &GL, commands: &[PainterCommand], width: u
     }
 
     let mut pixmap = Pixmap::new(width, height)?;
-    let mut paint = Paint::default();
-    paint.anti_alias = true;
+    let mut paint = Paint { anti_alias: true, ..Default::default() };
     let mut stroke = Stroke::default();
     
     // Group commands into draw calls (ending in Fill or Stroke)
@@ -90,6 +89,7 @@ pub fn render_commands_to_texture(gl: &GL, commands: &[PainterCommand], width: u
     let texture = gl.create_texture()?;
     gl.bind_texture(GL::TEXTURE_2D, Some(&texture));
     
+    #[allow(clippy::cast_possible_wrap)]
     gl.tex_image_2d_with_i32_and_i32_and_i32_and_format_and_type_and_opt_u8_array(
         GL::TEXTURE_2D,
         0,
@@ -102,9 +102,13 @@ pub fn render_commands_to_texture(gl: &GL, commands: &[PainterCommand], width: u
         Some(pixmap.data()),
     ).ok()?;
 
+    #[allow(clippy::cast_possible_wrap)]
     gl.tex_parameteri(GL::TEXTURE_2D, GL::TEXTURE_MIN_FILTER, GL::LINEAR as i32);
+    #[allow(clippy::cast_possible_wrap)]
     gl.tex_parameteri(GL::TEXTURE_2D, GL::TEXTURE_MAG_FILTER, GL::LINEAR as i32);
+    #[allow(clippy::cast_possible_wrap)]
     gl.tex_parameteri(GL::TEXTURE_2D, GL::TEXTURE_WRAP_S, GL::CLAMP_TO_EDGE as i32);
+    #[allow(clippy::cast_possible_wrap)]
     gl.tex_parameteri(GL::TEXTURE_2D, GL::TEXTURE_WRAP_T, GL::CLAMP_TO_EDGE as i32);
 
     Some(texture)

@@ -11,7 +11,7 @@ use hexx::Hex;
 use std::collections::HashMap;
 use glam::Vec3;
 
-use crate::physics::TrajectorySystem;
+use pystral_compiler::physics::TrajectorySystem;
 use self::world::create_demo_world;
 use self::animation::generate_arrow_tracks;
 use self::entity::{setup_rocks, setup_spritestack_demo};
@@ -132,8 +132,7 @@ fn setup_arrow(history: &mut HistoryManager) {
     // Find character position
     let char_hex = history.current_state.entities.iter()
         .find(|e| e.id == 1)
-        .map(|e| e.hex)
-        .unwrap_or(Hex::new(0, 1));
+        .map_or(Hex::new(0, 1), |e| e.hex);
     
     let layout = hexx::HexLayout::default();
     let char_pos = layout.hex_to_world_pos(char_hex);

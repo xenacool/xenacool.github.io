@@ -2,6 +2,7 @@ use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::{WebGlRenderingContext as GL};
 use std::sync::mpsc::{channel, Sender};
+use pystral_runtime::{RuntimeRequest, RuntimeResponse};
 use pystral_core::history::HistoryManager;
 use pystral_gate::render::{compile_shader, link_program, create_sprite_mesh, start_render_loop, VERTEX_SHADER, FRAGMENT_SHADER};
 use pystral_gate::{AppCommand, WorkerOutput, ReliableOutput, WorkerInput, ReliableInput, Envelope};
@@ -36,9 +37,9 @@ impl AppHandle {
         pystral_core::render::ERROR_MODE_ENABLED.store(enabled, std::sync::atomic::Ordering::Relaxed);
     }
 
-    pub fn update_history(&self, json: String) {
-        if let Ok(history) = serde_json::from_str::<HistoryManager>(&json) {
-            let _ = self.sender.send(AppCommand::UpdateHistory(history));
+    pub fn update_history(&self, json: &str) {
+        if let Ok(history) = serde_json::from_str::<HistoryManager>(json) {
+            let _ = self.sender.send(AppCommand::UpdateHistory(Box::new(history)));
         }
     }
 
@@ -49,12 +50,12 @@ impl AppHandle {
 
 #[wasm_bindgen]
 pub fn run_app() -> Result<AppHandle, JsValue> {
-    let document = web_sys::window().unwrap().document().unwrap();
-    let canvas = document.get_element_by_id("canvas").unwrap()
+    let document = web_sys::window().expect("No global window found").document().expect("No document found");
+    let canvas = document.get_element_by_id("canvas").expect("No element with id 'canvas' found")
         .dyn_into::<web_sys::HtmlCanvasElement>()?;
 
     let gl: GL = canvas.get_context("webgl")?
-        .unwrap().dyn_into()?;
+        .expect("Could not get WebGL context").dyn_into()?;
 
     let vert_shader = compile_shader(&gl, GL::VERTEX_SHADER, VERTEX_SHADER)?;
     let frag_shader = compile_shader(&gl, GL::FRAGMENT_SHADER, FRAGMENT_SHADER)?;
@@ -80,7 +81,7 @@ pub fn run_app() -> Result<AppHandle, JsValue> {
     let worker_tx_clone = worker_tx.clone();
     wasm_bindgen_futures::spawn_local(async move {
         gloo_timers::future::TimeoutFuture::new(2000).await;
-        let _ = worker_tx_clone.unbounded_send(WorkerInput::CompilerTask(pystral_compiler::task::CompilerTask::GenerateDemoLog));
+        let _ = worker_tx_clone.unbounded_send(WorkerInput::RuntimeRequest(RuntimeRequest::GenerateDemoLog));
     });
 
     let bridge = UnifiedWorker::spawn();
@@ -90,23 +91,17 @@ pub fn run_app() -> Result<AppHandle, JsValue> {
     wasm_bindgen_futures::spawn_local(async move {
         use futures::StreamExt;
         while let Some(output) = bridge_listener.next().await {
-            match output {
-                ReliableOutput::Msg(envelope) => {
-                    match envelope.msg {
-                        WorkerOutput::LogUpdate { messages, total_errors } => {
-                            update_log_ui(messages, total_errors);
-                        }
-                        WorkerOutput::CompilerResponse(res) => {
-                            match res {
-                                pystral_compiler::task::CompilerResponse::DemoLogGenerated(history) => {
-                                    let _ = app_tx_clone.send(AppCommand::UpdateHistory(history));
-                                }
-                                _ => {}
-                            }
+            if let ReliableOutput::Msg(envelope) = output {
+                match envelope.msg {
+                    WorkerOutput::LogUpdate { messages, total_errors } => {
+                        update_log_ui(messages, total_errors);
+                    }
+                    WorkerOutput::RuntimeResponse(res) => {
+                        if let RuntimeResponse::DemoLogGenerated(history) = *res {
+                            let _ = app_tx_clone.send(AppCommand::UpdateHistory(Box::new(history)));
                         }
                     }
                 }
-                _ => {}
             }
         }
     });

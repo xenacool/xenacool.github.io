@@ -1,6 +1,6 @@
 use pystral_core::history::HistoryManager;
 use pystral_core::log::Event;
-use crate::assets::AssetCollection;
+use pystral_compiler::assets::AssetCollection;
 
 pub fn setup_spritestack_assets(history: &mut HistoryManager) {
     let mut collection = AssetCollection::new();

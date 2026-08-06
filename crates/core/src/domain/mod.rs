@@ -33,11 +33,7 @@ pub struct HexMap {
 
 impl HexMap {
     pub fn new() -> Self {
-        Self {
-            orientation: GridOrientation::Pointy,
-            hex_size: Vec2::splat(1.0),
-            tiles: Vec::new(),
-        }
+        Self::default()
     }
 
     pub fn layout(&self) -> HexLayout {
@@ -57,6 +53,16 @@ pub struct HexGrid {
     pub orientation: GridOrientation,
     pub hex_size: Vec2,
     pub radius: u32,
+}
+
+impl Default for HexMap {
+    fn default() -> Self {
+        Self {
+            orientation: GridOrientation::Pointy,
+            hex_size: Vec2::splat(1.0),
+            tiles: Vec::new(),
+        }
+    }
 }
 
 impl HexGrid {

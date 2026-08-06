@@ -6,14 +6,15 @@ use crate::render::context::RenderContext;
 use crate::render::utils::{EntityExt, RenderResultExt};
 
 pub fn update_canvas_size(ctx: &RenderContext) -> (u32, u32) {
-    let window = web_sys::window().unwrap();
-    let canvas = ctx.gl.canvas().unwrap().dyn_into::<HtmlCanvasElement>().unwrap();
-    let width = window.inner_width().unwrap().as_f64().unwrap() as u32;
-    let height = window.inner_height().unwrap().as_f64().unwrap() as u32;
+    let window = web_sys::window().expect("No global window found");
+    let canvas = ctx.gl.canvas().expect("No canvas found").dyn_into::<HtmlCanvasElement>().expect("Canvas is not an HtmlCanvasElement");
+    let width = window.inner_width().expect("Could not get innerWidth").as_f64().expect("innerWidth is not a number") as u32;
+    let height = window.inner_height().expect("Could not get innerHeight").as_f64().expect("innerHeight is not a number") as u32;
     
     if canvas.width() != width || canvas.height() != height {
         canvas.set_width(width);
         canvas.set_height(height);
+        #[allow(clippy::cast_possible_wrap)]
         ctx.gl.viewport(0, 0, width as i32, height as i32);
     }
     (width, height)
@@ -62,8 +63,8 @@ pub fn setup_camera(ctx: &mut RenderContext, worker_tx: &futures::channel::mpsc:
     let cam_backward = Vec3::new(view.x_axis.z, view.y_axis.z, view.z_axis.z);
     let cam_forward = -cam_backward;
 
-    ctx.gl.uniform_matrix4fv_with_f32_array(ctx.uniforms.u_view.as_ref(), false, &view.to_cols_array());
-    ctx.gl.uniform_matrix4fv_with_f32_array(ctx.uniforms.u_proj.as_ref(), false, &proj.to_cols_array());
+    ctx.gl.uniform_matrix4fv_with_f32_array(ctx.uniforms.view.as_ref(), false, &view.to_cols_array());
+    ctx.gl.uniform_matrix4fv_with_f32_array(ctx.uniforms.proj.as_ref(), false, &proj.to_cols_array());
 
     (view, proj, cam_right, cam_up, cam_forward)
 }

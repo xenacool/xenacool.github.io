@@ -1,9 +1,10 @@
+#![allow(clippy::panic, clippy::unwrap_used, clippy::never_loop)]
+
 use pystral_core::history::HistoryManager;
-use pystral_compiler::demo::generate_demo_log;
 use pystral_gate::render::utils::{EntityExt, RenderResultExt};
 use pystral_gate::WorkerInput;
 use futures::channel::mpsc;
-use futures::StreamExt;
+use pystral_runtime::demo::generate_demo_log;
 
 #[test]
 fn debug_ui_log_errors() {
@@ -41,9 +42,11 @@ fn debug_ui_log_errors() {
             }
         }
         
-        while let Ok(Some(WorkerInput::Log(msg))) = rx.try_next() {
-            println!("Errors at index {}:", i);
-            println!("  - {}", msg);
+        while let Ok(msg) = rx.try_recv() {
+            if let WorkerInput::Log(msg) = msg {
+                println!("Errors at index {}:", i);
+                println!("  - {}", msg);
+            }
         }
     }
 }

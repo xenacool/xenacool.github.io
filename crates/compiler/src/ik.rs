@@ -30,22 +30,21 @@ pub struct Rig {
     pub target_names: Vec<String>,
 }
 
+#[derive(Default)]
 pub struct IkSystem {
     pub rigs: HashMap<String, Rig>,
 }
 
 impl IkSystem {
     pub fn new() -> Self {
-        Self {
-            rigs: HashMap::new(),
-        }
+        Self::default()
     }
 
     pub fn add_rig(&mut self, id: &str, rig: Rig) {
         self.rigs.insert(id.to_string(), rig);
     }
 
-    pub fn solve(&self, request: IkRequest) -> Result<IkResponse, String> {
+    pub fn solve(&self, request: &IkRequest) -> Result<IkResponse, String> {
         let rig = self.rigs.get(&request.rig_id).ok_or_else(|| format!("Rig {} not found", request.rig_id))?;
         
         let mut values = HashMap::new();

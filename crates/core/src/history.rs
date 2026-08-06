@@ -18,16 +18,14 @@ impl WorldState {
             Event::UpdateProperty { id, property, value } => {
                 if let Some(entity) = self.entities.iter_mut().find(|e| e.id == *id) {
                     entity.properties.insert(property.clone(), value.clone());
-                    if property == "fsm" {
-                        if let crate::log::PropertyValue::String(s) = value {
-                            entity.fsm_name = Some(s.clone());
-                        }
+                    if property == "fsm" && let crate::log::PropertyValue::String(s) = value {
+                        entity.fsm_name = Some(s.clone());
                     }
                 }
             }
             Event::SetAnimationState { id, state } => {
                 if let Some(entity) = self.entities.iter_mut().find(|e| e.id == *id) {
-                    entity.animation_state = state.clone();
+                    entity.animation_state.clone_from(state);
                 }
             }
             Event::DefineMaterial { name, material } => {
@@ -58,31 +56,25 @@ impl WorldState {
                 }
             }
             Event::MoveSprite { id, .. } => {
-                if let Some(prev) = &previous_entity_state {
-                    if let Some(entity) = self.entities.iter_mut().find(|e| e.id == *id) {
-                        entity.hex = prev.hex;
-                    }
+                if let (Some(prev), Some(entity)) = (&previous_entity_state, self.entities.iter_mut().find(|e| e.id == *id)) {
+                    entity.hex = prev.hex;
                 }
             }
             Event::UpdateProperty { id, property, .. } => {
-                if let Some(entity) = self.entities.iter_mut().find(|e| e.id == *id) {
-                    if let Some(prev) = &previous_entity_state {
-                        if let Some(prev_val) = prev.properties.get(property) {
-                            entity.properties.insert(property.clone(), prev_val.clone());
-                        } else {
-                            entity.properties.remove(property);
-                        }
-                        if property == "fsm" {
-                            entity.fsm_name = prev.fsm_name.clone();
-                        }
+                if let (Some(entity), Some(prev)) = (self.entities.iter_mut().find(|e| e.id == *id), &previous_entity_state) {
+                    if let Some(prev_val) = prev.properties.get(property) {
+                        entity.properties.insert(property.clone(), prev_val.clone());
+                    } else {
+                        entity.properties.remove(property);
+                    }
+                    if property == "fsm" {
+                        entity.fsm_name = prev.fsm_name.clone();
                     }
                 }
             }
             Event::SetAnimationState { id, .. } => {
-                if let Some(entity) = self.entities.iter_mut().find(|e| e.id == *id) {
-                    if let Some(prev) = &previous_entity_state {
-                        entity.animation_state = prev.animation_state.clone();
-                    }
+                if let (Some(entity), Some(prev)) = (self.entities.iter_mut().find(|e| e.id == *id), &previous_entity_state) {
+                    entity.animation_state.clone_from(&prev.animation_state);
                 }
             }
             Event::DefineMaterial { name, .. } => {
@@ -100,13 +92,11 @@ impl WorldState {
                 }
             }
             Event::TweenProperty { id, property, .. } => {
-                if let Some(entity) = self.entities.iter_mut().find(|e| e.id == *id) {
-                    if let Some(prev) = &previous_entity_state {
-                        if let Some(prev_val) = prev.properties.get(property) {
-                            entity.properties.insert(property.clone(), prev_val.clone());
-                        } else {
-                            entity.properties.remove(property);
-                        }
+                if let (Some(entity), Some(prev)) = (self.entities.iter_mut().find(|e| e.id == *id), &previous_entity_state) {
+                    if let Some(prev_val) = prev.properties.get(property) {
+                        entity.properties.insert(property.clone(), prev_val.clone());
+                    } else {
+                        entity.properties.remove(property);
                     }
                 }
             }
@@ -147,7 +137,7 @@ impl HistoryManager {
         self.log.push(event);
         self.current_index += 1;
 
-        if self.current_index % self.checkpoint_interval == 0 {
+        if self.current_index.is_multiple_of(self.checkpoint_interval) {
             self.checkpoints.push(Checkpoint {
                 event_index: self.current_index,
                 state: self.current_state.clone(),
@@ -159,9 +149,7 @@ impl HistoryManager {
         let target_index = target_index.min(self.log.len());
         
         // Find the nearest checkpoint before or at the target index
-        let checkpoint = self.checkpoints.iter()
-            .filter(|c| c.event_index <= target_index)
-            .last();
+        let checkpoint = self.checkpoints.iter().rfind(|c| c.event_index <= target_index);
 
         let mut state = if let Some(cp) = checkpoint {
             self.current_index = cp.event_index;

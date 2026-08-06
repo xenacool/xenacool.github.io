@@ -64,6 +64,7 @@ impl ActiveFSM {
     fn get_state_properties(&self, state_name: &str, now_ms: f64) -> HashMap<String, PropertyValue> {
         let mut props = HashMap::new();
         if let Some(state) = self.definition.states.get(state_name) {
+            #[allow(clippy::cast_possible_truncation)]
             let elapsed = (now_ms - self.state_start_time_ms) as f32;
             for track in &state.tracks {
                 if let Some(val) = evaluate_track(track, elapsed) {
@@ -79,13 +80,14 @@ fn evaluate_track(track: &PropertyTrack, time_ms: f32) -> Option<PropertyValue> 
     if track.keyframes.is_empty() { return None; }
     if track.keyframes.len() == 1 { return Some(track.keyframes[0].value.clone()); }
 
-    let total_duration = track.keyframes.last().unwrap().time_ms;
+    let total_duration = track.keyframes.last().expect("track has keyframes").time_ms;
     if total_duration <= 0.0 { return Some(track.keyframes[0].value.clone()); }
 
     let t = match track.loop_behavior {
         LoopBehavior::None => time_ms.min(total_duration),
         LoopBehavior::Loop => time_ms % total_duration,
         LoopBehavior::PingPong => {
+            #[allow(clippy::cast_possible_truncation)]
             let cycle = (time_ms / total_duration) as i32;
             let rem = time_ms % total_duration;
             if cycle % 2 == 0 { rem } else { total_duration - rem }
@@ -102,7 +104,7 @@ fn evaluate_track(track: &PropertyTrack, time_ms: f32) -> Option<PropertyValue> 
         }
     }
 
-    Some(track.keyframes.last().unwrap().value.clone())
+    Some(track.keyframes.last().expect("track has keyframes").value.clone())
 }
 
 pub fn interpolate(start: &PropertyValue, end: &PropertyValue, t: f32) -> PropertyValue {
@@ -119,7 +121,6 @@ pub fn interpolate(start: &PropertyValue, end: &PropertyValue, t: f32) -> Proper
             let b = s[2] + (e[2] - s[2]) * t;
             PropertyValue::Color([r, g, b])
         }
-        (PropertyValue::String(_), _) => end.clone(),
         _ => end.clone(),
     }
 }

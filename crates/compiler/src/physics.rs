@@ -20,16 +20,17 @@ pub struct TrajectoryResponse {
     pub yaw: f32,
 }
 
+#[derive(Default)]
 pub struct TrajectorySystem {
 }
 
 impl TrajectorySystem {
     pub fn new() -> Self {
-        Self {}
+        Self::default()
     }
 
-    pub fn solve(&self, request: TrajectoryRequest, map: &HexMap) -> Result<TrajectoryResponse, String> {
-        let mut physics = PhysicsWorld::new();
+    pub fn solve(&self, request: &TrajectoryRequest, map: &HexMap) -> Result<TrajectoryResponse, String> {
+        let mut physics = PhysicsWorld::default();
         physics.build_from_map(map);
 
         let diff = request.target - request.start;
@@ -89,15 +90,14 @@ impl TrajectorySystem {
     }
 }
 
+#[derive(Default)]
 pub struct PhysicsWorld {
     pub collider_set: ColliderSet,
 }
 
 impl PhysicsWorld {
     pub fn new() -> Self {
-        Self {
-            collider_set: ColliderSet::new(),
-        }
+        Self::default()
     }
 
     pub fn build_from_map(&mut self, map: &HexMap) {

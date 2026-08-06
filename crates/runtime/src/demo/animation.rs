@@ -1,7 +1,7 @@
 use pystral_core::animation::{Keyframe, LoopBehavior, PropertyTrack};
 use pystral_core::log::PropertyValue;
-use crate::ik::{IkSystem, IkRequest, Vec3 as IkVec3};
-use crate::physics::{TrajectorySystem, TrajectoryRequest};
+use pystral_compiler::ik::{IkSystem, IkRequest, Vec3 as IkVec3};
+use pystral_compiler::physics::{TrajectorySystem, TrajectoryRequest};
 use glam::Vec3;
 use std::collections::HashMap;
 
@@ -24,7 +24,7 @@ pub fn generate_ik_tracks(
             initial_guesses: HashMap::new(),
         };
 
-        if let Ok(response) = ik_system.solve(request) {
+        if let Ok(response) = ik_system.solve(&request) {
             for (joint, pos) in &response.joints {
                 tracks.entry(format!("{}_x", joint)).or_default().push(Keyframe { time_ms: t_ms, value: PropertyValue::Float(pos.x) });
                 tracks.entry(format!("{}_y", joint)).or_default().push(Keyframe { time_ms: t_ms, value: PropertyValue::Float(pos.y) });
@@ -49,7 +49,7 @@ pub fn generate_arrow_tracks(
     };
 
     let mut tracks = Vec::new();
-    match trajectory_system.solve(request, map) {
+    match trajectory_system.solve(&request, map) {
         Ok(response) => {
             let mut x_keyframes = Vec::new();
             let mut y_keyframes = Vec::new();
@@ -66,15 +66,15 @@ pub fn generate_arrow_tracks(
                 z_keyframes.push(Keyframe { time_ms: t, value: PropertyValue::Float(pos.y) }); // 3D Y is Z in our engine
                 
                 let pitch = response.rotations[i];
-                pitch_keyframes.push(Keyframe { time_ms: t, value: PropertyValue::Float(-pitch) }); // Negative pitch to tilt up
+                pitch_keyframes.push(Keyframe { time_ms: t, value: PropertyValue::Float(pitch) }); // Positive pitch to tilt up
                 yaw_keyframes.push(Keyframe { time_ms: t, value: PropertyValue::Float(response.yaw) });
             }
 
             tracks.push(PropertyTrack { property: "world_x".into(), keyframes: x_keyframes, loop_behavior: LoopBehavior::Loop });
             tracks.push(PropertyTrack { property: "world_y".into(), keyframes: y_keyframes, loop_behavior: LoopBehavior::Loop });
             tracks.push(PropertyTrack { property: "z".into(), keyframes: z_keyframes, loop_behavior: LoopBehavior::Loop });
-            tracks.push(PropertyTrack { property: "rotation_y".into(), keyframes: pitch_keyframes, loop_behavior: LoopBehavior::Loop });
-            tracks.push(PropertyTrack { property: "rotation_z".into(), keyframes: yaw_keyframes, loop_behavior: LoopBehavior::Loop });
+            tracks.push(PropertyTrack { property: "rotation_z".into(), keyframes: pitch_keyframes, loop_behavior: LoopBehavior::Loop });
+            tracks.push(PropertyTrack { property: "rotation_y".into(), keyframes: yaw_keyframes, loop_behavior: LoopBehavior::Loop });
         }
         Err(_e) => {
             // Log to UI if we can't solve it

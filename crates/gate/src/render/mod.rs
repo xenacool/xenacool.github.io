@@ -62,7 +62,7 @@ pub fn link_program(gl: &GL, vert: &WebGlShader, frag: &WebGlShader) -> Result<W
 
 fn request_animation_frame(f: &Closure<dyn FnMut()>) {
     web_sys::window()
-        .unwrap()
+        .expect("No global window found")
         .request_animation_frame(f.as_ref().unchecked_ref())
         .expect("should register `requestAnimationFrame` OK");
 }
@@ -86,8 +86,8 @@ pub fn start_render_loop(
 
     *g.borrow_mut() = Some(Closure::wrap(Box::new(move || {
         handler.borrow_mut().tick();
-        request_animation_frame(f.borrow().as_ref().unwrap());
+        request_animation_frame(f.borrow().as_ref().expect("Closure should be initialized"));
     }) as Box<dyn FnMut()>));
 
-    request_animation_frame(g.borrow().as_ref().unwrap());
+    request_animation_frame(g.borrow().as_ref().expect("Closure should be initialized"));
 }

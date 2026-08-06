@@ -42,7 +42,7 @@ impl LoopHandler {
     }
 
     pub fn tick(&mut self) {
-        let now = web_sys::window().unwrap().performance().unwrap().now();
+        let now = web_sys::window().expect("No global window found").performance().expect("Performance object not found").now();
 
         // 0. Process Commands
         self.process_commands();
@@ -51,22 +51,21 @@ impl LoopHandler {
         let (is_playing_anims, debug_mode, _delta) = self.update_playback_and_history(now);
 
         // 2. Get State & Update Logic
-        if let Some(state) = self.get_current_state(now, is_playing_anims) {
-            // 3. Canvas & Viewport
-            let (width, height) = update_canvas_size(&self.ctx);
+        let state = self.get_current_state(now, is_playing_anims);
+        // 3. Canvas & Viewport
+        let (width, height) = update_canvas_size(&self.ctx);
 
-            // 4. Clear
-            self.ctx.gl.clear(GL::COLOR_BUFFER_BIT | GL::DEPTH_BUFFER_BIT);
+        // 4. Clear
+        self.ctx.gl.clear(GL::COLOR_BUFFER_BIT | GL::DEPTH_BUFFER_BIT);
 
-            // 5. Camera & View Matrices
-            let (_view, _proj, cam_right, cam_up, cam_forward) = setup_camera(&mut self.ctx, &self.worker_tx, &state, width, height);
+        // 5. Camera & View Matrices
+        let (_view, _proj, cam_right, cam_up, cam_forward) = setup_camera(&mut self.ctx, &self.worker_tx, &state, width, height);
 
-            // Update Nav Buttons based on current camera neighbors
-            self.sync_nav_buttons(&state);
+        // Update Nav Buttons based on current camera neighbors
+        self.sync_nav_buttons(&state);
 
-            // 6. Draw Scene
-            draw_scene(&mut self.ctx, &self.worker_tx, state, cam_right, cam_up, cam_forward, debug_mode, now, is_playing_anims);
-        }
+        // 6. Draw Scene
+        draw_scene(&mut self.ctx, &self.worker_tx, &state, cam_right, cam_up, cam_forward, debug_mode, now, is_playing_anims);
     }
 
     fn process_commands(&mut self) {
@@ -87,7 +86,7 @@ impl LoopHandler {
                     self.playback_state.debug_mode = enabled;
                 }
                 AppCommand::UpdateHistory(history) => {
-                    self.history_manager = history;
+                    self.history_manager = *history;
                     self.ctx.active_camera_id = None;
                     crate::render::set_ui_slider_max(self.history_manager.log.len() as u32);
                     crate::render::update_ui_slider(self.history_manager.current_index as u32);
@@ -160,7 +159,7 @@ impl LoopHandler {
         crate::render::update_nav_buttons(up, down, left, right);
     }
 
-    fn get_current_state(&mut self, now: f64, is_playing_anims: bool) -> Option<WorldState> {
+    fn get_current_state(&mut self, now: f64, is_playing_anims: bool) -> WorldState {
         let current_idx = self.history_manager.current_index;
         let state = self.history_manager.current_state.clone();
         
@@ -176,7 +175,7 @@ impl LoopHandler {
 
         if self.ctx.last_index != Some(current_idx) {
             if let Some(e) = event {
-                let last_index = self.ctx.last_index.unwrap();
+                let last_index = self.ctx.last_index.expect("Last index should be set");
                 Self::handle_event_tweens_static(&mut self.ctx, &e, &self.history_manager, last_index, now);
             } else {
                 self.ctx.movement_tweens.clear();
@@ -194,11 +193,11 @@ impl LoopHandler {
             }
         }
 
-        self.apply_fsm_properties(&mut state);
-        self.apply_movement_tweens(&mut state, now);
-        self.apply_property_tweens(&mut state, now);
+        Self::apply_fsm_properties(&self.ctx, &mut state);
+        Self::apply_movement_tweens(&self.ctx, &mut state, now);
+        Self::apply_property_tweens(&self.ctx, &mut state, now);
 
-        Some(state)
+        state
     }
 
     fn handle_event_tweens_static(ctx: &mut RenderContext, event: &Event, history: &HistoryManager, prev_idx: usize, now: f64) {
@@ -227,7 +226,7 @@ impl LoopHandler {
     fn get_prev_entity_hex_static(history: &HistoryManager, prev_idx: usize, id: u64) -> Option<hexx::Hex> {
         let mut prev_state = WorldState::default();
         let mut temp_idx = 0;
-        let checkpoint = history.checkpoints.iter().filter(|c| c.event_index <= prev_idx).last();
+        let checkpoint = history.checkpoints.iter().rfind(|c| c.event_index <= prev_idx);
         if let Some(cp) = checkpoint {
             temp_idx = cp.event_index;
             prev_state = cp.state.clone();
@@ -241,7 +240,7 @@ impl LoopHandler {
     fn get_prev_property_value_static(history: &HistoryManager, prev_idx: usize, id: u64, property: &str) -> Option<pystral_core::log::PropertyValue> {
         let mut prev_state = WorldState::default();
         let mut temp_idx = 0;
-        let checkpoint = history.checkpoints.iter().filter(|c| c.event_index <= prev_idx).last();
+        let checkpoint = history.checkpoints.iter().rfind(|c| c.event_index <= prev_idx);
         if let Some(cp) = checkpoint {
             temp_idx = cp.event_index;
             prev_state = cp.state.clone();
@@ -267,9 +266,9 @@ impl LoopHandler {
         }
     }
 
-    fn apply_fsm_properties(&self, state: &mut WorldState) {
+    fn apply_fsm_properties(ctx: &RenderContext, state: &mut WorldState) {
         for entity in &mut state.entities {
-            if let Some(fsm) = self.ctx.active_fsms.get(&entity.id) {
+            if let Some(fsm) = ctx.active_fsms.get(&entity.id) {
                 for (prop, val) in &fsm.current_properties {
                     entity.properties.insert(prop.clone(), val.clone());
                 }
@@ -277,18 +276,17 @@ impl LoopHandler {
         }
     }
 
-    fn apply_movement_tweens(&self, _state: &mut WorldState, _now: f64) {
+    fn apply_movement_tweens(_ctx: &RenderContext, _state: &mut WorldState, _now: f64) {
         // Movement tweens are applied during drawing in scene.rs
     }
 
-    fn apply_property_tweens(&self, state: &mut WorldState, now: f64) {
-        for ((id, _), tween) in &self.ctx.property_tweens {
-            if (now - tween.start_time_ms) < tween.duration_ms {
-                if let Some(entity) = state.entities.iter_mut().find(|e| e.id == *id) {
-                    let t = ((now - tween.start_time_ms) / tween.duration_ms).clamp(0.0, 1.0) as f32;
-                    let val = interpolate_property(&tween.from_value, &tween.to_value, t);
-                    entity.properties.insert(tween.property.clone(), val);
-                }
+    fn apply_property_tweens(ctx: &RenderContext, state: &mut WorldState, now: f64) {
+        for ((id, _), tween) in &ctx.property_tweens {
+            if (now - tween.start_time_ms) < tween.duration_ms
+                && let Some(entity) = state.entities.iter_mut().find(|e| e.id == *id) {
+                let t = ((now - tween.start_time_ms) / tween.duration_ms).clamp(0.0, 1.0) as f32;
+                let val = interpolate_property(&tween.from_value, &tween.to_value, t);
+                entity.properties.insert(tween.property.clone(), val);
             }
         }
     }

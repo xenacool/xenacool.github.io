@@ -112,9 +112,9 @@ impl EntityState {
                 "spine_1", "tail_1", "tail_2", "tail_3", "tail_4"
             ];
             for j in joints {
-                properties.insert(format!("{}_x", j), PropertyValue::Float(0.0));
-                properties.insert(format!("{}_y", j), PropertyValue::Float(0.0));
-                properties.insert(format!("{}_z", j), PropertyValue::Float(0.0));
+                properties.insert(format!("{j}_x"), PropertyValue::Float(0.0));
+                properties.insert(format!("{j}_y"), PropertyValue::Float(0.0));
+                properties.insert(format!("{j}_z"), PropertyValue::Float(0.0));
             }
 
             properties.insert("material".to_string(), PropertyValue::Material(crate::domain::Material {
