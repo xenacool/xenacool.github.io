@@ -4,6 +4,8 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+pest = "2.7"
+pest_derive = "2.7"
 pystral_core = { path = "../core" }
 hexx = { version = "0.24.0", features = ["grid", "serde", "mesh"] }
 glam = { version = "0.30", features = ["serde"] }

@@ -17,6 +17,12 @@ pub struct AbilityId(pub u64);
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct JobId(pub u64);
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct PassiveId(pub u64);
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct ReactionId(pub u64);
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default, PartialOrd, Ord)]
 pub struct GridCell {
     pub q: i32,
@@ -72,8 +78,10 @@ pub struct JobDef {
     pub movement_slots_count: u8,
     pub passive_slots_count: u8,
     pub reaction_slots_count: u8,
-    pub ability_slots_count: u8, // Typically 1 for secondary job ability
+    pub ability_slots_count: u8,
     pub innate_abilities: Vec<AbilityId>,
+    pub innate_passives: Vec<PassiveId>,
+    pub innate_reactions: Vec<ReactionId>,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
@@ -205,8 +213,16 @@ impl Domain for TacticalDomain {
         &[&MoveBehavior, &AbilityBehavior, &WaitBehavior]
     }
 
-    fn get_current_value(_tick: u64, _state_diff: StateDiffRef<Self>, _agent: AgentId) -> AgentValue {
-        // w_hp * (hp / hp_max)  +  w_pos * positional_score  -  w_opp * enemy_hp_sum
+    fn get_current_value(_tick: u64, state_diff: StateDiffRef<Self>, agent: AgentId) -> AgentValue {
+        if let Some(ir) = &state_diff.script_ir {
+            let mut vm = pystral_core::script_vm::ScriptVM::new();
+            if let Some(fn_idx) = ir.functions.iter().position(|f| f.name == "get_current_value") {
+                let args = vec![pystral_core::script_vm::Value::AgentId(agent.0)];
+                if let Ok(pystral_core::script_vm::Value::F64(val)) = vm.execute(ir, fn_idx, args) {
+                    return (val as f32).try_into().unwrap_or(0.0f32.try_into().unwrap());
+                }
+            }
+        }
         0.0f32.try_into().unwrap()
     }
 
@@ -219,7 +235,6 @@ impl GlobalDomain for TacticalDomain {
     type GlobalState = TacticalState;
 
     fn derive_local_state(global_state: &Self::GlobalState, _agent: AgentId) -> Self::State {
-        // For local planning, we could prune the state to only include nearby agents
         global_state.clone()
     }
 
@@ -301,6 +316,8 @@ pub struct TacticalState {
     pub grid: TacticalGrid,
     pub collision: Option<CollisionMap>,
     pub logger: Logger,
+    pub script_ir: Option<pystral_core::script::ScriptIR>,
+    pub reaction_queue: Vec<(AgentId, ReactionId)>,
 }
 
 impl TacticalState {
@@ -310,6 +327,8 @@ impl TacticalState {
             grid: self.grid.clone(),
             collision: self.collision.clone(),
             logger: self.logger.clone(),
+            script_ir: self.script_ir.clone(),
+            reaction_queue: self.reaction_queue.clone(),
         }
     }
 }
