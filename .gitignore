@@ -7,3 +7,4 @@
 .cargo/config.toml
 web/pystral_gate.js
 web/pystral_gate_bg.wasm
+/assets
