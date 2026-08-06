@@ -78,11 +78,13 @@ void main() {
     }
 
     vec3 color = pow(uObjectColor, vec3(2.2));
+    float alpha = 1.0;
     if (uUseTexture) {
         vec4 texColor = texture2D(uTexture, vUV);
         if (texColor.a < 0.01) discard;
         vec3 linearTexColor = pow(texColor.rgb, vec3(2.2));
         color = mix(color, linearTexColor, texColor.a);
+        alpha = texColor.a;
     }
 
     vec3 result = lighting * color + (uEmissive * color);
@@ -90,5 +92,5 @@ void main() {
     // Height-based tint/fade
     result *= (0.9 + 0.2 * vHeight);
 
-    gl_FragColor = vec4(pow(result, vec3(1.0/2.2)), 1.0);
+    gl_FragColor = vec4(pow(result, vec3(1.0/2.2)), alpha);
 }";

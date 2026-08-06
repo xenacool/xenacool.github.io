@@ -1,4 +1,4 @@
-use games::*;
+use pystral_games::*;
 use std::collections::HashMap;
 use rand::SeedableRng;
 use rand::rngs::StdRng;
@@ -14,14 +14,11 @@ fn setup_unit(_id: u64, speed: i32, wits: i32) -> UnitState {
         gender: Gender::Nonbinary,
         class_id: ActorClassId(1),
         primary_job: JobId(1),
-        secondary_job: None,
+        secondary_jobs: vec![],
         movement_ability: None,
         passive_abilities: Vec::new(),
-        reaction_ability: None,
+        reaction_abilities: vec![],
         stats: UnitStats {
-            health_max: 100,
-            mana_max: 100,
-            action_points_max: 4,
             strength: 10,
             dexterity: 10,
             intelligence: 10,
@@ -38,6 +35,11 @@ fn setup_unit(_id: u64, speed: i32, wits: i32) -> UnitState {
         },
         status_effects: Vec::new(),
         modifier_deck: AbilityModifierDeck::default(),
+        derived_stats: DerivedStats {
+            health_max: 100,
+            mana_max: 100,
+            action_points_max: 4,
+        },
     }
 }
 
@@ -48,6 +50,8 @@ fn test_ct_scheduler() {
         grid: TacticalGrid::default(),
         collision: None,
         logger: Logger::new(),
+        reaction_queue: Vec::new(),
+        rng: SeededRng::new(42),
     };
 
     let id1 = AgentId(1);
@@ -73,8 +77,110 @@ fn test_ct_scheduler() {
     assert_eq!(state.agents[&id2].ct, 1000);
     assert_eq!(state.agents[&id1].ct, 1000); // Also ready now because 10 more ticks passed
     
-    // Check sorting by WITS (id2 has 20, id1 has 10)
+    // Check sorting by CT (both 1000) then WITS (id2 has 20, id1 has 10)
     assert_eq!(ready, vec![id2, id1]);
+}
+
+#[test]
+fn test_ct_priority_and_initialization() {
+    let mut state = TacticalState {
+        agents: HashMap::new(),
+        grid: TacticalGrid::default(),
+        collision: None,
+        logger: Logger::new(),
+        reaction_queue: Vec::new(),
+        rng: SeededRng::new(42),
+    };
+
+    let id1 = AgentId(1); // Higher Speed, Lower Wits
+    let id2 = AgentId(2); // Lower Speed, Higher Wits
+
+    state.agents.insert(id1, setup_unit(1, 100, 10));
+    state.agents.insert(id2, setup_unit(2, 90, 20));
+
+    let scheduler = CTScheduler::new(1000);
+    
+    // Test initialization
+    scheduler.initialize_ct(&mut state);
+    assert_eq!(state.agents[&id1].ct, 10);
+    assert_eq!(state.agents[&id2].ct, 20);
+
+    // After 10 ticks:
+    // id1: 10 + 100 * 10 = 1010 (Ready)
+    // id2: 20 + 90 * 10 = 920 (Not Ready)
+    let ready = scheduler.tick_until_ready(&mut state);
+    assert_eq!(ready, vec![id1]);
+    assert_eq!(state.agents[&id1].ct, 1010);
+    assert_eq!(state.agents[&id2].ct, 920);
+
+    // Reset id1 and tick again until id2 is ready
+    state.agents.get_mut(&id1).unwrap().ct = 0;
+    
+    // Next tick:
+    // id1: 0 + 100 = 100
+    // id2: 920 + 90 = 1010 (Ready)
+    let ready = scheduler.tick_until_ready(&mut state);
+    assert_eq!(ready, vec![id2]);
+}
+
+#[test]
+fn test_ct_tie_breaker_wits() {
+    let mut state = TacticalState {
+        agents: HashMap::new(),
+        grid: TacticalGrid::default(),
+        collision: None,
+        logger: Logger::new(),
+        reaction_queue: Vec::new(),
+        rng: SeededRng::new(42),
+    };
+
+    let id1 = AgentId(1);
+    let id2 = AgentId(2);
+
+    // Same CT, different Wits
+    let mut unit1 = setup_unit(1, 100, 10);
+    unit1.ct = 1000;
+    let mut unit2 = setup_unit(2, 100, 20);
+    unit2.ct = 1000;
+
+    state.agents.insert(id1, unit1);
+    state.agents.insert(id2, unit2);
+
+    let scheduler = CTScheduler::new(1000);
+    let ready = scheduler.tick_until_ready(&mut state);
+    
+    // Both have 1000 CT, so id2 should be first due to higher Wits (20 > 10)
+    assert_eq!(ready, vec![id2, id1]);
+}
+
+#[test]
+fn test_ct_higher_priority_than_wits() {
+    let mut state = TacticalState {
+        agents: HashMap::new(),
+        grid: TacticalGrid::default(),
+        collision: None,
+        logger: Logger::new(),
+        reaction_queue: Vec::new(),
+        rng: SeededRng::new(42),
+    };
+
+    let id1 = AgentId(1);
+    let id2 = AgentId(2);
+
+    // id1 has higher CT but lower Wits
+    let mut unit1 = setup_unit(1, 100, 10);
+    unit1.ct = 1100;
+    let mut unit2 = setup_unit(2, 100, 20);
+    unit2.ct = 1050;
+
+    state.agents.insert(id1, unit1);
+    state.agents.insert(id2, unit2);
+
+    let scheduler = CTScheduler::new(1000);
+    let ready = scheduler.tick_until_ready(&mut state);
+    
+    // id1 has higher CT (1100 > 1050), so it should be first
+    assert_eq!(ready, vec![id1, id2]);
 }
 
 #[test]

@@ -75,7 +75,7 @@ build-wasm:
 	mkdir -p web
 	wasm-bindgen --target web --out-dir web --no-typescript target/wasm32-unknown-unknown/debug/pystral_gate.wasm
 
-test:
+test: check-loc check-func-length playwright-test
 	cargo test
 
 

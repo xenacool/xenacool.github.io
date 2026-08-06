@@ -33,6 +33,15 @@ fn test_history_behavior_at_boundaries() {
 }
 
 #[test]
+fn test_print_log() {
+    let mut history = HistoryManager::new();
+    generate_demo_log(&mut history);
+    for (i, event) in history.log.iter().enumerate() {
+        println!("{}: {:?}", i, event);
+    }
+}
+
+#[test]
 fn test_demo_log_rendering_behavior_strict() {
     let (tx, mut rx) = mpsc::unbounded::<WorkerInput>();
 
@@ -90,10 +99,17 @@ fn test_demo_log_rendering_behavior_strict() {
         }
         
         // Check for errors in the channel
+        let mut error_messages = Vec::new();
         while let Ok(msg) = rx.try_recv() {
             if let WorkerInput::Log(msg) = msg {
-                panic!("UI Log error at index {}: {}", i, msg);
+                error_messages.push(msg);
+                if error_messages.len() >= 10 {
+                    break;
+                }
             }
+        }
+        if !error_messages.is_empty() {
+            panic!("UI Log errors at index {}:\n{}", i, error_messages.join("\n"));
         }
     }
 }

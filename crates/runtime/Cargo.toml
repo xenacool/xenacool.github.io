@@ -6,10 +6,13 @@ edition = "2024"
 [dependencies]
 pystral_core = { path = "../core" }
 pystral_compiler = { path = "../compiler" }
+pystral_games = { path = "../games" }
+npc-engine-core = { git = "https://github.com/xenacool/npc-engine.git" }
 serde = { version = "1.0", features = ["derive"] }
 glam = { version = "0.30", features = ["serde"] }
 hexx = { version = "0.24.0", features = ["grid", "serde", "mesh"] }
 wasm-bindgen = "0.2"
+getrandom = { version = "0.2", features = ["js"] }
 
 [lints]
 workspace = true

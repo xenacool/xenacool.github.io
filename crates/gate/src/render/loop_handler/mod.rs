@@ -1,5 +1,6 @@
 pub mod camera;
 pub mod scene;
+pub mod entity;
 
 use web_sys::WebGlRenderingContext as GL;
 use pystral_core::history::HistoryManager;

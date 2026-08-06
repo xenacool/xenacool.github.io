@@ -1,3 +1,9 @@
+pub mod tags;
+pub mod jobs;
+pub mod abilities;
+pub mod scheduler;
+pub mod rng;
+
 use std::collections::{HashMap, BTreeSet, BTreeMap};
 use serde::{Deserialize, Serialize};
 use pystral_core::ui_log::{Logger, LogCommand};
@@ -5,152 +11,17 @@ pub use npc_engine_core::{Behavior, Context, ContextMut, Domain, StateDiffRef, T
 use npc_engine_utils::GlobalDomain;
 use std::hash::Hash;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct TagId(pub u64);
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct ActorClassId(pub u64);
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct AbilityId(pub u64);
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct JobId(pub u64);
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct PassiveId(pub u64);
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct ReactionId(pub u64);
+pub use tags::*;
+pub use jobs::*;
+pub use abilities::*;
+pub use scheduler::*;
+pub use rng::*;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default, PartialOrd, Ord)]
 pub struct GridCell {
     pub q: i32,
     pub r: i32,
     pub s: i32,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum Gender {
-    Male,
-    Female,
-    Nonbinary,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct UnitStats {
-    // Derived Stats
-    pub health_max: i32,
-    pub mana_max: i32,
-    pub action_points_max: i32,
-
-    // Base Attributes
-    pub strength: i32,
-    pub dexterity: i32,
-    pub intelligence: i32,
-    pub wisdom: i32,
-    pub charisma: i32,
-    pub constitution: i32,
-    pub wits: i32,
-    pub stamina: i32,
-    pub armor_class: i32,
-    pub speed: i32,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
-pub enum SlotType {
-    MainHand,
-    OffHand,
-    Head,
-    Body,
-    Accessory,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EquipmentSlots {
-    pub slots: HashMap<SlotType, Option<u64>>, // ItemId placeholder
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct JobDef {
-    pub id: JobId,
-    pub equipment_slots: Vec<SlotType>,
-    pub movement_slots_count: u8,
-    pub passive_slots_count: u8,
-    pub reaction_slots_count: u8,
-    pub ability_slots_count: u8,
-    pub innate_abilities: Vec<AbilityId>,
-    pub innate_passives: Vec<PassiveId>,
-    pub innate_reactions: Vec<ReactionId>,
-}
-
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
-pub enum ModifierCard {
-    Plus0,
-    Plus1,
-    Minus1,
-    Plus2,
-    Minus2,
-    Critical, // 2x
-    Null,     // 0x
-}
-
-impl ModifierCard {
-    pub fn apply(&self, value: i32) -> i32 {
-        match self {
-            ModifierCard::Plus0 => value,
-            ModifierCard::Plus1 => value + 1,
-            ModifierCard::Minus1 => value - 1,
-            ModifierCard::Plus2 => value + 2,
-            ModifierCard::Minus2 => value - 2,
-            ModifierCard::Critical => value * 2,
-            ModifierCard::Null => 0,
-        }
-    }
-
-    pub fn is_reshuffle(&self) -> bool {
-        matches!(self, ModifierCard::Critical | ModifierCard::Null)
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
-pub struct AbilityModifierDeck {
-    pub draw_pile: Vec<ModifierCard>,
-    pub discard_pile: Vec<ModifierCard>,
-    pub needs_reshuffle: bool,
-}
-
-impl AbilityModifierDeck {
-    pub fn draw(&mut self, rng: &mut impl rand::Rng) -> ModifierCard {
-        if self.draw_pile.is_empty() {
-            self.reshuffle(rng);
-        }
-        
-        // If still empty, return a default +0 (should not happen with a proper deck)
-        if self.draw_pile.is_empty() {
-            return ModifierCard::Plus0;
-        }
-
-        let card = self.draw_pile.remove(0);
-        if card.is_reshuffle() {
-            self.needs_reshuffle = true;
-        }
-        self.discard_pile.push(card);
-        card
-    }
-
-    pub fn reshuffle(&mut self, rng: &mut impl rand::Rng) {
-        use rand::seq::SliceRandom;
-        self.draw_pile.append(&mut self.discard_pile);
-        self.draw_pile.shuffle(rng);
-        self.needs_reshuffle = false;
-    }
-
-    pub fn end_of_action(&mut self, rng: &mut impl rand::Rng) {
-        if self.needs_reshuffle {
-            self.reshuffle(rng);
-        }
-    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -163,14 +34,15 @@ pub struct UnitState {
     pub gender: Gender,
     pub class_id: ActorClassId,
     pub primary_job: JobId,
-    pub secondary_job: Option<JobId>,
+    pub secondary_jobs: Vec<JobId>,
     pub movement_ability: Option<AbilityId>,
     pub passive_abilities: Vec<AbilityId>,
-    pub reaction_ability: Option<AbilityId>,
+    pub reaction_abilities: Vec<AbilityId>,
     pub stats: UnitStats,
     pub equipment: EquipmentSlots,
     pub status_effects: Vec<TagId>,
     pub modifier_deck: AbilityModifierDeck,
+    pub derived_stats: crate::DerivedStats,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -187,6 +59,7 @@ pub struct CollisionMap {
 pub struct TacticalDiff {
     pub health_changes: BTreeMap<AgentId, i32>,
     pub position_changes: BTreeMap<AgentId, (i32, i32, i32)>,
+    pub rng_update: Option<SeededRng>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -214,15 +87,6 @@ impl Domain for TacticalDomain {
     }
 
     fn get_current_value(_tick: u64, state_diff: StateDiffRef<Self>, agent: AgentId) -> AgentValue {
-        if let Some(ir) = &state_diff.script_ir {
-            let mut vm = pystral_core::script_vm::ScriptVM::new();
-            if let Some(fn_idx) = ir.functions.iter().position(|f| f.name == "get_current_value") {
-                let args = vec![pystral_core::script_vm::Value::AgentId(agent.0)];
-                if let Ok(pystral_core::script_vm::Value::F64(val)) = vm.execute(ir, fn_idx, args) {
-                    return (val as f32).try_into().unwrap_or(0.0f32.try_into().unwrap());
-                }
-            }
-        }
         0.0f32.try_into().unwrap()
     }
 
@@ -239,6 +103,9 @@ impl GlobalDomain for TacticalDomain {
     }
 
     fn apply(global_state: &mut Self::GlobalState, _local_state: &Self::State, diff: &Self::Diff) {
+        if let Some(new_rng) = &diff.rng_update {
+            global_state.rng = new_rng.clone();
+        }
         for (agent_id, health_change) in &diff.health_changes {
             if let Some(agent) = global_state.agents.get_mut(agent_id) {
                 agent.health += health_change;
@@ -316,8 +183,8 @@ pub struct TacticalState {
     pub grid: TacticalGrid,
     pub collision: Option<CollisionMap>,
     pub logger: Logger,
-    pub script_ir: Option<pystral_core::script::ScriptIR>,
     pub reaction_queue: Vec<(AgentId, ReactionId)>,
+    pub rng: SeededRng,
 }
 
 impl TacticalState {
@@ -327,129 +194,9 @@ impl TacticalState {
             grid: self.grid.clone(),
             collision: self.collision.clone(),
             logger: self.logger.clone(),
-            script_ir: self.script_ir.clone(),
             reaction_queue: self.reaction_queue.clone(),
+            rng: self.rng.clone(),
         }
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct TagDef {
-    pub id: TagId,
-    pub max_stacks: u8,
-}
-
-pub struct TagRegistry {
-    pub defs: HashMap<TagId, TagDef>,
-}
-
-#[derive(Default, Debug, Clone)]
-pub struct TagBag {
-    pub counts: HashMap<TagId, u8>,
-}
-
-impl TagBag {
-    pub fn emit(&mut self, tag: TagId, n: u8, defs: &TagRegistry, logger: &mut Logger) {
-        if let Some(def) = defs.defs.get(&tag) {
-            let current = self.counts.entry(tag).or_insert(0);
-            *current = (*current).saturating_add(n).min(def.max_stacks);
-        } else {
-            logger.apply_command(LogCommand::Log(format!("Attempted to emit undefined tag: {:?}", tag)));
-        }
-    }
-
-    pub fn consume(&mut self, tag: TagId, n: u8) -> u8 {
-        if let Some(current) = self.counts.get_mut(&tag) {
-            let consumed = (*current).min(n);
-            *current -= consumed;
-            consumed
-        } else {
-            0
-        }
-    }
-}
-
-pub struct CTScheduler {
-    pub agents: Vec<AgentId>,
-    pub ct_threshold: i32,
-}
-
-impl CTScheduler {
-    pub fn new(ct_threshold: i32) -> Self {
-        Self {
-            agents: Vec::new(),
-            ct_threshold,
-        }
-    }
-
-    pub fn tick_until_ready(&self, state: &mut TacticalState) -> Vec<AgentId> {
-        loop {
-            let mut ready = Vec::new();
-            for (&id, agent) in state.agents.iter() {
-                if agent.ct >= self.ct_threshold {
-                    ready.push(id);
-                }
-            }
-
-            if !ready.is_empty() {
-                // Sort by WITS (descending) then by CT (descending) for stability
-                ready.sort_by(|a, b| {
-                    let agent_a = &state.agents[a];
-                    let agent_b = &state.agents[b];
-                    agent_b.stats.wits.cmp(&agent_a.stats.wits)
-                        .then(agent_b.ct.cmp(&agent_a.ct))
-                });
-                return ready;
-            }
-
-            // Tick
-            for agent in state.agents.values_mut() {
-                agent.ct += agent.stats.speed;
-            }
-        }
-    }
-
-    pub fn calculate_deduction(&self, ap_spent: i32, ap_max: i32) -> i32 {
-        if ap_max == 0 { return self.ct_threshold; }
-        (self.ct_threshold * ap_spent) / ap_max
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct AbilityDef {
-    pub ap_cost: u8,
-    pub emit_tags: Vec<(TagId, u8)>,
-    pub consume_tags: Vec<(TagId, u8, u8)>, // (tag, stacks, discount)
-    pub scaling: HashMap<String, f32>,       // Attribute name -> scaling factor
-}
-
-#[derive(Debug, Clone)]
-pub struct MoveProgram {
-    pub steps_ap_cost: Vec<(u8, u8)>, // (step-threshold, AP cost)
-    pub emit_tags: Vec<(TagId, u8)>,
-    pub consume_tags: Vec<(TagId, u8, u8)>,
-}
-
-impl MoveProgram {
-    pub fn get_ap_cost(&self, total_steps_so_far: u8, tag_bag: &mut TagBag) -> u8 {
-        let current_step = total_steps_so_far + 1;
-        let mut base_cost = 1;
-        for &(threshold, c) in &self.steps_ap_cost {
-            if current_step >= threshold {
-                base_cost = c;
-            } else {
-                break;
-            }
-        }
-
-        let mut discount = 0;
-        for &(tag, stacks, d) in &self.consume_tags {
-            if tag_bag.consume(tag, stacks) == stacks {
-                discount += d;
-            }
-        }
-
-        (base_cost as i32 - discount as i32).max(0) as u8
     }
 }
 
@@ -505,11 +252,12 @@ mod tests {
         let job = JobDef {
             id: JobId(1),
             equipment_slots: vec![SlotType::MainHand, SlotType::OffHand, SlotType::Head, SlotType::Body, SlotType::Accessory],
-            movement_slots_count: 1,
             passive_slots_count: 2,
             reaction_slots_count: 1,
-            ability_slots_count: 1,
+            secondary_job_slots_count: 1,
             innate_abilities: vec![],
+            innate_passives: vec![],
+            innate_reactions: vec![],
         };
 
         let unit = UnitState {
@@ -521,14 +269,11 @@ mod tests {
             gender: Gender::Male,
             class_id: ActorClassId(1),
             primary_job: JobId(1),
-            secondary_job: None,
+            secondary_jobs: vec![],
             movement_ability: None,
             passive_abilities: vec![],
-            reaction_ability: None,
+            reaction_abilities: vec![],
             stats: UnitStats {
-                health_max: 100,
-                mana_max: 50,
-                action_points_max: 4,
                 strength: 10,
                 dexterity: 10,
                 intelligence: 10,
@@ -539,6 +284,11 @@ mod tests {
                 stamina: 10,
                 armor_class: 10,
                 speed: 10,
+            },
+            derived_stats: DerivedStats {
+                health_max: 100,
+                mana_max: 50,
+                action_points_max: 4,
             },
             equipment: EquipmentSlots {
                 slots: HashMap::new(),

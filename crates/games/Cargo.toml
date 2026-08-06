@@ -1,5 +1,5 @@
 [package]
-name = "games"
+name = "pystral_games"
 version = "0.1.0"
 edition = "2024"
 
@@ -14,6 +14,7 @@ hexx = { version = "0.24.0", features = ["grid", "serde", "mesh"] }
 glam = { version = "0.30", features = ["serde"] }
 hashbrown = "0.15"
 rand = "0.8"
+rand_core = "0.6"
 
 [lints]
 workspace = true

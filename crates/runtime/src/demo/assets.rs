@@ -14,6 +14,9 @@ pub fn setup_spritestack_assets(history: &mut HistoryManager) {
     collection.add_sphere("SpiderAbdomen", 27, [15, 15, 15, 255], 0.05, 0.9);
     collection.add_sphere("SpiderJoint", 9, [40, 40, 40, 255], 0.05, 0.5);
 
+    // Skeleton Minion
+    collection.add_skeleton_minion();
+
     history.push_and_apply(Event::DefineAssetCollection {
         name: "primitives".to_string(),
         data: collection.to_binary(),

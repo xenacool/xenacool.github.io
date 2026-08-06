@@ -1,5 +1,4 @@
-node_modules/
-assets/*
+/node_modules
 /reference
 # Rust builds
 /target

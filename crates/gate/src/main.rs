@@ -72,6 +72,8 @@ pub fn run_app() -> Result<AppHandle, JsValue> {
 
     gl.enable(GL::DEPTH_TEST);
     gl.enable(GL::CULL_FACE);
+    gl.enable(GL::BLEND);
+    gl.blend_func(GL::SRC_ALPHA, GL::ONE_MINUS_SRC_ALPHA);
     gl.clear_color(0.1, 0.1, 0.1, 1.0);
     
     let (app_tx, app_rx) = channel();

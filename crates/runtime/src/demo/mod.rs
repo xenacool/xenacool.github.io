@@ -24,6 +24,7 @@ pub fn generate_demo_log(history: &mut HistoryManager) {
     setup_spider(history);
     setup_rocks(history);
     setup_spritestack_demo(history);
+    setup_skeleton_minion(history);
     setup_arrow(history);
     finalize_demo(history);
 }
@@ -208,4 +209,41 @@ fn setup_arrow(history: &mut HistoryManager) {
     history.push_and_apply(Event::UpdateProperty { id: 4, property: "z".to_string(), value: PropertyValue::Float(start.y) });
     history.push_and_apply(Event::UpdateProperty { id: 4, property: "fsm".to_string(), value: PropertyValue::String("arrow_fsm".to_string()) });
     history.push_and_apply(Event::SetAnimationState { id: 4, state: "flight".to_string() });
+}
+
+fn setup_skeleton_minion(history: &mut HistoryManager) {
+    let target = Vec3::new(-5.0, 2.0, 0.0);
+    let id = 20;
+
+    history.push_and_apply(Event::SpawnEntity {
+        id,
+        kind: "skeleton_minion".to_string(),
+        hex: Hex::ZERO,
+    });
+
+    history.push_and_apply(Event::UpdateProperty { id, property: "world_x".to_string(), value: PropertyValue::Float(target.x) });
+    history.push_and_apply(Event::UpdateProperty { id, property: "world_y".to_string(), value: PropertyValue::Float(target.z) });
+    history.push_and_apply(Event::UpdateProperty { id, property: "z".to_string(), value: PropertyValue::Float(0.0) }); // On the ground
+    history.push_and_apply(Event::UpdateProperty { id, property: "scale".to_string(), value: PropertyValue::Float(1.0) });
+    
+    history.push_and_apply(Event::UpdateProperty { id, property: "x_offset".to_string(), value: PropertyValue::Float(0.0) });
+    history.push_and_apply(Event::UpdateProperty { id, property: "y_offset".to_string(), value: PropertyValue::Float(0.0) });
+    history.push_and_apply(Event::UpdateProperty { id, property: "z_offset".to_string(), value: PropertyValue::Float(2.5) });
+
+    history.push_and_apply(Event::UpdateProperty {
+        id,
+        property: "sprite_parts".to_string(),
+        value: PropertyValue::SpriteParts(vec![
+            pystral_core::domain::SpritePart {
+                x_prop: "x_offset".into(),
+                y_prop: "y_offset".into(),
+                z_prop: "z_offset".into(),
+                rotation_prop: None,
+                color: [1.0, 1.0, 1.0],
+                scale: 1.0,
+                painter_commands: Vec::new(),
+                spritestack: Some(("primitives".into(), "SkeletonMinion".into())),
+            }
+        ]),
+    });
 }

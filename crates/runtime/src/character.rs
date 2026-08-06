@@ -164,7 +164,7 @@ pub fn setup_spider(history: &mut HistoryManager) {
     });
 
     history.push_and_apply(Event::SpawnEntity {
-        id: 5,
+        id: 1,
         kind: "sprite".to_string(),
         hex: Hex::new(3, -1),
     });
@@ -209,7 +209,7 @@ pub fn setup_spider(history: &mut HistoryManager) {
 
     for (prop, val) in initial_props {
         history.push_and_apply(Event::UpdateProperty {
-            id: 5,
+            id: 1,
             property: prop,
             value: val,
         });
@@ -234,13 +234,13 @@ pub fn setup_spider(history: &mut HistoryManager) {
     });
 
     history.push_and_apply(Event::UpdateProperty {
-        id: 5,
+        id: 1,
         property: "fsm".to_string(),
         value: PropertyValue::String("spider_fsm".to_string()),
     });
 
     history.push_and_apply(Event::SetAnimationState {
-        id: 5,
+        id: 1,
         state: "idle".to_string(),
     });
 
@@ -257,7 +257,7 @@ pub fn setup_spider(history: &mut HistoryManager) {
     }
 
     history.push_and_apply(Event::UpdateProperty {
-        id: 5,
+        id: 1,
         property: "skeleton".to_string(),
         value: PropertyValue::Skeleton(pystral_core::domain::Skeleton { bones }),
     });

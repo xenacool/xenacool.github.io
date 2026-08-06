@@ -1,6 +1,8 @@
 use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
+use std::io::Cursor;
 use pystral_core::domain::{Spritestack, SpritestackSlice};
+use png;
 
 #[derive(Serialize, Deserialize, Debug, Default)]
 pub struct AssetCollection {
@@ -142,8 +144,78 @@ impl AssetCollection {
         bincode::serialize(self).expect("Failed to serialize asset collection")
     }
 
+    pub fn add_png_spritestack(&mut self, name: &str, spacing: f32, layers: Vec<&[u8]>) {
+        let mut slices = Vec::new();
+        let mut width = 0;
+        let mut height = 0;
+
+        for layer_data in layers {
+            let decoder = png::Decoder::new(Cursor::new(layer_data));
+            let mut reader = decoder.read_info().expect("Failed to read PNG info");
+            let mut buf = vec![0; reader.output_buffer_size().unwrap()];
+            let info = reader.next_frame(&mut buf).expect("Failed to read PNG frame");
+
+            if width == 0 {
+                width = info.width;
+                height = info.height;
+            }
+
+            let color_data = match info.color_type {
+                png::ColorType::Rgba => buf,
+                png::ColorType::Rgb => {
+                    let mut rgba = Vec::with_capacity((info.width * info.height * 4) as usize);
+                    for chunk in buf.chunks_exact(3) {
+                        rgba.push(chunk[0]);
+                        rgba.push(chunk[1]);
+                        rgba.push(chunk[2]);
+                        rgba.push(255);
+                    }
+                    rgba
+                }
+                _ => panic!("Unsupported PNG color type: {:?}", info.color_type),
+            };
+
+            let pixel_count = (width * height) as usize;
+            let mut normal_data = vec![0u8; pixel_count * 4];
+            for i in 0..pixel_count {
+                // Default normal: pointing up (0, 1, 0)
+                // Packed format: [ (nx*0.5+0.5)*255, (ny*0.5+0.5)*255, (nz*0.5+0.5)*255, 255 ]
+                // nx=0 -> 127
+                // ny=1 -> 255
+                // nz=0 -> 127
+                normal_data[i * 4] = 127;
+                normal_data[i * 4 + 1] = 255;
+                normal_data[i * 4 + 2] = 127;
+                normal_data[i * 4 + 3] = 255;
+            }
+
+            slices.push(SpritestackSlice {
+                color_data,
+                normal_data,
+            });
+        }
+
+        self.spritestacks.insert(
+            name.to_string(),
+            Spritestack {
+                width,
+                height,
+                spacing,
+                slices,
+            },
+        );
+    }
+
     pub fn from_binary(data: &[u8]) -> Self {
         bincode::deserialize(data).expect("Failed to deserialize asset collection")
+    }
+
+    pub fn add_skeleton_minion(&mut self) {
+        self.add_png_spritestack(
+            "SkeletonMinion",
+            0.05,
+            crate::skeleton_minion_assets::LAYERS.to_vec(),
+        );
     }
 }
 
