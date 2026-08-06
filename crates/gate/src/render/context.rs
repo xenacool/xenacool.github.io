@@ -42,6 +42,7 @@ pub struct SpritestackTextures {
     pub width: u32,
     pub height: u32,
     pub spacing: f32,
+    pub aabb: glam::Vec3,
 }
 
 pub struct RenderContext {

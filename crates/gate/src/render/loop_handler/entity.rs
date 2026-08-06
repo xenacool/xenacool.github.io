@@ -75,36 +75,20 @@ pub fn draw_parts(ctx: &mut RenderContext, worker_tx: &futures::channel::mpsc::U
         
         if let Some((collection_name, asset_name)) = &part.spritestack {
             let cache_key = format!("{}:{}", collection_name, asset_name);
-            
-            if !ctx.asset_collection_cache.contains_key(collection_name) && let Some(data) = state.asset_collections.get(collection_name) {
-                let collection = pystral_compiler::assets::AssetCollection::from_binary(data);
-                ctx.asset_collection_cache.insert(collection_name.clone(), collection);
-            }
 
-            if !ctx.spritestack_assets.contains_key(&cache_key)
-                && let Some(collection) = ctx.asset_collection_cache.get(collection_name)
-                && let Some(stack) = collection.spritestacks.get(asset_name) {
-                let mut color_textures = Vec::new();
-                let mut normal_textures = Vec::new();
-                for slice in &stack.slices {
-                    color_textures.push(create_texture(&ctx.gl, stack.width, stack.height, &slice.color_data));
-                    normal_textures.push(create_texture(&ctx.gl, stack.width, stack.height, &slice.normal_data));
-                }
-                ctx.spritestack_assets.insert(cache_key.clone(), crate::render::context::SpritestackTextures {
-                    color_textures,
-                    normal_textures,
-                    width: stack.width,
-                    height: stack.height,
-                    spacing: stack.spacing,
-                });
-            }
+            attach_assets(ctx, state, collection_name, asset_name, &cache_key);
 
             if let Some(textures) = ctx.spritestack_assets.get(&cache_key) {
-                let spacing = textures.spacing;
-                let quad_scale = (textures.width as f32 - 0.5) * spacing * part.scale * entity_scale;
+                let quad_scale = textures.aabb.x * part.scale * entity_scale;
+                let total_height = textures.aabb.y * entity_scale;
+                let num_layers = textures.color_textures.len() as f32;
                 
                 for (i, (color_tex, normal_tex)) in textures.color_textures.iter().zip(textures.normal_textures.iter()).enumerate() {
-                    let z_offset = (i as f32 - textures.color_textures.len() as f32 * 0.5) * spacing * entity_scale;
+                    let z_offset = if num_layers > 1.0 {
+                        (i as f32 / (num_layers - 1.0) - 0.5) * total_height
+                    } else {
+                        0.0
+                    };
                     
                     let engine_world_offset = Vec3::new(rx, rz, ry) * entity_scale;
                     let spritestack_part_pos = entity_pos + engine_world_offset + Vec3::Y * z_offset;
@@ -130,6 +114,32 @@ pub fn draw_parts(ctx: &mut RenderContext, worker_tx: &futures::channel::mpsc::U
         } else {
             ctx.sprite_mesh.draw(&ctx.gl, ctx.attribs.pos, ctx.attribs.norm, ctx.attribs.uv);
         }
+    }
+}
+
+fn attach_assets(ctx: &mut RenderContext, state: &WorldState, collection_name: &String, asset_name: &String, cache_key: &str) {
+    if !ctx.asset_collection_cache.contains_key(collection_name) && let Some(data) = state.asset_collections.get(collection_name) {
+        let collection = pystral_compiler::assets::AssetCollection::from_binary(data);
+        ctx.asset_collection_cache.insert(collection_name.clone(), collection);
+    }
+
+    if !ctx.spritestack_assets.contains_key(cache_key)
+        && let Some(collection) = ctx.asset_collection_cache.get(collection_name)
+        && let Some(stack) = collection.spritestacks.get(asset_name) {
+        let mut color_textures = Vec::new();
+        let mut normal_textures = Vec::new();
+        for slice in &stack.slices {
+            color_textures.push(create_texture(&ctx.gl, stack.width, stack.height, &slice.color_data));
+            normal_textures.push(create_texture(&ctx.gl, stack.width, stack.height, &slice.normal_data));
+        }
+        ctx.spritestack_assets.insert(cache_key.to_string(), crate::render::context::SpritestackTextures {
+            color_textures,
+            normal_textures,
+            width: stack.width,
+            height: stack.height,
+            spacing: stack.spacing,
+            aabb: stack.aabb,
+        });
     }
 }
 
@@ -239,38 +249,19 @@ pub fn draw_spritestack(ctx: &mut RenderContext, entity: &EntityState, state: &W
         };
 
         let cache_key = format!("{}:{}", collection_name, asset_name);
-        
-        if !ctx.asset_collection_cache.contains_key(collection_name) && let Some(data) = state.asset_collections.get(collection_name) {
-            let collection = pystral_compiler::assets::AssetCollection::from_binary(data);
-            ctx.asset_collection_cache.insert(collection_name.clone(), collection);
-        }
-
-        if !ctx.spritestack_assets.contains_key(&cache_key)
-            && let Some(collection) = ctx.asset_collection_cache.get(collection_name)
-            && let Some(stack) = collection.spritestacks.get(asset_name) {
-            let mut color_textures = Vec::new();
-            let mut normal_textures = Vec::new();
-
-            for slice in &stack.slices {
-                color_textures.push(create_texture(&ctx.gl, stack.width, stack.height, &slice.color_data));
-                normal_textures.push(create_texture(&ctx.gl, stack.width, stack.height, &slice.normal_data));
-            }
-
-            ctx.spritestack_assets.insert(cache_key.clone(), crate::render::context::SpritestackTextures {
-                color_textures,
-                normal_textures,
-                width: stack.width,
-                height: stack.height,
-                spacing: stack.spacing,
-            });
-        }
+        attach_assets(ctx, state, collection_name, asset_name, &cache_key);
 
         if let Some(textures) = ctx.spritestack_assets.get(&cache_key) {
-            let spacing = textures.spacing;
-            let quad_scale = (textures.width as f32 - 0.5) * spacing * entity_scale;
+            let quad_scale = textures.aabb.x * entity_scale;
+            let total_height = textures.aabb.y * entity_scale;
+            let num_layers = textures.color_textures.len() as f32;
             
             for (i, (color_tex, normal_tex)) in textures.color_textures.iter().zip(textures.normal_textures.iter()).enumerate() {
-                let z_offset = (i as f32 - textures.color_textures.len() as f32 * 0.5) * spacing * entity_scale;
+                let z_offset = if num_layers > 1.0 {
+                    (i as f32 / (num_layers - 1.0) - 0.5) * total_height
+                } else {
+                    0.0
+                };
                 let slice_pos = sprite_pos + Vec3::Y * z_offset;
                 
                 let slice_model = Mat4::from_translation(slice_pos) 

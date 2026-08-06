@@ -128,6 +128,7 @@ impl EntityState {
                 width: 0,
                 height: 0,
                 spacing: 0.1,
+                aabb: Vec3::ZERO,
                 slices: Vec::new(),
             }));
         } else if kind == "camera" {

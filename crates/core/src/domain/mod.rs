@@ -1,6 +1,6 @@
 use serde::{Serialize, Deserialize};
 use hexx::{HexLayout, HexOrientation, Hex};
-use glam::Vec2;
+use glam::{Vec2, Vec3};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum GridOrientation {
@@ -147,6 +147,7 @@ pub struct Spritestack {
     pub width: u32,
     pub height: u32,
     pub spacing: f32,
+    pub aabb: Vec3,
     pub slices: Vec<SpritestackSlice>,
 }
 

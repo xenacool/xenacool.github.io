@@ -1,6 +1,7 @@
 use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
 use std::io::Cursor;
+use glam::Vec3;
 use pystral_core::domain::{Spritestack, SpritestackSlice};
 use png;
 
@@ -87,6 +88,11 @@ impl AssetCollection {
             width: size,
             height: size,
             spacing,
+            aabb: Vec3::new(
+                (size as f32 - 0.5) * spacing,
+                (slices.len() as f32 - 1.0) * spacing,
+                (size as f32 - 0.5) * spacing,
+            ),
             slices,
         });
     }
@@ -136,6 +142,11 @@ impl AssetCollection {
             width: size,
             height: size,
             spacing,
+            aabb: Vec3::new(
+                (size as f32 - 0.5) * spacing,
+                (slices.len() as f32 - 1.0) * spacing,
+                (size as f32 - 0.5) * spacing,
+            ),
             slices,
         });
     }
@@ -195,12 +206,19 @@ impl AssetCollection {
             });
         }
 
+        let aabb = Vec3::new(
+            (width as f32 - 0.5) * spacing,
+            (slices.len() as f32 - 1.0) * spacing,
+            (height as f32 - 0.5) * spacing,
+        );
+
         self.spritestacks.insert(
             name.to_string(),
             Spritestack {
                 width,
                 height,
                 spacing,
+                aabb,
                 slices,
             },
         );
@@ -211,11 +229,34 @@ impl AssetCollection {
     }
 
     pub fn add_skeleton_minion(&mut self) {
+        let layers = crate::skeleton_minion_assets::LAYERS.to_vec();
+        let num_layers = layers.len();
+        
+        // Normalize to what it was with 100 layers and 0.05 spacing
+        // Width/Height: (pixel_size - 0.5) * 0.05
+        // Depth (stack height): (100 - 1) * 0.05 = 4.95
+        // For SkeletonMinion, let's assume a target bounding box.
+        // If we want it to be independent of layers, we set the AABB directly.
+        
         self.add_png_spritestack(
             "SkeletonMinion",
-            0.05,
-            crate::skeleton_minion_assets::LAYERS.to_vec(),
+            0.05, // This spacing will be used to calculate aabb in add_png_spritestack, 
+                  // but we want to override it or use a different spacing.
+            layers,
         );
+
+        // Override AABB for SkeletonMinion to be independent of layers
+        if let Some(stack) = self.spritestacks.get_mut("SkeletonMinion") {
+            let original_spacing = 0.05;
+            let original_layers = 100.0;
+            stack.aabb = Vec3::new(
+                (stack.width as f32 - 0.5) * original_spacing,
+                (original_layers - 1.0) * original_spacing,
+                (stack.height as f32 - 0.5) * original_spacing,
+            );
+            // We also need to update the spacing so the renderer knows how to space the current number of layers
+            stack.spacing = stack.aabb.y / (num_layers as f32 - 1.0);
+        }
     }
 }
 
