@@ -1,4 +1,12 @@
-.PHONY: build-wasm run-web deploy test nuke-deploy playwright-install playwright-test playwright
+.PHONY: install build-wasm run-web deploy test nuke-deploy playwright-install playwright-test playwright
+
+install:
+	@if [ ! -d "assets" ]; then \
+		echo "Cloning assets..."; \
+		git clone git@github.com:xenacool/xenacool_assets.git assets; \
+	else \
+		echo "Assets already installed."; \
+	fi
 
 playwright: playwright-install playwright-test
 
