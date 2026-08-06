@@ -10,7 +10,6 @@ use serde::{Serialize, Deserialize};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum RuntimeRequest {
     SolveIk(IkRequest),
-    SolveTrajectory(TrajectoryRequest, HexMap),
     GenerateDemoLog,
 }
 
@@ -26,7 +25,6 @@ pub enum RuntimeResponse {
 #[derive(Default)]
 pub struct Runtime {
     ik_system: IkSystem,
-    trajectory_system: TrajectorySystem,
 }
 
 impl Runtime {
@@ -42,15 +40,6 @@ impl Runtime {
                     Ok(res) => RuntimeResponse::IkSolved(res),
                     Err(e) => {
                         logs.push(format!("IK Error: {}", e));
-                        RuntimeResponse::Error(e)
-                    }
-                }
-            }
-            RuntimeRequest::SolveTrajectory(req, map) => {
-                match self.trajectory_system.solve(&req, &map) {
-                    Ok(res) => RuntimeResponse::TrajectorySolved(res),
-                    Err(e) => {
-                        logs.push(format!("Trajectory Error: {}", e));
                         RuntimeResponse::Error(e)
                     }
                 }

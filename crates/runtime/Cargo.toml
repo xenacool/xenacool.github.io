@@ -13,6 +13,7 @@ glam = { version = "0.30", features = ["serde"] }
 hexx = { version = "0.24.0", features = ["grid", "serde", "mesh"] }
 wasm-bindgen = "0.2"
 getrandom = { version = "0.2", features = ["js"] }
+pystral_macros = { path = "../macros" }
 
 [lints]
 workspace = true

@@ -102,20 +102,24 @@ impl AssetCollection {
     }
 
     pub fn add_sphere(&mut self, name: &str, size: u32, color: [u8; 4], spacing: f32, _roughness: f32) {
+        self.add_sphere_layers(name, size, size, color, spacing)
+    }
+
+    pub fn add_sphere_layers(&mut self, name: &str, res: u32, layers: u32, color: [u8; 4], spacing: f32) {
         let mut slices = Vec::new();
-        let pixel_count = (size * size) as usize;
+        let pixel_count = (res * res) as usize;
         
-        for i in 0..size {
+        for i in 0..layers {
             let mut color_data = vec![0u8; pixel_count * 4];
             let mut normal_data = vec![0u8; pixel_count * 4];
             
-            for y in 0..size {
-                for x in 0..size {
-                    let idx = (y * size + x) as usize * 4;
+            for y in 0..res {
+                for x in 0..res {
+                    let idx = (y * res + x) as usize * 4;
                     
-                    let fx = x as f32 / (size - 1) as f32 - 0.5;
-                    let fy = y as f32 / (size - 1) as f32 - 0.5;
-                    let fi = i as f32 / (size - 1) as f32 - 0.5;
+                    let fx = x as f32 / (res as f32 - 1.0).max(1.0) - 0.5;
+                    let fy = y as f32 / (res as f32 - 1.0).max(1.0) - 0.5;
+                    let fi = i as f32 / (layers as f32 - 1.0).max(1.0) - 0.5;
                     
                     let dist = (fx*fx + fy*fy + fi*fi).sqrt();
                     let limit = 0.45;
@@ -123,9 +127,9 @@ impl AssetCollection {
                     if dist < limit {
                         color_data[idx..idx+4].copy_from_slice(&color);
                         
-                        let nx = fx / dist;
-                        let ny = fi / dist;
-                        let nz = fy / dist;
+                        let nx = if dist > 0.0 { fx / dist } else { 0.0 };
+                        let ny = if dist > 0.0 { fi / dist } else { 1.0 };
+                        let nz = if dist > 0.0 { fy / dist } else { 0.0 };
                         
                         normal_data[idx] = ((nx * 0.5 + 0.5) * 255.0) as u8;
                         normal_data[idx+1] = ((ny * 0.5 + 0.5) * 255.0) as u8;
@@ -139,13 +143,13 @@ impl AssetCollection {
         }
         
         self.spritestacks.insert(name.to_string(), Spritestack {
-            width: size,
-            height: size,
+            width: res,
+            height: res,
             spacing,
             aabb: Vec3::new(
-                (size as f32 - 0.5) * spacing,
+                (res as f32 - 0.5) * spacing,
                 (slices.len() as f32 - 1.0) * spacing,
-                (size as f32 - 0.5) * spacing,
+                (res as f32 - 0.5) * spacing,
             ),
             slices,
         });
@@ -226,37 +230,6 @@ impl AssetCollection {
 
     pub fn from_binary(data: &[u8]) -> Self {
         bincode::deserialize(data).expect("Failed to deserialize asset collection")
-    }
-
-    pub fn add_skeleton_minion(&mut self) {
-        let layers = crate::skeleton_minion_assets::LAYERS.to_vec();
-        let num_layers = layers.len();
-        
-        // Normalize to what it was with 100 layers and 0.05 spacing
-        // Width/Height: (pixel_size - 0.5) * 0.05
-        // Depth (stack height): (100 - 1) * 0.05 = 4.95
-        // For SkeletonMinion, let's assume a target bounding box.
-        // If we want it to be independent of layers, we set the AABB directly.
-        
-        self.add_png_spritestack(
-            "SkeletonMinion",
-            0.05, // This spacing will be used to calculate aabb in add_png_spritestack, 
-                  // but we want to override it or use a different spacing.
-            layers,
-        );
-
-        // Override AABB for SkeletonMinion to be independent of layers
-        if let Some(stack) = self.spritestacks.get_mut("SkeletonMinion") {
-            let original_spacing = 0.05;
-            let original_layers = 100.0;
-            stack.aabb = Vec3::new(
-                (stack.width as f32 - 0.5) * original_spacing,
-                (original_layers - 1.0) * original_spacing,
-                (stack.height as f32 - 0.5) * original_spacing,
-            );
-            // We also need to update the spacing so the renderer knows how to space the current number of layers
-            stack.spacing = stack.aabb.y / (num_layers as f32 - 1.0);
-        }
     }
 }
 

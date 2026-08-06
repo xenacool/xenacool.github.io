@@ -31,7 +31,7 @@ pub fn include_layers(input: TokenStream) -> TokenStream {
     
     let includes = (input.start..=input.end).map(|i| {
         let path = input.template.replace("{}", &i.to_string());
-        quote! { include_bytes!(#path) }
+        quote! { include_bytes!(#path) as &[u8] }
     });
 
     let expanded = quote! {

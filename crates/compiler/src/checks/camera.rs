@@ -68,21 +68,35 @@ pub fn check_camera_symmetry(history: &HistoryManager) -> Result<(), Vec<String>
 
 #[cfg(test)]
 mod tests {
+    use hexx::Hex;
+    use pystral_core::log::Event;
     use super::*;
-    use crate::sample_history_log::positive::generate_valid_camera_log;
-    use crate::sample_history_log::negative::{generate_asymmetric_camera_log, generate_broken_chain_camera_log};
 
     #[test]
     fn test_valid_camera_symmetry() {
         let mut history = HistoryManager::new();
-        generate_valid_camera_log(&mut history);
+        history.push_and_apply(Event::SpawnEntity { id: 10, kind: "camera".to_string(), hex: Hex::ZERO });
+        history.push_and_apply(Event::UpdateProperty { id: 10, property: "neighbor_right".to_string(), value: PropertyValue::Float(11.0) });
+
+        // Camera 2
+        history.push_and_apply(Event::SpawnEntity { id: 11, kind: "camera".to_string(), hex: Hex::ZERO });
+        history.push_and_apply(Event::UpdateProperty { id: 11, property: "neighbor_left".to_string(), value: PropertyValue::Float(10.0) });
+        history.push_and_apply(Event::UpdateProperty { id: 11, property: "neighbor_up".to_string(), value: PropertyValue::Float(12.0) });
+
+        // Camera 3
+        history.push_and_apply(Event::SpawnEntity { id: 12, kind: "camera".to_string(), hex: Hex::ZERO });
+        history.push_and_apply(Event::UpdateProperty { id: 12, property: "neighbor_down".to_string(), value: PropertyValue::Float(11.0) });
         assert!(check_camera_symmetry(&history).is_ok());
     }
 
     #[test]
     fn test_asymmetric_camera_symmetry() {
         let mut history = HistoryManager::new();
-        generate_asymmetric_camera_log(&mut history);
+        history.push_and_apply(Event::SpawnEntity { id: 20, kind: "camera".to_string(), hex: Hex::ZERO });
+        history.push_and_apply(Event::UpdateProperty { id: 20, property: "neighbor_right".to_string(), value: PropertyValue::Float(21.0) });
+
+        // Camera 2
+        history.push_and_apply(Event::SpawnEntity { id: 21, kind: "camera".to_string(), hex: Hex::ZERO });
         let result = check_camera_symmetry(&history);
         assert!(result.is_err());
         let errs = result.expect_err("should be error");
@@ -93,7 +107,18 @@ mod tests {
     #[test]
     fn test_broken_chain_camera_symmetry() {
         let mut history = HistoryManager::new();
-        generate_broken_chain_camera_log(&mut history);
+        history.push_and_apply(Event::SpawnEntity { id: 30, kind: "camera".to_string(), hex: Hex::ZERO });
+        history.push_and_apply(Event::UpdateProperty { id: 30, property: "neighbor_right".to_string(), value: PropertyValue::Float(31.0) });
+
+        // Camera 2
+        history.push_and_apply(Event::SpawnEntity { id: 31, kind: "camera".to_string(), hex: Hex::ZERO });
+        history.push_and_apply(Event::UpdateProperty { id: 31, property: "neighbor_left".to_string(), value: PropertyValue::Float(30.0) });
+        history.push_and_apply(Event::UpdateProperty { id: 31, property: "neighbor_up".to_string(), value: PropertyValue::Float(32.0) });
+
+        // Camera 3
+        history.push_and_apply(Event::SpawnEntity { id: 32, kind: "camera".to_string(), hex: Hex::ZERO });
+        // Camera 3 points back to 30 instead of 31
+        history.push_and_apply(Event::UpdateProperty { id: 32, property: "neighbor_down".to_string(), value: PropertyValue::Float(30.0) });
         let result = check_camera_symmetry(&history);
         assert!(result.is_err());
         let errs = result.expect_err("should be error");

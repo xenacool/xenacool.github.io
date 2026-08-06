@@ -138,7 +138,7 @@ pub fn draw_scene(ctx: &mut RenderContext, worker_tx: &futures::channel::mpsc::U
 
         // Draw Skeleton
         if let Some(skeleton) = entity.get_skeleton().log_fallback(worker_tx) {
-            draw_skeleton(ctx, worker_tx, entity, sprite_pos, entity_scale, cam_right, billboard_up, cam_forward, &skeleton, debug_mode, side, render_rotation_z, rotation_y);
+            draw_skeleton(ctx, worker_tx, entity, state, sprite_pos, entity_scale, cam_right, billboard_up, cam_forward, &skeleton, debug_mode, side, render_rotation_z, rotation_y);
         }
 
         // Draw Spritestack
