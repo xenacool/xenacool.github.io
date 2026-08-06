@@ -5,6 +5,7 @@ members = [
     "crates/core",
     "crates/compiler",
     "crates/runtime",
+    "crates/games",
 ]
 
 [profile.dev]

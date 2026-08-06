@@ -82,7 +82,7 @@ pub fn create_spider_rig() -> Rig {
         solver_vars.push(format!("{}_y", v));
         solver_vars.push(format!("{}_z", v));
     }
-    let solver_vars_ref: Vec<&str> = solver_vars.iter().map(String::as_str).collect();
+    let solver_vars_ref: Vec<&str> = solver_vars.iter().map(|s| s.as_str()).collect();
 
     let compiled = pystral_compiler::ik::Compiler::compile(&eqs).expect("spider rig compile");
     let solver = pystral_compiler::ik::NewtonRaphsonSolver::new_with_variables(compiled, &solver_vars_ref).expect("expected solver");
@@ -125,21 +125,7 @@ pub fn setup_spider(history: &mut HistoryManager) {
     let mut ik_system = IkSystem::new();
     ik_system.add_rig("spider", create_spider_rig());
 
-    let idle_tracks = create_spider_idle_tracks(&mut ik_system);
-
-    history.push_and_apply(Event::SpawnEntity {
-        id: 5,
-        kind: "sprite".to_string(),
-        hex: Hex::new(3, -1),
-    });
-
-    apply_spider_initial_properties(history, 5);
-    apply_spider_fsm(history, 5, idle_tracks);
-    apply_spider_skeleton(history, 5);
-}
-
-fn create_spider_idle_tracks(ik_system: &mut IkSystem) -> HashMap<String, Vec<pystral_core::animation::Keyframe>> {
-    crate::demo::animation::generate_ik_tracks(ik_system, "spider", 40, 100.0, |_i, phase| {
+    let idle_tracks = crate::demo::animation::generate_ik_tracks(&mut ik_system, "spider", 40, 100.0, |_i, phase| {
         let mut targets = HashMap::new();
         let breathing = (phase.sin() * 0.05) as f32;
         
@@ -160,7 +146,7 @@ fn create_spider_idle_tracks(ik_system: &mut IkSystem) -> HashMap<String, Vec<py
                     _ => 0.0,
                 }.to_radians();
                 
-                let r = 0.7 + (breathing * 0.2);
+                let r = 0.7 + (breathing * 0.2); // Legs move slightly with breathing
                 targets.insert(format!("target_{}_foot", prefix), pystral_compiler::ik::Vec3 { 
                     x: angle.cos() * r, 
                     y: angle.sin() * r, 
@@ -168,11 +154,21 @@ fn create_spider_idle_tracks(ik_system: &mut IkSystem) -> HashMap<String, Vec<py
                 });
             }
         }
+        
+        // Add thorax movement for breathing
+        // The IK system currently doesn't support targets for all variables easily if not defined as targets,
+        // but we can influence it by changing initial guesses or adding a thorax target.
+        // For now, let's just move the feet targets.
+        
         targets
-    })
-}
+    });
 
-fn apply_spider_initial_properties(history: &mut HistoryManager, id: u64) {
+    history.push_and_apply(Event::SpawnEntity {
+        id: 5,
+        kind: "sprite".to_string(),
+        hex: Hex::new(3, -1),
+    });
+
     let mut initial_props = vec![
         ("scale".to_string(), PropertyValue::Float(1.5)),
         ("z".to_string(), PropertyValue::Float(1.0)),
@@ -212,11 +208,13 @@ fn apply_spider_initial_properties(history: &mut HistoryManager, id: u64) {
     initial_props.push(("sprite_parts".to_string(), PropertyValue::SpriteParts(sprite_parts)));
 
     for (prop, val) in initial_props {
-        history.push_and_apply(Event::UpdateProperty { id, property: prop, value: val });
+        history.push_and_apply(Event::UpdateProperty {
+            id: 5,
+            property: prop,
+            value: val,
+        });
     }
-}
 
-fn apply_spider_fsm(history: &mut HistoryManager, id: u64, idle_tracks: HashMap<String, Vec<pystral_core::animation::Keyframe>>) {
     let mut states = HashMap::new();
     let mut idle_state_tracks = Vec::new();
     for (prop, keyframes) in idle_tracks {
@@ -230,22 +228,22 @@ fn apply_spider_fsm(history: &mut HistoryManager, id: u64, idle_tracks: HashMap<
 
     history.push_and_apply(Event::DefineFSM {
         name: "spider_fsm".to_string(),
-        definition: pystral_core::animation::InactiveFSMDefinition { states },
+        definition: pystral_core::animation::InactiveFSMDefinition {
+            states,
+        },
     });
 
     history.push_and_apply(Event::UpdateProperty {
-        id,
+        id: 5,
         property: "fsm".to_string(),
         value: PropertyValue::String("spider_fsm".to_string()),
     });
 
     history.push_and_apply(Event::SetAnimationState {
-        id,
+        id: 5,
         state: "idle".to_string(),
     });
-}
 
-fn apply_spider_skeleton(history: &mut HistoryManager, id: u64) {
     let mut bones = vec![
         Bone { start: Joint::Property("thorax".to_string()), end: Joint::Property("abdomen".to_string()), painter_commands: make_bone_commands(WIDTH) },
     ];
@@ -259,7 +257,7 @@ fn apply_spider_skeleton(history: &mut HistoryManager, id: u64) {
     }
 
     history.push_and_apply(Event::UpdateProperty {
-        id,
+        id: 5,
         property: "skeleton".to_string(),
         value: PropertyValue::Skeleton(pystral_core::domain::Skeleton { bones }),
     });

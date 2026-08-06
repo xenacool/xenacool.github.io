@@ -1,12 +1,14 @@
 use std::collections::VecDeque;
 
-#[derive(Clone)]
+use serde::{Serialize, Deserialize};
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct LogEntry {
     pub message: String,
     pub count: usize,
 }
 
-#[derive(Clone, Default)]
+#[derive(Clone, Default, Debug, Serialize, Deserialize)]
 pub struct Logger {
     pub entries: VecDeque<LogEntry>,
     pub total_errors: usize,
@@ -53,6 +55,7 @@ impl Logger {
 }
 
 
+#[derive(Debug, Serialize, Deserialize)]
 pub enum LogCommand {
     Log(String),
     Reset,
