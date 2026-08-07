@@ -1,10 +1,8 @@
-pub mod character;
 pub mod demo;
 
 use pystral_compiler::ik::{IkSystem, IkRequest, IkResponse};
-use pystral_compiler::physics::{TrajectorySystem, TrajectoryRequest, TrajectoryResponse};
+use pystral_compiler::physics::{TrajectoryResponse};
 use pystral_core::history::HistoryManager;
-use pystral_core::domain::HexMap;
 use serde::{Serialize, Deserialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

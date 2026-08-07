@@ -79,10 +79,10 @@ pub fn run_app() -> Result<AppHandle, JsValue> {
     let (app_tx, app_rx) = channel();
     let (worker_tx, mut worker_rx) = futures::channel::mpsc::unbounded::<WorkerInput>();
     
-    // Request initial demo log with a delay to ensure worker is ready
+    // Request initial demo log immediately
     let worker_tx_clone = worker_tx.clone();
     wasm_bindgen_futures::spawn_local(async move {
-        gloo_timers::future::TimeoutFuture::new(2000).await;
+        gloo_timers::future::TimeoutFuture::new(50).await;
         let _ = worker_tx_clone.unbounded_send(WorkerInput::RuntimeRequest(RuntimeRequest::GenerateDemoLog));
     });
 

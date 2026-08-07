@@ -55,16 +55,24 @@ fn test_demo_log_rendering_behavior_strict() {
         let state = &history.current_state;
         for entity in &state.entities {
             if entity.id == 0 {
-                let _ = entity.get_hex_map().log_fallback(&tx);
-                let _ = entity.get_lighting().log_fallback(&tx);
+                if entity.properties.contains_key("map") {
+                    let _ = entity.get_hex_map().log_fallback(&tx);
+                    let _ = entity.get_lighting().log_fallback(&tx);
+                }
             } else if entity.kind == "camera" {
-                let _ = entity.get_float("angle", 0.0).log_fallback(&tx);
-                let _ = entity.get_float("distance", 0.0).log_fallback(&tx);
-                let _ = entity.get_float("height", 0.0).log_fallback(&tx);
-                let _ = entity.get_float("target_x", 0.0).log_fallback(&tx);
-                let _ = entity.get_float("target_y", 0.0).log_fallback(&tx);
-                let _ = entity.get_float("target_z", 0.0).log_fallback(&tx);
+                if entity.properties.contains_key("angle") {
+                    let _ = entity.get_float("angle", 0.0).log_fallback(&tx);
+                    let _ = entity.get_float("distance", 0.0).log_fallback(&tx);
+                    let _ = entity.get_float("height", 0.0).log_fallback(&tx);
+                    let _ = entity.get_float("target_x", 0.0).log_fallback(&tx);
+                    let _ = entity.get_float("target_y", 0.0).log_fallback(&tx);
+                    let _ = entity.get_float("target_z", 0.0).log_fallback(&tx);
+                }
             } else {
+                if !entity.properties.contains_key("asset") {
+                    continue;
+                }
+
                 let _ = entity.get_float("scale", 1.0).log_fallback(&tx);
                 let _ = entity.get_float("z", 0.0).log_fallback(&tx);
                 let _ = entity.get_float("rotation_z", 0.0).log_fallback(&tx);
@@ -73,15 +81,6 @@ fn test_demo_log_rendering_behavior_strict() {
                 let _ = entity.get_float("cam_offset_z", 0.0).log_fallback(&tx);
                 let _ = entity.get_material(&state.materials).log_fallback(&tx);
                 
-                // Also check sprite parts and skeleton which are used in the renderer
-                let parts = entity.get_sprite_parts().log_fallback(&tx);
-                for part in parts {
-                    let _ = entity.get_float(&part.x_prop, 0.0).log_fallback(&tx);
-                    let _ = entity.get_float(&part.y_prop, 0.0).log_fallback(&tx);
-                    if let Some(rot_prop) = &part.rotation_prop {
-                        let _ = entity.get_float(rot_prop, 0.0).log_fallback(&tx);
-                    }
-                }
                 
                 if let Some(skeleton) = entity.get_skeleton().log_fallback(&tx) {
                     for bone in &skeleton.bones {

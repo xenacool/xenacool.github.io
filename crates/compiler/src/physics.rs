@@ -20,7 +20,7 @@ pub struct TrajectoryResponse {
     pub yaw: f32,
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct TrajectorySystem {
 }
 

@@ -1,5 +1,5 @@
 use pystral_core::log::{PropertyValue, EntityState};
-use pystral_core::domain::{SpritePart, Material};
+use pystral_core::domain::Material;
 use pystral_core::render::{RenderError, ERROR_MODE_ENABLED};
 use std::sync::atomic::Ordering;
 
@@ -25,7 +25,6 @@ impl<T> RenderResultExt<T> for RenderResult<T> {
 
 pub trait EntityExt {
     fn get_float(&self, key: &str, default: f32) -> RenderResult<f32>;
-    fn get_sprite_parts(&self) -> RenderResult<Vec<SpritePart>>;
     fn get_material(&self, materials: &std::collections::HashMap<String, Material>) -> RenderResult<Material>;
     fn get_hex_map(&self) -> RenderResult<pystral_core::domain::HexMap>;
     fn get_lighting(&self) -> RenderResult<pystral_core::domain::LightingConfig>;
@@ -59,18 +58,6 @@ impl EntityExt for EntityState {
         }
     }
 
-    fn get_sprite_parts(&self) -> RenderResult<Vec<SpritePart>> {
-        let key = "sprite_parts";
-        if let Some(PropertyValue::SpriteParts(parts)) = self.properties.get(key) {
-            if ERROR_MODE_ENABLED.load(Ordering::Relaxed) {
-                Err(RenderError::new("Property sprite_parts found but ERROR_MODE_ENABLED is set", parts.clone()))
-            } else {
-                Ok(parts.clone())
-            }
-        } else {
-            Err(RenderError::new("Property sprite_parts not found", Vec::new()))
-        }
-    }
 
     fn get_material(&self, materials: &std::collections::HashMap<String, Material>) -> RenderResult<Material> {
         let default = Material {

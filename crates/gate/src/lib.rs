@@ -5,6 +5,11 @@ use serde::{Deserialize, Serialize};
 pub mod render;
 pub mod worker;
 
+#[cfg(test)]
+mod strict_log_test;
+#[cfg(test)]
+mod character_test;
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Envelope<T> {
     pub seq: u64,
