@@ -8,7 +8,11 @@ use serde::{Serialize, Deserialize};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum RuntimeRequest {
     SolveIk(IkRequest),
-    GenerateDemoLog,
+    GenerateDemoLog {
+        atlas_json: String,
+        spritesheet_rgba: Vec<u8>,
+        spritesheet_width: u32,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -42,9 +46,9 @@ impl Runtime {
                     }
                 }
             }
-            RuntimeRequest::GenerateDemoLog => {
+            RuntimeRequest::GenerateDemoLog { atlas_json, spritesheet_rgba, spritesheet_width } => {
                 let mut history = HistoryManager::new();
-                demo::generate_demo_log(&mut history);
+                demo::generate_demo_log(&mut history, &atlas_json, &spritesheet_rgba, spritesheet_width);
                 RuntimeResponse::DemoLogGenerated(history)
             }
         };

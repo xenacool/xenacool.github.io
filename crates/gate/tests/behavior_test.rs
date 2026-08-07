@@ -8,8 +8,9 @@ use pystral_runtime::demo::generate_demo_log;
 
 #[test]
 fn test_history_behavior_at_boundaries() {
+    let (atlas_json, spritesheet_rgba, width) = pystral_gate::load_test_assets();
     let mut history = HistoryManager::new();
-    generate_demo_log(&mut history);
+    generate_demo_log(&mut history, &atlas_json, &spritesheet_rgba, width);
     let total_len = history.log.len();
 
     // Given history at the end
@@ -34,8 +35,9 @@ fn test_history_behavior_at_boundaries() {
 
 #[test]
 fn test_print_log() {
+    let (atlas_json, spritesheet_rgba, width) = pystral_gate::load_test_assets();
     let mut history = HistoryManager::new();
-    generate_demo_log(&mut history);
+    generate_demo_log(&mut history, &atlas_json, &spritesheet_rgba, width);
     for (i, event) in history.log.iter().enumerate() {
         println!("{}: {:?}", i, event);
     }
@@ -45,8 +47,9 @@ fn test_print_log() {
 fn test_demo_log_rendering_behavior_strict() {
     let (tx, mut rx) = mpsc::unbounded::<WorkerInput>();
 
+    let (atlas_json, spritesheet_rgba, width) = pystral_gate::load_test_assets();
     let mut history = HistoryManager::new();
-    generate_demo_log(&mut history);
+    generate_demo_log(&mut history, &atlas_json, &spritesheet_rgba, width);
     
     // Simulate each step of the log and check for UI log issues
     for i in 0..=history.log.len() {
@@ -115,8 +118,9 @@ fn test_demo_log_rendering_behavior_strict() {
 
 #[test]
 fn test_arrow_trajectory_arc() {
+    let (atlas_json, spritesheet_rgba, width) = pystral_gate::load_test_assets();
     let mut history = HistoryManager::new();
-    generate_demo_log(&mut history);
+    generate_demo_log(&mut history, &atlas_json, &spritesheet_rgba, width);
     
     // Find the arrow FSM definition
     let arrow_fsm = history.current_state.fsms.get("arrow_fsm").expect("Arrow FSM should be defined");
@@ -157,8 +161,9 @@ fn test_arrow_trajectory_arc() {
 
 #[test]
 fn test_material_resolution_behavior() {
+    let (atlas_json, spritesheet_rgba, width) = pystral_gate::load_test_assets();
     let mut history = HistoryManager::new();
-    generate_demo_log(&mut history);
+    generate_demo_log(&mut history, &atlas_json, &spritesheet_rgba, width);
     
     // Jump to after arrow is spawned (it uses a named material)
     history.jump_to(history.log.len());

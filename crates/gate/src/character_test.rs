@@ -7,8 +7,9 @@ mod tests {
 
     #[test]
     fn test_characters_visibility() {
+        let (atlas_json, spritesheet_rgba, width) = crate::load_test_assets();
         let mut history = HistoryManager::new();
-        generate_demo_log(&mut history);
+        generate_demo_log(&mut history, &atlas_json, &spritesheet_rgba, width);
 
         // We want to check the state after characters are spawned and asset collection is defined.
         // In demo.rhai, it seems to happen early.

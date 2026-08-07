@@ -82,8 +82,18 @@ pub fn run_app() -> Result<AppHandle, JsValue> {
     // Request initial demo log immediately
     let worker_tx_clone = worker_tx.clone();
     wasm_bindgen_futures::spawn_local(async move {
-        gloo_timers::future::TimeoutFuture::new(50).await;
-        let _ = worker_tx_clone.unbounded_send(WorkerInput::RuntimeRequest(RuntimeRequest::GenerateDemoLog));
+        match fetch_assets().await {
+            Ok((atlas_json, spritesheet_rgba, width)) => {
+                let _ = worker_tx_clone.unbounded_send(WorkerInput::RuntimeRequest(RuntimeRequest::GenerateDemoLog {
+                    atlas_json,
+                    spritesheet_rgba,
+                    spritesheet_width: width,
+                }));
+            }
+            Err(e) => {
+                web_sys::console::error_1(&format!("Failed to fetch assets: {:?}", e).into());
+            }
+        }
     });
 
     let bridge = UnifiedWorker::spawn();
@@ -130,6 +140,38 @@ pub fn run_app() -> Result<AppHandle, JsValue> {
 extern "C" {
     #[wasm_bindgen(js_namespace = window)]
     fn update_log_ui(messages: Vec<String>, total_errors: u32);
+}
+
+async fn fetch_assets() -> Result<(String, Vec<u8>, u32), JsValue> {
+    let window = web_sys::window().expect("No global window found");
+    
+    let resp_atlas = wasm_bindgen_futures::JsFuture::from(window.fetch_with_str("/web/atlas.json")).await?;
+    let resp_atlas: web_sys::Response = resp_atlas.dyn_into()?;
+    let atlas_json = wasm_bindgen_futures::JsFuture::from(resp_atlas.text()?).await?.as_string().unwrap();
+    
+    let resp_img = wasm_bindgen_futures::JsFuture::from(window.fetch_with_str("/web/spritesheet.png")).await?;
+    let resp_img: web_sys::Response = resp_img.dyn_into()?;
+    let blob = wasm_bindgen_futures::JsFuture::from(resp_img.blob()?).await?;
+    let blob: web_sys::Blob = blob.dyn_into()?;
+    
+    let bitmap_promise = window.create_image_bitmap_with_blob(&blob)?;
+    let bitmap = wasm_bindgen_futures::JsFuture::from(bitmap_promise).await?;
+    let bitmap: web_sys::ImageBitmap = bitmap.dyn_into()?;
+    
+    let width = bitmap.width();
+    let height = bitmap.height();
+    
+    let document = window.document().expect("No document found");
+    let canvas = document.create_element("canvas")?.dyn_into::<web_sys::HtmlCanvasElement>()?;
+    canvas.set_width(width);
+    canvas.set_height(height);
+    let ctx = canvas.get_context("2d")?.unwrap().dyn_into::<web_sys::CanvasRenderingContext2d>()?;
+    ctx.draw_image_with_image_bitmap(&bitmap, 0.0, 0.0)?;
+    
+    let image_data = ctx.get_image_data(0, 0, width as i32, height as i32)?;
+    let pixels = image_data.data().to_vec();
+    
+    Ok((atlas_json, pixels, width))
 }
 
 fn main() {}

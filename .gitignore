@@ -8,3 +8,5 @@
 web/pystral_gate.js
 web/pystral_gate_bg.wasm
 /assets
+web/atlas.json
+web/spritesheet.png

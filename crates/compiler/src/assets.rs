@@ -5,6 +5,31 @@ use glam::Vec3;
 use pystral_core::domain::{Spritestack, SpritestackSlice};
 use png;
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct SpriteRegion {
+    pub x: u32,
+    pub y: u32,
+    pub w: u32,
+    pub h: u32,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
+pub struct SpriteAtlas {
+    pub width: u32,
+    pub height: u32,
+    pub spritestacks: HashMap<String, Vec<SpriteRegion>>,
+}
+
+impl SpriteAtlas {
+    pub fn from_json(json: &str) -> serde_json::Result<Self> {
+        serde_json::from_str(json)
+    }
+
+    pub fn to_json(&self) -> serde_json::Result<String> {
+        serde_json::to_string_pretty(self)
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]
 pub struct AssetCollection {
     pub spritestacks: HashMap<String, Spritestack>,
@@ -140,6 +165,65 @@ impl AssetCollection {
                 // nx=0 -> 127
                 // ny=1 -> 255
                 // nz=0 -> 127
+                normal_data[i * 4] = 127;
+                normal_data[i * 4 + 1] = 255;
+                normal_data[i * 4 + 2] = 127;
+                normal_data[i * 4 + 3] = 255;
+            }
+
+            slices.push(SpritestackSlice {
+                color_data,
+                normal_data,
+            });
+        }
+
+        let aabb = Vec3::new(
+            (width as f32 - 0.5) * spacing,
+            (slices.len() as f32 - 1.0) * spacing,
+            (height as f32 - 0.5) * spacing,
+        );
+
+        self.spritestacks.insert(
+            name.to_string(),
+            Spritestack {
+                width,
+                height,
+                spacing,
+                aabb,
+                slices,
+            },
+        );
+    }
+
+    pub fn add_atlas_spritestack(
+        &mut self,
+        name: &str,
+        spacing: f32,
+        atlas: &SpriteAtlas,
+        spritesheet_rgba: &[u8],
+        spritesheet_width: u32,
+    ) {
+        let regions = atlas.spritestacks.get(name).expect("Character not found in atlas");
+        let mut slices = Vec::new();
+        let mut width = 0;
+        let mut height = 0;
+
+        for region in regions {
+            if width == 0 {
+                width = region.w;
+                height = region.h;
+            }
+
+            let mut color_data = Vec::with_capacity((region.w * region.h * 4) as usize);
+            for y in 0..region.h {
+                let start_idx = ((region.y + y) * spritesheet_width + region.x) as usize * 4;
+                let end_idx = start_idx + (region.w as usize * 4);
+                color_data.extend_from_slice(&spritesheet_rgba[start_idx..end_idx]);
+            }
+
+            let pixel_count = (region.w * region.h) as usize;
+            let mut normal_data = vec![0u8; pixel_count * 4];
+            for i in 0..pixel_count {
                 normal_data[i * 4] = 127;
                 normal_data[i * 4 + 1] = 255;
                 normal_data[i * 4 + 2] = 127;
