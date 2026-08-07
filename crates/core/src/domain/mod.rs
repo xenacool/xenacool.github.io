@@ -166,18 +166,6 @@ pub struct Spritestack {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct SpritePart {
-    pub x_prop: String,
-    pub y_prop: String,
-    pub z_prop: String,
-    pub rotation_prop: Option<String>,
-    pub color: [f32; 3],
-    pub scale: f32,
-    pub painter_commands: Vec<PainterCommand>,
-    pub spritestack: Option<(String, String)>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct LightingConfig {
     pub ambient_color: [f32; 3],
     pub ambient_intensity: f32,

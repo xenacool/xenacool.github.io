@@ -1,7 +1,7 @@
 use serde::{Serialize, Deserialize};
 use hexx::Hex;
 use glam::Vec3;
-use crate::domain::{HexGrid, HexMap, Material, LightingConfig, Shape3D, Skeleton, SpritePart, Spritestack};
+use crate::domain::{HexGrid, HexMap, Material, LightingConfig, Shape3D, Skeleton, Spritestack};
 use crate::animation::InactiveFSMDefinition;
 use std::collections::HashMap;
 
@@ -17,7 +17,6 @@ pub enum PropertyValue {
     Lighting(LightingConfig),
     Shape3D(Shape3D),
     Skeleton(Skeleton),
-    SpriteParts(Vec<SpritePart>),
     Spritestack(Spritestack),
     AssetRef(String),
 }
@@ -101,8 +100,9 @@ impl EntityState {
             properties.insert("cam_offset_x".to_string(), PropertyValue::Float(0.0));
             properties.insert("cam_offset_y".to_string(), PropertyValue::Float(0.0));
             properties.insert("cam_offset_z".to_string(), PropertyValue::Float(0.0));
-            properties.insert("x".to_string(), PropertyValue::Float(0.0));
-            properties.insert("y".to_string(), PropertyValue::Float(0.0));
+            properties.insert("x_offset".to_string(), PropertyValue::Float(0.0));
+            properties.insert("y_offset".to_string(), PropertyValue::Float(0.0));
+            properties.insert("z_offset".to_string(), PropertyValue::Float(0.0));
             
             // Joint defaults to avoid log errors during character setup
             let joints = vec![
@@ -123,7 +123,6 @@ impl EntityState {
                 metalness: 0.0,
                 emissive: 0.0,
             }));
-            properties.insert("sprite_parts".to_string(), PropertyValue::SpriteParts(Vec::new()));
             properties.insert("spritestack".to_string(), PropertyValue::Spritestack(crate::domain::Spritestack {
                 width: 0,
                 height: 0,

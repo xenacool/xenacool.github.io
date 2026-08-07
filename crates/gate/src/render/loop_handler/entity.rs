@@ -1,145 +1,87 @@
-use glam::{Mat4, Vec3, Vec2};
-use pystral_core::log::{EntityState, PropertyValue, WorldState};
+use glam::{Mat4, Vec3};
+use pystral_core::log::{EntityState, WorldState};
 use pystral_core::domain::{Shape3D, Joint};
 use web_sys::WebGlRenderingContext as GL;
 use crate::render::context::RenderContext;
 use crate::render::draw_utils::{set_model_matrix, set_material};
 use crate::render::utils::{EntityExt, RenderResultExt};
 
-#[allow(clippy::too_many_lines)]
-pub fn draw_parts(ctx: &mut RenderContext, worker_tx: &futures::channel::mpsc::UnboundedSender<crate::WorkerInput>, entity: &EntityState, state: &WorldState, sprite_pos: Vec3, entity_pos: Vec3, billboard_rot: Mat4, entity_scale: f32, cam_right: Vec3, billboard_up: Vec3, cam_forward: Vec3, side: crate::render::painter::ViewSide, render_rotation_z: f32, rotation_y: f32) {
-    let parts = entity.get_sprite_parts().log_fallback(worker_tx);
-    let cos_z = render_rotation_z.cos();
-    let sin_z = render_rotation_z.sin();
 
-    for (i, part) in parts.iter().enumerate() {
-        let jx = entity.get_float(&part.x_prop, 0.0).log_fallback(worker_tx);
-        let jy = entity.get_float(&part.y_prop, 0.0).log_fallback(worker_tx);
-        let jz = entity.get_float(&part.z_prop, 0.0).log_fallback(worker_tx);
-        
-        let rx = jx * cos_z - jy * sin_z;
-        let ry = jx * sin_z + jy * cos_z;
-        let rz = jz;
+pub fn draw_spritestack(ctx: &mut RenderContext, worker_tx: &futures::channel::mpsc::UnboundedSender<crate::WorkerInput>, entity: &EntityState, state: &WorldState, sprite_pos: Vec3, _billboard_rot: glam::Mat4, entity_scale: f32, _cam_forward: Vec3, yaw: f32) {
+    if let Some(pystral_core::log::PropertyValue::String(asset_name)) = entity.properties.get("asset") {
+        let collection_name = "primitives".to_string();
+        let cache_key = format!("{}:{}", collection_name, asset_name);
+        attach_assets(ctx, worker_tx, state, &collection_name, asset_name, &cache_key);
 
-        let prot = if let Some(rot_prop) = &part.rotation_prop {
-            -entity.get_float(rot_prop, 0.0).log_fallback(worker_tx)
-        } else {
-            0.0
-        };
-        
-        let mut render_prot = prot;
-        if side == crate::render::painter::ViewSide::Mirrored {
-            render_prot = -prot;
-        }
-        
-        let engine_offset = Vec3::new(rx, rz, ry);
-        let bx = engine_offset.dot(cam_right);
-        let by = engine_offset.dot(billboard_up);
-        let bz = engine_offset.dot(cam_forward);
-
-        let part_pos = sprite_pos + cam_right * (bx * entity_scale) + billboard_up * (by * entity_scale) + cam_forward * (bz * entity_scale - i as f32 * 0.001);
-        let part_model = Mat4::from_translation(part_pos + billboard_up * (part.scale * entity_scale * 0.5)) * billboard_rot * Mat4::from_rotation_z(render_rotation_z + render_prot) * Mat4::from_scale(Vec3::splat(part.scale * entity_scale));
-        set_model_matrix(&ctx.gl, &ctx.uniforms, &part_model);
-        
-        let mut use_tex = false;
-        if !part.painter_commands.is_empty() {
-            let cache_key = (entity.id, i);
-            let needs_update = if let Some((old_cmds, _)) = ctx.sprite_part_textures.get(&cache_key) {
-                old_cmds != &part.painter_commands
-            } else {
-                true
-            };
+        if let Some(textures) = ctx.spritestack_assets.get(&cache_key) {
+            let quad_scale = textures.aabb.x * entity_scale;
+            let total_height = textures.aabb.y * entity_scale;
+            let num_layers = textures.color_textures.len() as f32;
             
-            if needs_update {
-                let front_tex = crate::render::painter::render_commands_to_texture(&ctx.gl, &part.painter_commands, 256, 256, crate::render::painter::ViewSide::Front);
-                let mirrored_tex = crate::render::painter::render_commands_to_texture(&ctx.gl, &part.painter_commands, 256, 256, crate::render::painter::ViewSide::Mirrored);
+            for (i, (color_tex, normal_tex)) in textures.color_textures.iter().zip(textures.normal_textures.iter()).enumerate() {
+                let z_offset = if num_layers > 1.0 {
+                    (i as f32 / (num_layers - 1.0) - 0.5) * total_height
+                } else {
+                    0.0
+                };
+                let slice_pos = sprite_pos + Vec3::Y * z_offset;
                 
-                if let (Some(f), Some(m)) = (front_tex, mirrored_tex)
-                    && let Some((_, old_set)) = ctx.sprite_part_textures.insert(cache_key, (part.painter_commands.clone(), crate::render::context::TextureSet { front: f, mirrored: m })) {
-                    ctx.gl.delete_texture(Some(&old_set.front));
-                    ctx.gl.delete_texture(Some(&old_set.mirrored));
-                }
-            }
-            
-            if let Some((_, tex_set)) = ctx.sprite_part_textures.get(&cache_key) {
-                let tex = if side == crate::render::painter::ViewSide::Front { &tex_set.front } else { &tex_set.mirrored };
-                ctx.gl.active_texture(GL::TEXTURE0);
-                ctx.gl.bind_texture(GL::TEXTURE_2D, Some(tex));
+                let slice_model = glam::Mat4::from_translation(slice_pos) 
+                    * glam::Mat4::from_rotation_y(yaw)
+                    * glam::Mat4::from_rotation_x(-std::f32::consts::FRAC_PI_2)
+                    * glam::Mat4::from_scale(Vec3::splat(quad_scale));
+                
+                set_model_matrix(&ctx.gl, &ctx.uniforms, &slice_model);
+                
+                ctx.gl.active_texture(web_sys::WebGlRenderingContext::TEXTURE0);
+                ctx.gl.bind_texture(web_sys::WebGlRenderingContext::TEXTURE_2D, Some(color_tex));
                 ctx.gl.uniform1i(ctx.uniforms.texture.as_ref(), 0);
-                use_tex = true;
-            }
-        }
-
-        ctx.gl.uniform1i(ctx.uniforms.use_tex.as_ref(), use_tex as i32);
-        ctx.gl.uniform3f(ctx.uniforms.obj_color.as_ref(), part.color[0], part.color[1], part.color[2]);
-        
-        if let Some((collection_name, asset_name)) = &part.spritestack {
-            let cache_key = format!("{}:{}", collection_name, asset_name);
-
-            attach_assets(ctx, state, collection_name, asset_name, &cache_key);
-
-            if let Some(textures) = ctx.spritestack_assets.get(&cache_key) {
-                let quad_scale = textures.aabb.x * part.scale * entity_scale;
-                let total_height = textures.aabb.y * entity_scale;
-                let num_layers = textures.color_textures.len() as f32;
                 
-                for (i, (color_tex, normal_tex)) in textures.color_textures.iter().zip(textures.normal_textures.iter()).enumerate() {
-                    let z_offset = if num_layers > 1.0 {
-                        (i as f32 / (num_layers - 1.0) - 0.5) * total_height
-                    } else {
-                        0.0
-                    };
-                    
-                    let engine_world_offset = Vec3::new(rx, rz, ry) * entity_scale;
-                    let spritestack_part_pos = entity_pos + engine_world_offset + Vec3::Y * z_offset;
-
-                    let slice_model = Mat4::from_translation(spritestack_part_pos) 
-                        * Mat4::from_rotation_y(rotation_y + render_prot)
-                        * Mat4::from_rotation_x(-std::f32::consts::FRAC_PI_2)
-                        * Mat4::from_scale(Vec3::splat(quad_scale));
-                    set_model_matrix(&ctx.gl, &ctx.uniforms, &slice_model);
-                    
-                    ctx.gl.active_texture(GL::TEXTURE0);
-                    ctx.gl.bind_texture(GL::TEXTURE_2D, Some(color_tex));
-                    ctx.gl.uniform1i(ctx.uniforms.texture.as_ref(), 0);
-                    ctx.gl.active_texture(GL::TEXTURE1);
-                    ctx.gl.bind_texture(GL::TEXTURE_2D, Some(normal_tex));
-                    ctx.gl.uniform1i(ctx.uniforms.normal_map.as_ref(), 1);
-                    ctx.gl.uniform1i(ctx.uniforms.use_tex.as_ref(), 1);
-                    ctx.gl.uniform1i(ctx.uniforms.use_normal_map.as_ref(), 1);
-                    ctx.sprite_mesh.draw(&ctx.gl, ctx.attribs.pos, ctx.attribs.norm, ctx.attribs.uv);
-                }
-                ctx.gl.uniform1i(ctx.uniforms.use_normal_map.as_ref(), 0);
+                ctx.gl.active_texture(web_sys::WebGlRenderingContext::TEXTURE1);
+                ctx.gl.bind_texture(web_sys::WebGlRenderingContext::TEXTURE_2D, Some(normal_tex));
+                ctx.gl.uniform1i(ctx.uniforms.normal_map.as_ref(), 1);
+                
+                ctx.gl.uniform1i(ctx.uniforms.use_tex.as_ref(), 1);
+                ctx.gl.uniform1i(ctx.uniforms.use_normal_map.as_ref(), 1);
+                
+                ctx.sprite_mesh.draw(&ctx.gl, ctx.attribs.pos, ctx.attribs.norm, ctx.attribs.uv);
             }
-        } else {
-            ctx.sprite_mesh.draw(&ctx.gl, ctx.attribs.pos, ctx.attribs.norm, ctx.attribs.uv);
+            ctx.gl.uniform1i(ctx.uniforms.use_normal_map.as_ref(), 0);
         }
     }
 }
 
-fn attach_assets(ctx: &mut RenderContext, state: &WorldState, collection_name: &String, asset_name: &String, cache_key: &str) {
-    if !ctx.asset_collection_cache.contains_key(collection_name) && let Some(data) = state.asset_collections.get(collection_name) {
-        let collection = pystral_compiler::assets::AssetCollection::from_binary(data);
-        ctx.asset_collection_cache.insert(collection_name.clone(), collection);
+fn attach_assets(ctx: &mut RenderContext, worker_tx: &futures::channel::mpsc::UnboundedSender<crate::WorkerInput>, state: &WorldState, collection_name: &String, asset_name: &String, cache_key: &str) {
+    if !ctx.asset_collection_cache.contains_key(collection_name) {
+        if let Some(data) = state.asset_collections.get(collection_name) {
+            let collection = pystral_compiler::assets::AssetCollection::from_binary(data);
+            ctx.asset_collection_cache.insert(collection_name.clone(), collection);
+        } else {
+            let _ = worker_tx.unbounded_send(crate::WorkerInput::Log(format!("Asset collection {} not found in state", collection_name)));
+        }
     }
 
-    if !ctx.spritestack_assets.contains_key(cache_key)
-        && let Some(collection) = ctx.asset_collection_cache.get(collection_name)
-        && let Some(stack) = collection.spritestacks.get(asset_name) {
-        let mut color_textures = Vec::new();
-        let mut normal_textures = Vec::new();
-        for slice in &stack.slices {
-            color_textures.push(create_texture(&ctx.gl, stack.width, stack.height, &slice.color_data));
-            normal_textures.push(create_texture(&ctx.gl, stack.width, stack.height, &slice.normal_data));
+    if !ctx.spritestack_assets.contains_key(cache_key) {
+        if let Some(collection) = ctx.asset_collection_cache.get(collection_name) {
+            if let Some(stack) = collection.spritestacks.get(asset_name) {
+                let mut color_textures = Vec::new();
+                let mut normal_textures = Vec::new();
+                for slice in &stack.slices {
+                    color_textures.push(create_texture(&ctx.gl, stack.width, stack.height, &slice.color_data));
+                    normal_textures.push(create_texture(&ctx.gl, stack.width, stack.height, &slice.normal_data));
+                }
+                ctx.spritestack_assets.insert(cache_key.to_string(), crate::render::context::SpritestackTextures {
+                    color_textures,
+                    normal_textures,
+                    width: stack.width,
+                    height: stack.height,
+                    spacing: stack.spacing,
+                    aabb: stack.aabb,
+                });
+            } else {
+                let _ = worker_tx.unbounded_send(crate::WorkerInput::Log(format!("Asset {} not found in collection {}", asset_name, collection_name)));
+            }
         }
-        ctx.spritestack_assets.insert(cache_key.to_string(), crate::render::context::SpritestackTextures {
-            color_textures,
-            normal_textures,
-            width: stack.width,
-            height: stack.height,
-            spacing: stack.spacing,
-            aabb: stack.aabb,
-        });
     }
 }
 
@@ -233,7 +175,7 @@ pub fn draw_skeleton(ctx: &mut RenderContext, worker_tx: &futures::channel::mpsc
             
             if let Some((collection_name, asset_name)) = &bone.spritestack {
                 let asset_cache_key = format!("{}:{}", collection_name, asset_name);
-                attach_assets(ctx, state, collection_name, asset_name, &asset_cache_key);
+                attach_assets(ctx, worker_tx, state, collection_name, asset_name, &asset_cache_key);
                 
                 if let Some(textures) = ctx.spritestack_assets.get(&asset_cache_key) {
                     let quad_scale = textures.aabb.x * bone.scale * entity_scale;
@@ -280,52 +222,6 @@ pub fn draw_skeleton(ctx: &mut RenderContext, worker_tx: &futures::channel::mpsc
     }
 }
 
-pub fn draw_spritestack(ctx: &mut RenderContext, entity: &EntityState, state: &WorldState, sprite_pos: Vec3, _billboard_rot: Mat4, entity_scale: f32, _cam_forward: Vec3, yaw: f32) {
-    if let Some(PropertyValue::AssetRef(collection_name)) = entity.properties.get("spritestack_collection") {
-        let Some(PropertyValue::String(asset_name)) = entity.properties.get("spritestack_name") else {
-            return;
-        };
-
-        let cache_key = format!("{}:{}", collection_name, asset_name);
-        attach_assets(ctx, state, collection_name, asset_name, &cache_key);
-
-        if let Some(textures) = ctx.spritestack_assets.get(&cache_key) {
-            let quad_scale = textures.aabb.x * entity_scale;
-            let total_height = textures.aabb.y * entity_scale;
-            let num_layers = textures.color_textures.len() as f32;
-            
-            for (i, (color_tex, normal_tex)) in textures.color_textures.iter().zip(textures.normal_textures.iter()).enumerate() {
-                let z_offset = if num_layers > 1.0 {
-                    (i as f32 / (num_layers - 1.0) - 0.5) * total_height
-                } else {
-                    0.0
-                };
-                let slice_pos = sprite_pos + Vec3::Y * z_offset;
-                
-                let slice_model = Mat4::from_translation(slice_pos) 
-                    * Mat4::from_rotation_y(yaw)
-                    * Mat4::from_rotation_x(-std::f32::consts::FRAC_PI_2)
-                    * Mat4::from_scale(Vec3::splat(quad_scale));
-                
-                set_model_matrix(&ctx.gl, &ctx.uniforms, &slice_model);
-                
-                ctx.gl.active_texture(GL::TEXTURE0);
-                ctx.gl.bind_texture(GL::TEXTURE_2D, Some(color_tex));
-                ctx.gl.uniform1i(ctx.uniforms.texture.as_ref(), 0);
-                
-                ctx.gl.active_texture(GL::TEXTURE1);
-                ctx.gl.bind_texture(GL::TEXTURE_2D, Some(normal_tex));
-                ctx.gl.uniform1i(ctx.uniforms.normal_map.as_ref(), 1);
-                
-                ctx.gl.uniform1i(ctx.uniforms.use_tex.as_ref(), 1);
-                ctx.gl.uniform1i(ctx.uniforms.use_normal_map.as_ref(), 1);
-                
-                ctx.sprite_mesh.draw(&ctx.gl, ctx.attribs.pos, ctx.attribs.norm, ctx.attribs.uv);
-            }
-            ctx.gl.uniform1i(ctx.uniforms.use_normal_map.as_ref(), 0);
-        }
-    }
-}
 
 pub fn create_texture(gl: &GL, width: u32, height: u32, data: &[u8]) -> web_sys::WebGlTexture {
     let texture = gl.create_texture().expect("Failed to create texture");

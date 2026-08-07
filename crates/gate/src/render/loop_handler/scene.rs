@@ -1,13 +1,12 @@
 use glam::{Mat4, Vec3, Vec2};
-use pystral_core::log::{WorldState, EntityState, PropertyValue};
-use pystral_core::domain::{Shape3D, Joint};
+use pystral_core::log::{WorldState, PropertyValue};
 use web_sys::WebGlRenderingContext as GL;
 use hexx::ColumnMeshBuilder;
 use crate::render::context::RenderContext;
 use crate::render::mesh::Mesh;
 use crate::render::draw_utils::{set_model_matrix, set_material};
 use crate::render::utils::{EntityExt, RenderResultExt};
-use super::entity::{draw_parts, draw_skeleton, draw_spritestack, draw_collision};
+use super::entity::{draw_skeleton, draw_collision, draw_spritestack};
 
 #[allow(clippy::too_many_lines)]
 pub fn draw_scene(ctx: &mut RenderContext, worker_tx: &futures::channel::mpsc::UnboundedSender<crate::WorkerInput>, state: &WorldState, cam_right: Vec3, cam_up: Vec3, cam_forward: Vec3, debug_mode: bool, now: f64, _is_playing_anims: bool) {
@@ -28,7 +27,7 @@ pub fn draw_scene(ctx: &mut RenderContext, worker_tx: &futures::channel::mpsc::U
     let unit_hex_mesh = ctx.unit_hex_mesh_cache.as_ref().expect("Hex mesh cache should be initialized");
 
     let mut current_map = None;
-    if let Some(world) = state.entities.iter().find(|e| e.id == 0) {
+    if let Some(world) = state.entities.iter().find(|e| e.kind == "world") {
         current_map = Some(world.get_hex_map().log_fallback(worker_tx));
     }
 
@@ -66,7 +65,7 @@ pub fn draw_scene(ctx: &mut RenderContext, worker_tx: &futures::channel::mpsc::U
     ctx.movement_tweens.retain(|_, tween| (now - tween.start_time_ms) < tween.duration_ms);
 
     for entity in &state.entities {
-        if entity.id == 0 || entity.kind == "camera" { continue; }
+        if entity.kind == "world" || entity.kind == "camera" { continue; }
         
         let mut current_hex_pos = layout.hex_to_world_pos(entity.hex);
         let mut current_hex = entity.hex;
@@ -133,16 +132,15 @@ pub fn draw_scene(ctx: &mut RenderContext, worker_tx: &futures::channel::mpsc::U
 
         ctx.gl.disable(GL::CULL_FACE);
 
-        // Draw Parts
-        draw_parts(ctx, worker_tx, entity, state, sprite_pos, entity_pos, billboard_rot, entity_scale, cam_right, billboard_up, cam_forward, side, render_rotation_z, rotation_y);
+        // Draw Spritestack
+        if entity.properties.contains_key("asset") {
+            draw_spritestack(ctx, worker_tx, entity, state, sprite_pos, billboard_rot, entity_scale, cam_forward, rotation_y);
+        }
 
         // Draw Skeleton
         if let Some(skeleton) = entity.get_skeleton().log_fallback(worker_tx) {
             draw_skeleton(ctx, worker_tx, entity, state, sprite_pos, entity_scale, cam_right, billboard_up, cam_forward, &skeleton, debug_mode, side, render_rotation_z, rotation_y);
         }
-
-        // Draw Spritestack
-        draw_spritestack(ctx, entity, state, entity_pos, billboard_rot, entity_scale, cam_forward, rotation_y);
 
         if debug_mode && let Some(shape) = entity.get_collision().log_fallback(worker_tx) {
             draw_collision(ctx, sprite_pos, rotation_z, &shape);
@@ -154,7 +152,7 @@ pub fn draw_scene(ctx: &mut RenderContext, worker_tx: &futures::channel::mpsc::U
 
 fn apply_lighting(ctx: &mut RenderContext, worker_tx: &futures::channel::mpsc::UnboundedSender<crate::WorkerInput>, state: &WorldState) {
     let mut lighting = pystral_core::domain::LightingConfig::default();
-    if let Some(world) = state.entities.iter().find(|e| e.id == 0) {
+    if let Some(world) = state.entities.iter().find(|e| e.kind == "world") {
         lighting = world.get_lighting().log_fallback(worker_tx);
     }
 
@@ -176,7 +174,7 @@ fn apply_lighting(ctx: &mut RenderContext, worker_tx: &futures::channel::mpsc::U
 }
 
 fn get_layout(state: &WorldState, worker_tx: &futures::channel::mpsc::UnboundedSender<crate::WorkerInput>) -> hexx::HexLayout {
-    if let Some(world) = state.entities.iter().find(|e| e.id == 0) {
+    if let Some(world) = state.entities.iter().find(|e| e.kind == "world") {
         world.get_hex_map().log_fallback(worker_tx).layout()
     } else {
         hexx::HexLayout::default()

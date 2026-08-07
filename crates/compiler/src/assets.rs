@@ -5,7 +5,7 @@ use glam::Vec3;
 use pystral_core::domain::{Spritestack, SpritestackSlice};
 use png;
 
-#[derive(Serialize, Deserialize, Debug, Default)]
+#[derive(Serialize, Deserialize, Debug, Default, Clone)]
 pub struct AssetCollection {
     pub spritestacks: HashMap<String, Spritestack>,
 }
@@ -92,64 +92,6 @@ impl AssetCollection {
                 (size as f32 - 0.5) * spacing,
                 (slices.len() as f32 - 1.0) * spacing,
                 (size as f32 - 0.5) * spacing,
-            ),
-            slices,
-        });
-    }
-
-    pub fn add_rock(&mut self, name: &str, size: u32, color: [u8; 4], spacing: f32) {
-        self.add_sphere(name, size, color, spacing, 1.0);
-    }
-
-    pub fn add_sphere(&mut self, name: &str, size: u32, color: [u8; 4], spacing: f32, _roughness: f32) {
-        self.add_sphere_layers(name, size, size, color, spacing)
-    }
-
-    pub fn add_sphere_layers(&mut self, name: &str, res: u32, layers: u32, color: [u8; 4], spacing: f32) {
-        let mut slices = Vec::new();
-        let pixel_count = (res * res) as usize;
-        
-        for i in 0..layers {
-            let mut color_data = vec![0u8; pixel_count * 4];
-            let mut normal_data = vec![0u8; pixel_count * 4];
-            
-            for y in 0..res {
-                for x in 0..res {
-                    let idx = (y * res + x) as usize * 4;
-                    
-                    let fx = x as f32 / (res as f32 - 1.0).max(1.0) - 0.5;
-                    let fy = y as f32 / (res as f32 - 1.0).max(1.0) - 0.5;
-                    let fi = i as f32 / (layers as f32 - 1.0).max(1.0) - 0.5;
-                    
-                    let dist = (fx*fx + fy*fy + fi*fi).sqrt();
-                    let limit = 0.45;
-                    
-                    if dist < limit {
-                        color_data[idx..idx+4].copy_from_slice(&color);
-                        
-                        let nx = if dist > 0.0 { fx / dist } else { 0.0 };
-                        let ny = if dist > 0.0 { fi / dist } else { 1.0 };
-                        let nz = if dist > 0.0 { fy / dist } else { 0.0 };
-                        
-                        normal_data[idx] = ((nx * 0.5 + 0.5) * 255.0) as u8;
-                        normal_data[idx+1] = ((ny * 0.5 + 0.5) * 255.0) as u8;
-                        normal_data[idx+2] = ((nz * 0.5 + 0.5) * 255.0) as u8;
-                        normal_data[idx+3] = 255;
-                    }
-                }
-            }
-            
-            slices.push(SpritestackSlice { color_data, normal_data });
-        }
-        
-        self.spritestacks.insert(name.to_string(), Spritestack {
-            width: res,
-            height: res,
-            spacing,
-            aabb: Vec3::new(
-                (res as f32 - 0.5) * spacing,
-                (slices.len() as f32 - 1.0) * spacing,
-                (res as f32 - 0.5) * spacing,
             ),
             slices,
         });
