@@ -79,7 +79,7 @@ check-func-length:
 	echo "$$all_funcs" | sort -rn | head -5 | awk '{print $$1 " lines: " $$2 " " substr($$0, index($$0,$$3))}'
 
 build:
-	cargo build
+	cargo build --package pystral_compiler
 
 build-wasm:
 	cargo build --target wasm32-unknown-unknown
