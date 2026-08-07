@@ -6,6 +6,7 @@ use pystral_core::ui_log::Logger;
 
 fn setup_unit(_id: u64, speed: i32, wits: i32) -> UnitState {
     UnitState {
+        team_id: 1,
         health: 100,
         mana: 100,
         action_points: 4,
@@ -15,7 +16,7 @@ fn setup_unit(_id: u64, speed: i32, wits: i32) -> UnitState {
         class_id: ActorClassId(1),
         primary_job: JobId(1),
         secondary_jobs: vec![],
-        movement_ability: None,
+        movement_ability: MovementId(0),
         passive_abilities: Vec::new(),
         reaction_abilities: vec![],
         stats: UnitStats {
@@ -34,6 +35,7 @@ fn setup_unit(_id: u64, speed: i32, wits: i32) -> UnitState {
             slots: HashMap::new(),
         },
         status_effects: Vec::new(),
+        turn_tags: TagBag::default(),
         modifier_deck: AbilityModifierDeck::default(),
         derived_stats: DerivedStats {
             health_max: 100,
@@ -52,6 +54,11 @@ fn test_ct_scheduler() {
         logger: Logger::new(),
         reaction_queue: Vec::new(),
         rng: SeededRng::new(42),
+        ability_registry: HashMap::new(),
+        job_registry: HashMap::new(),
+        movement_registry: HashMap::new(),
+        reaction_registry: HashMap::new(),
+        tag_registry: TagRegistry { defs: HashMap::new() },
     };
 
     let id1 = AgentId(1);
@@ -90,6 +97,11 @@ fn test_ct_priority_and_initialization() {
         logger: Logger::new(),
         reaction_queue: Vec::new(),
         rng: SeededRng::new(42),
+        ability_registry: HashMap::new(),
+        job_registry: HashMap::new(),
+        movement_registry: HashMap::new(),
+        reaction_registry: HashMap::new(),
+        tag_registry: TagRegistry { defs: HashMap::new() },
     };
 
     let id1 = AgentId(1); // Higher Speed, Lower Wits
@@ -132,6 +144,11 @@ fn test_ct_tie_breaker_wits() {
         logger: Logger::new(),
         reaction_queue: Vec::new(),
         rng: SeededRng::new(42),
+        ability_registry: HashMap::new(),
+        job_registry: HashMap::new(),
+        movement_registry: HashMap::new(),
+        reaction_registry: HashMap::new(),
+        tag_registry: TagRegistry { defs: HashMap::new() },
     };
 
     let id1 = AgentId(1);
@@ -162,6 +179,11 @@ fn test_ct_higher_priority_than_wits() {
         logger: Logger::new(),
         reaction_queue: Vec::new(),
         rng: SeededRng::new(42),
+        ability_registry: HashMap::new(),
+        job_registry: HashMap::new(),
+        movement_registry: HashMap::new(),
+        reaction_registry: HashMap::new(),
+        tag_registry: TagRegistry { defs: HashMap::new() },
     };
 
     let id1 = AgentId(1);
@@ -187,6 +209,8 @@ fn test_ct_higher_priority_than_wits() {
 fn test_ap_movement_costs() {
     let mut tag_bag = TagBag::default();
     let move_prog = MoveProgram {
+        id: MovementId(0),
+        name: "Test Move".to_string(),
         steps_ap_cost: vec![(3, 2), (5, 3)], // 1-2: 1AP, 3-4: 2AP, 5+: 3AP
         emit_tags: vec![],
         consume_tags: vec![],
@@ -212,6 +236,8 @@ fn test_tag_discount() {
     };
 
     let move_prog = MoveProgram {
+        id: MovementId(0),
+        name: "Test Move".to_string(),
         steps_ap_cost: vec![(3, 2), (5, 3)],
         emit_tags: vec![],
         consume_tags: vec![(tag1, 1, 1)], // Consume 1 stack of tag1 for 1 AP discount
@@ -258,6 +284,8 @@ fn test_damage_calculation() {
     let defender = setup_unit(2, 100, 10);
     
     let ability = AbilityDef {
+        id: AbilityId(0),
+        name: "Test Ability".to_string(),
         ap_cost: 2,
         emit_tags: vec![],
         consume_tags: vec![],
@@ -293,6 +321,8 @@ fn test_unknown_stat_logging() {
     let mut logger = Logger::new();
 
     let ability = AbilityDef {
+        id: AbilityId(0),
+        name: "Test Ability".to_string(),
         ap_cost: 2,
         emit_tags: vec![],
         consume_tags: vec![],

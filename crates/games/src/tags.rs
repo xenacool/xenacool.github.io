@@ -1,23 +1,36 @@
 use std::collections::HashMap;
+use std::hash::Hash;
 use serde::{Deserialize, Serialize};
 use pystral_core::ui_log::{Logger, LogCommand};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct TagId(pub u64);
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TagDef {
     pub id: TagId,
     pub max_stacks: u8,
 }
 
+#[derive(Debug, Clone)]
 pub struct TagRegistry {
     pub defs: HashMap<TagId, TagDef>,
 }
 
-#[derive(Default, Debug, Clone)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct TagBag {
     pub counts: HashMap<TagId, u8>,
+}
+
+impl Hash for TagBag {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        let mut keys: Vec<_> = self.counts.keys().collect();
+        keys.sort_by_key(|&k| k.0);
+        for k in keys {
+            k.hash(state);
+            self.counts.get(k).hash(state);
+        }
+    }
 }
 
 impl TagBag {

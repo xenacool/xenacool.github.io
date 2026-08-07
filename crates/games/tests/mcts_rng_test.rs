@@ -12,10 +12,16 @@ fn test_mcts_sampling_determinism() {
         logger: Logger::new(),
         reaction_queue: Vec::new(),
         rng: SeededRng::new(42),
+        ability_registry: HashMap::new(),
+        job_registry: HashMap::new(),
+        movement_registry: HashMap::new(),
+        reaction_registry: HashMap::new(),
+        tag_registry: TagRegistry { defs: HashMap::new() },
     };
 
     let agent_id = AgentId(1);
-    let mut unit = UnitState {
+    let unit = UnitState {
+        team_id: 1,
         health: 100,
         mana: 100,
         action_points: 4,
@@ -25,7 +31,7 @@ fn test_mcts_sampling_determinism() {
         class_id: ActorClassId(1),
         primary_job: JobId(1),
         secondary_jobs: vec![],
-        movement_ability: None,
+        movement_ability: MovementId(0),
         passive_abilities: vec![],
         reaction_abilities: vec![],
         stats: UnitStats {
@@ -49,6 +55,7 @@ fn test_mcts_sampling_determinism() {
             slots: HashMap::new(),
         },
         status_effects: Vec::new(),
+        turn_tags: TagBag::default(),
         modifier_deck: AbilityModifierDeck {
             draw_pile: vec![ModifierCard::Plus1, ModifierCard::Minus1, ModifierCard::Critical],
             discard_pile: vec![],
@@ -63,7 +70,7 @@ fn test_mcts_sampling_determinism() {
 
     // 3. Perform a "random" draw in both branches
     // We'll simulate what a Task::execute would do
-    let mut draw_random_card = |s: &mut TacticalState| {
+    let draw_random_card = |s: &mut TacticalState| {
         let agent = s.agents.get_mut(&agent_id).unwrap();
         // Force a situation where RNG MUST be used: empty draw pile, cards in discard pile
         if agent.modifier_deck.draw_pile.is_empty() && agent.modifier_deck.discard_pile.is_empty() {
@@ -77,8 +84,8 @@ fn test_mcts_sampling_determinism() {
         
         // Return a diff to satisfy the pattern
         TacticalDiff {
-            health_changes: BTreeMap::new(),
-            position_changes: BTreeMap::new(),
+            agents: BTreeMap::new(),
+            reaction_queue: Vec::new(),
             rng_update: Some(s.rng.clone()),
         }
     };
