@@ -1,5 +1,6 @@
 pub mod animation;
 pub mod scripting;
+pub mod simulation;
 pub mod world;
 
 use pystral_compiler::assets::AssetCollection;
@@ -23,5 +24,9 @@ pub fn setup_spritestack_assets(history: &mut HistoryManager) {
 
 pub fn generate_demo_log(history: &mut HistoryManager, atlas_json: &str, spritesheet_rgba: &[u8], spritesheet_width: u32) {
     let script = include_str!("../../../../assets/scripts/demo.rhai");
-    scripting::generate_demo_log_rhai(history, script, atlas_json, spritesheet_rgba, spritesheet_width).expect("Rhai execution failed");
+    if let Err(e) = scripting::generate_demo_log_rhai(history, script, atlas_json, spritesheet_rgba, spritesheet_width) {
+        history.push_and_apply(Event::Log {
+            msg: format!("Rhai execution failed: {}", e),
+        });
+    }
 }

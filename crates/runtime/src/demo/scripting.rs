@@ -1,3 +1,4 @@
+use crate::demo::simulation::TacticalSimulation;
 use rhai::{Engine, Scope, Dynamic};
 use pystral_core::history::HistoryManager;
 use pystral_core::log::{Event, PropertyValue};
@@ -25,12 +26,14 @@ pub fn generate_demo_log_rhai(
     register_png_assets(&mut engine);
     register_physics(&mut engine);
     register_history_methods(&mut engine);
+    register_simulation(&mut engine);
 
     let mut scope = Scope::new();
     scope.push("history", history.clone());
     scope.push("atlas_json", atlas_json.to_string());
     scope.push("spritesheet_rgba", rhai::Blob::from(spritesheet_rgba.to_vec()));
     scope.push("spritesheet_width", spritesheet_width as i64);
+    scope.push("run_simulation", true);
 
     engine.run_with_scope(&mut scope, script)?;
 
@@ -93,12 +96,19 @@ fn register_animation_types(engine: &mut Engine) {
 fn register_asset_management(engine: &mut Engine) {
     // Register Asset Management
     engine.register_type_with_name::<SpriteAtlas>("SpriteAtlas")
-        .register_fn("load_atlas", |json: &str| SpriteAtlas::from_json(json).expect("Failed to parse atlas JSON"));
+        .register_fn("load_atlas", |json: &str| {
+            SpriteAtlas::from_json(json).unwrap_or_else(|_| SpriteAtlas { width: 0, height: 0, spritestacks: HashMap::new() })
+        });
 
     engine.register_type_with_name::<AssetCollection>("AssetCollection")
         .register_fn("new_asset_collection", || AssetCollection::new())
         .register_fn("add_atlas_spritestack", |collection: &mut AssetCollection, name: &str, spacing: f64, atlas: SpriteAtlas, spritesheet_rgba: rhai::Blob, width: i64| {
-             collection.add_atlas_spritestack(name, spacing as f32, &atlas, &spritesheet_rgba, width as u32);
+             if atlas.spritestacks.contains_key(name) {
+                 collection.add_atlas_spritestack(name, spacing as f32, &atlas, &spritesheet_rgba, width as u32);
+             } else {
+                 // Log error to history if possible, but here we don't have history directly.
+                 // For now, let's just avoid panicking.
+             }
         })
         .register_fn("add_arrow", |collection: &mut AssetCollection, name: &str, color: rhai::Array, spacing: f64| {
             let r = color.get(0).and_then(|v| v.as_int().ok()).unwrap_or(255) as u8;
@@ -283,19 +293,13 @@ fn register_history_methods(engine: &mut Engine) {
         id
     });
 
-    engine.register_fn("spawn_entity", |history: &mut HistoryManager, kind: &str, hex: Hex| {
-        let id = history.log.len() as u64;
-        history.push_and_apply(Event::SpawnEntity {
-            id,
-            kind: kind.to_string(),
-            hex,
-        });
-        id as i64
-    });
-
     engine.register_fn("set", |history: &mut HistoryManager, id: i64, prop: &str, value: Dynamic| {
         let val = if let Some(f) = value.as_float().ok() {
             PropertyValue::Float(f as f32)
+        } else if let Some(i) = value.as_int().ok() {
+            PropertyValue::Float(i as f32)
+        } else if let Some(b) = value.as_bool().ok() {
+            PropertyValue::String(if b { "true".to_string() } else { "false".to_string() })
         } else if let Some(s) = value.clone().into_string().ok() {
             PropertyValue::String(s)
         } else if value.is::<Vec3>() {
@@ -337,12 +341,69 @@ fn register_history_methods(engine: &mut Engine) {
         });
     });
 
+    engine.register_fn("move_sprite", |history: &mut HistoryManager, id: i64, destination: Hex, duration_ms: i64| {
+        history.push_and_apply(Event::MoveSprite {
+            id: id as u64,
+            destination,
+            duration_ms: Some(duration_ms as u32),
+        });
+    });
+
     engine.register_fn("set_animation_state", |history: &mut HistoryManager, id: i64, state: &str| {
         history.push_and_apply(Event::SetAnimationState {
             id: id as u64,
             state: state.to_string(),
         });
     });
+
+    engine.register_fn("segno", |history: &mut HistoryManager, n: i64| {
+        history.push_and_apply(Event::Segno(n as u64));
+    });
+}
+
+fn register_simulation(engine: &mut Engine) {
+    engine.register_type_with_name::<TacticalSimulation>("TacticalSimulation");
+
+    engine.register_fn("new_simulation", TacticalSimulation::new);
+    
+    engine.register_fn("step", |sim: &mut TacticalSimulation| {
+        let agents = sim.step();
+        agents.into_iter().map(|id| Dynamic::from(id.0 as i64)).collect::<rhai::Array>()
+    });
+    
+    engine.register_fn("get_agent_position", |sim: &mut TacticalSimulation, id: i64| {
+        let pos = sim.get_agent_position(id);
+        Hex::new(pos.0, pos.1) // We only care about Q, R for now
+    });
+    
+    engine.register_fn("get_agent_health", |sim: &mut TacticalSimulation, id: i64| {
+        sim.get_agent_health(id)
+    });
+    
+    engine.register_fn("get_prompts", |sim: &mut TacticalSimulation, id: i64| {
+        let prompts = sim.get_prompts(id);
+        let mut map = rhai::Map::new();
+        for (k, v) in prompts {
+            map.insert(k.into(), v.into());
+        }
+        map
+    });
+    
+    engine.register_fn("list_agents", |sim: &mut TacticalSimulation| {
+        let agents = sim.list_agents();
+        agents.into_iter().map(Dynamic::from).collect::<rhai::Array>()
+    });
+}
+
+pub fn register_all(engine: &mut Engine) {
+    register_basic_types(engine);
+    register_domain_types(engine);
+    register_animation_types(engine);
+    register_asset_management(engine);
+    register_png_assets(engine);
+    register_physics(engine);
+    register_history_methods(engine);
+    register_simulation(engine);
 }
 
 #[rhai::plugin::export_module]

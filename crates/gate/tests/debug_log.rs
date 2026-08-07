@@ -43,9 +43,10 @@ fn debug_ui_log_errors() {
         }
         
         while let Ok(msg) = rx.try_recv() {
-            if let WorkerInput::Log(msg) = msg {
+            if let WorkerInput::LogError(msg) = msg {
                 println!("Errors at index {}:", i);
                 println!("  - {}", msg);
+                panic!("UI Log error: {}", msg);
             }
         }
     }

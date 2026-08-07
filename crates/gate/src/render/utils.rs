@@ -16,7 +16,7 @@ impl<T> RenderResultExt<T> for RenderResult<T> {
         match self {
             Ok(v) => v,
             Err(e) => {
-                let _ = worker_tx.unbounded_send(WorkerInput::Log(e.message));
+                let _ = worker_tx.unbounded_send(WorkerInput::LogError(e.message));
                 e.fallback
             }
         }
@@ -28,7 +28,6 @@ pub trait EntityExt {
     fn get_material(&self, materials: &std::collections::HashMap<String, Material>) -> RenderResult<Material>;
     fn get_hex_map(&self) -> RenderResult<pystral_core::domain::HexMap>;
     fn get_lighting(&self) -> RenderResult<pystral_core::domain::LightingConfig>;
-    fn get_skeleton(&self) -> RenderResult<Option<pystral_core::domain::Skeleton>>;
     fn get_collision(&self) -> RenderResult<Option<pystral_core::domain::Shape3D>>;
 }
 
@@ -117,19 +116,6 @@ impl EntityExt for EntityState {
             }
         } else {
             Err(RenderError::new("Property lighting not found", default))
-        }
-    }
-
-    fn get_skeleton(&self) -> RenderResult<Option<pystral_core::domain::Skeleton>> {
-        let key = "skeleton";
-        if let Some(PropertyValue::Skeleton(s)) = self.properties.get(key) {
-            if ERROR_MODE_ENABLED.load(Ordering::Relaxed) {
-                Err(RenderError::new("Property skeleton found but ERROR_MODE_ENABLED is set", Some(s.clone())))
-            } else {
-                Ok(Some(s.clone()))
-            }
-        } else {
-            Ok(None) // It's fine for an entity to not have a skeleton
         }
     }
 

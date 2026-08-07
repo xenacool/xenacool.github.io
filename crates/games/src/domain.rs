@@ -34,7 +34,7 @@ impl Domain for TacticalDomain {
             }
         }
         
-        score.try_into().unwrap()
+        npc_engine_core::AgentValue::new(score).unwrap_or_else(|_| npc_engine_core::AgentValue::new(0.0).unwrap())
     }
 
     fn update_visible_agents(_start_tick: u64, _ctx: Context<Self>, _agents: &mut BTreeSet<AgentId>) {
@@ -83,7 +83,7 @@ pub fn calculate_damage(
             "WITS" => attacker_stats.wits,
             "STA" => attacker_stats.stamina,
             _ => {
-                logger.apply_command(LogCommand::Log(format!("Unknown attacker attribute: {}", stat_name)));
+                logger.apply_command(LogCommand::Error(format!("Unknown attacker attribute: {}", stat_name)));
                 0
             }
         };
@@ -96,7 +96,7 @@ pub fn calculate_damage(
         "CON" => defender_stats.constitution,
         "AGI" | "DEX" => defender_stats.dexterity,
         _ => {
-            logger.apply_command(LogCommand::Log(format!("Unknown defender attribute: {}", defender_stat_name)));
+            logger.apply_command(LogCommand::Error(format!("Unknown defender attribute: {}", defender_stat_name)));
             0
         }
     };

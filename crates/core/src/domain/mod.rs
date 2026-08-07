@@ -146,11 +146,6 @@ impl Bone {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct Skeleton {
-    pub bones: Vec<Bone>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct SpritestackSlice {
     pub color_data: Vec<u8>,  // RGBA
     pub normal_data: Vec<u8>, // RGBA (packed Nx, Ny, Nz, 1.0)

@@ -78,6 +78,9 @@ check-func-length:
 	echo "Top 5 largest functions:"; \
 	echo "$$all_funcs" | sort -rn | head -5 | awk '{print $$1 " lines: " $$2 " " substr($$0, index($$0,$$3))}'
 
+build:
+	cargo build
+
 build-wasm:
 	cargo build --target wasm32-unknown-unknown
 	mkdir -p web

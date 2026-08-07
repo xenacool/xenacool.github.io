@@ -39,7 +39,7 @@ impl TagBag {
             let current = self.counts.entry(tag).or_insert(0);
             *current = (*current).saturating_add(n).min(def.max_stacks);
         } else {
-            logger.apply_command(LogCommand::Log(format!("Attempted to emit undefined tag: {:?}", tag)));
+            logger.apply_command(LogCommand::Error(format!("Attempted to emit undefined tag: {:?}", tag)));
         }
     }
 

@@ -6,7 +6,7 @@ use crate::render::context::RenderContext;
 use crate::render::mesh::Mesh;
 use crate::render::draw_utils::{set_model_matrix, set_material};
 use crate::render::utils::{EntityExt, RenderResultExt};
-use super::entity::{draw_skeleton, draw_collision, draw_spritestack};
+use super::entity::{draw_collision, draw_spritestack};
 
 #[allow(clippy::too_many_lines)]
 pub fn draw_scene(ctx: &mut RenderContext, worker_tx: &futures::channel::mpsc::UnboundedSender<crate::WorkerInput>, state: &WorldState, cam_right: Vec3, cam_up: Vec3, cam_forward: Vec3, debug_mode: bool, now: f64, _is_playing_anims: bool) {
@@ -65,7 +65,7 @@ pub fn draw_scene(ctx: &mut RenderContext, worker_tx: &futures::channel::mpsc::U
     ctx.movement_tweens.retain(|_, tween| (now - tween.start_time_ms) < tween.duration_ms);
 
     for entity in &state.entities {
-        if entity.kind == "world" || entity.kind == "camera" { continue; }
+        if entity.kind == "world" || entity.kind == "camera" || entity.kind == "prompt" { continue; }
         
         let mut current_hex_pos = layout.hex_to_world_pos(entity.hex);
         let mut current_hex = entity.hex;
@@ -136,12 +136,6 @@ pub fn draw_scene(ctx: &mut RenderContext, worker_tx: &futures::channel::mpsc::U
         if entity.properties.contains_key("asset") {
             draw_spritestack(ctx, worker_tx, entity, state, sprite_pos, billboard_rot, entity_scale, cam_forward, rotation_y);
         }
-
-        // Draw Skeleton
-        if let Some(skeleton) = entity.get_skeleton().log_fallback(worker_tx) {
-            draw_skeleton(ctx, worker_tx, entity, state, sprite_pos, entity_scale, cam_right, billboard_up, cam_forward, &skeleton, debug_mode, side, render_rotation_z, rotation_y);
-        }
-
         if debug_mode && let Some(shape) = entity.get_collision().log_fallback(worker_tx) {
             draw_collision(ctx, sprite_pos, rotation_z, &shape);
         }

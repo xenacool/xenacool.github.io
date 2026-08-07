@@ -1,6 +1,7 @@
 use crate::AgentId;
 use crate::TacticalState;
 
+#[derive(Clone)]
 pub struct CTScheduler {
     pub agents: Vec<AgentId>,
     pub ct_threshold: i32,

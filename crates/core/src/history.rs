@@ -42,6 +42,8 @@ impl WorldState {
             Event::DefineAssetCollection { name, data } => {
                 self.asset_collections.insert(name.clone(), data.clone());
             }
+            Event::Log { .. } => {}
+            Event::Segno(_) => {}
         }
     }
 
@@ -103,6 +105,8 @@ impl WorldState {
             Event::DefineAssetCollection { name, .. } => {
                 self.asset_collections.remove(name);
             }
+            Event::Log { .. } => {}
+            Event::Segno(_) => {}
         }
     }
 }
@@ -137,7 +141,7 @@ impl HistoryManager {
         self.log.push(event);
         self.current_index += 1;
 
-        if self.current_index.is_multiple_of(self.checkpoint_interval) {
+        if self.current_index % self.checkpoint_interval == 0 {
             self.checkpoints.push(Checkpoint {
                 event_index: self.current_index,
                 state: self.current_state.clone(),
