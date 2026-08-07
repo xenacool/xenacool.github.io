@@ -757,7 +757,6 @@ dependencies = [
 [[package]]
 name = "npc-engine-core"
 version = "0.1.0"
-source = "git+https://github.com/xenacool/npc-engine.git#c9a2f7048993fe07171046f36b5b3f78fe661f20"
 dependencies = [
  "dot",
  "downcast-rs 1.2.1",
@@ -768,12 +767,12 @@ dependencies = [
  "rand_chacha 0.3.1",
  "rustc-hash",
  "serde",
+ "web-time",
 ]
 
 [[package]]
 name = "npc-engine-utils"
 version = "0.1.0"
-source = "git+https://github.com/xenacool/npc-engine.git#c9a2f7048993fe07171046f36b5b3f78fe661f20"
 dependencies = [
  "ansi_term",
  "log",
@@ -1221,6 +1220,7 @@ dependencies = [
  "hexx",
  "log",
  "npc-engine-core",
+ "npc-engine-utils",
  "pystral_compiler",
  "pystral_core",
  "pystral_games",
@@ -1228,6 +1228,7 @@ dependencies = [
  "rhai",
  "serde",
  "wasm-bindgen",
+ "web-sys",
 ]
 
 [[package]]

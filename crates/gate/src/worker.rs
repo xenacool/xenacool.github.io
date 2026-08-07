@@ -5,7 +5,7 @@ use std::pin::Pin;
 use std::task::{Context, Poll};
 use std::collections::VecDeque;
 use futures::{StreamExt, SinkExt};
-use pystral_runtime::Runtime;
+use pystral_runtime::{Runtime, RuntimeRequest};
 use wasm_bindgen::prelude::*;
 
 pub struct UnifiedWorker {
@@ -14,6 +14,9 @@ pub struct UnifiedWorker {
     runtime: Runtime,
     next_output_seq: u64,
     last_received_seq: u64,
+    last_acked_segno: u64,
+    last_sent_segno: u64,
+    is_simulating: bool,
     outbox: VecDeque<ReliableOutput>,
 }
 
@@ -27,6 +30,9 @@ impl Reactor for UnifiedWorker {
             runtime: Runtime::new(),
             next_output_seq: 0,
             last_received_seq: 0,
+            last_acked_segno: 0,
+            last_sent_segno: 0,
+            is_simulating: false,
             outbox: VecDeque::new(),
         }
     }
@@ -63,11 +69,20 @@ impl Future for UnifiedWorker {
                     self.last_received_seq = envelope.seq;
                     
                     let response = match envelope.msg {
-                        WorkerInput::Log(msg) => {
-                            self.logger.apply_command(pystral_core::ui_log::LogCommand::Log(msg));
+                        WorkerInput::LogInfo(msg) => {
+                            self.logger.apply_command(pystral_core::ui_log::LogCommand::Info(msg));
                             Some(WorkerOutput::LogUpdate {
                                 messages: self.logger.get_messages(),
                                 total_errors: self.logger.total_errors as u32,
+                                total_info: self.logger.total_info as u32,
+                            })
+                        }
+                        WorkerInput::LogError(msg) => {
+                            self.logger.apply_command(pystral_core::ui_log::LogCommand::Error(msg));
+                            Some(WorkerOutput::LogUpdate {
+                                messages: self.logger.get_messages(),
+                                total_errors: self.logger.total_errors as u32,
+                                total_info: self.logger.total_info as u32,
                             })
                         }
                         WorkerInput::ResetLog => {
@@ -75,14 +90,27 @@ impl Future for UnifiedWorker {
                             Some(WorkerOutput::LogUpdate {
                                 messages: self.logger.get_messages(),
                                 total_errors: self.logger.total_errors as u32,
+                                total_info: self.logger.total_info as u32,
                             })
                         }
                         WorkerInput::RuntimeRequest(task) => {
-                            let (res, logs) = self.runtime.process_request(task);
+                            let mut t = task;
+                            if let RuntimeRequest::GenerateDemoLog { atlas_json, spritesheet_rgba, spritesheet_width } = t {
+                                t = RuntimeRequest::StartDemoSimulation { atlas_json, spritesheet_rgba, spritesheet_width };
+                                self.is_simulating = true;
+                                self.last_sent_segno = 0;
+                                self.last_acked_segno = 0;
+                            }
+                            
+                            let (res, logs) = self.runtime.process_request(t);
                             for log in logs {
-                                self.logger.apply_command(pystral_core::ui_log::LogCommand::Log(log));
+                                self.logger.apply_command(pystral_core::ui_log::LogCommand::Error(log));
                             }
                             Some(WorkerOutput::RuntimeResponse(Box::new(res)))
+                        }
+                        WorkerInput::Ack(segno) => {
+                            self.last_acked_segno = segno;
+                            None
                         }
                     };
                     
@@ -117,6 +145,31 @@ impl Future for UnifiedWorker {
                     }
                     Poll::Pending => break,
                 }
+            }
+        }
+
+        // Auto-step simulation if ACKs are received
+        if self.is_simulating && self.last_acked_segno >= self.last_sent_segno {
+            // Check if we hit the limit
+            if self.last_sent_segno > 20 {
+                self.is_simulating = false;
+            } else {
+                let (res, logs) = self.runtime.process_request(pystral_runtime::RuntimeRequest::StepDemoSimulation);
+                for log in logs {
+                    self.logger.apply_command(pystral_core::ui_log::LogCommand::Error(log));
+                }
+                
+                self.last_sent_segno += 1;
+                
+                let out_envelope = Envelope {
+                    seq: self.next_output_seq,
+                    msg: WorkerOutput::RuntimeResponse(Box::new(res)),
+                };
+                self.next_output_seq += 1;
+                self.outbox.push_back(ReliableOutput::Msg(Box::new(out_envelope)));
+                
+                // Re-wake to process the new outbox message
+                cx.waker().wake_by_ref();
             }
         }
 

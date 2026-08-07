@@ -55,3 +55,7 @@ cast_sign_loss = "allow"
 too_many_arguments = "allow"
 type_complexity = "allow"
 too_many_lines = "warn"
+
+[patch."https://github.com/xenacool/npc-engine.git"]
+npc-engine-core = { path = "reference/npc-engine/npc-engine-core" }
+npc-engine-utils = { path = "reference/npc-engine/npc-engine-utils" }

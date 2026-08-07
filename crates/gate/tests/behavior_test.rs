@@ -84,18 +84,6 @@ fn test_demo_log_rendering_behavior_strict() {
                 let _ = entity.get_float("cam_offset_z", 0.0).log_fallback(&tx);
                 let _ = entity.get_material(&state.materials).log_fallback(&tx);
                 
-                
-                if let Some(skeleton) = entity.get_skeleton().log_fallback(&tx) {
-                    for bone in &skeleton.bones {
-                        for joint in &[&bone.start, &bone.end] {
-                            if let pystral_core::domain::Joint::Property(prop) = joint {
-                                let _ = entity.get_float(&format!("{}_x", prop), 0.0).log_fallback(&tx);
-                                let _ = entity.get_float(&format!("{}_y", prop), 0.0).log_fallback(&tx);
-                            }
-                        }
-                    }
-                }
-
                 let _ = entity.get_collision().log_fallback(&tx);
             }
         }
@@ -103,11 +91,14 @@ fn test_demo_log_rendering_behavior_strict() {
         // Check for errors in the channel
         let mut error_messages = Vec::new();
         while let Ok(msg) = rx.try_recv() {
-            if let WorkerInput::Log(msg) = msg {
-                error_messages.push(msg);
-                if error_messages.len() >= 10 {
-                    break;
+            match msg {
+                WorkerInput::LogError(msg) => {
+                    error_messages.push(msg);
                 }
+                _ => {}
+            }
+            if error_messages.len() >= 10 {
+                break;
             }
         }
         if !error_messages.is_empty() {

@@ -30,14 +30,16 @@ pub enum ReliableOutput {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum WorkerInput {
-    Log(String),
+    LogInfo(String),
+    LogError(String),
     ResetLog,
     RuntimeRequest(RuntimeRequest),
+    Ack(u64),
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum WorkerOutput {
-    LogUpdate { messages: Vec<String>, total_errors: u32 },
+    LogUpdate { messages: Vec<String>, total_errors: u32, total_info: u32 },
     RuntimeResponse(Box<RuntimeResponse>),
 }
 
@@ -47,7 +49,9 @@ pub enum AppCommand {
     TogglePlayAnimations,
     SetDebugMode(bool),
     UpdateHistory(Box<HistoryManager>),
+    AppendHistory(Box<HistoryManager>),
     CameraNav(String),
+    ActionNav(String),
 }
 
 #[cfg(any(test, debug_assertions))]

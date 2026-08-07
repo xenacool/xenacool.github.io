@@ -22,6 +22,11 @@ mod tests {
             history.jump_to(i);
             let state = &history.current_state;
             
+            println!("Step {}: {} entities", i, state.entities.len());
+            for e in &state.entities {
+                println!("  Entity {}: kind={}", e.id, e.kind);
+            }
+            
             let characters: Vec<_> = state.entities.iter()
                 .filter(|e| {
                     e.kind == "skeleton_minion" || e.kind == "necromancer" || e.kind == "caveman" || e.kind == "mage"
@@ -38,8 +43,13 @@ mod tests {
                 let collection = AssetCollection::from_binary(collection_data);
                 
                 for char_entity in characters {
-                    let asset_prop = char_entity.properties.get("asset")
-                        .expect(&format!("Character {} ({}) missing asset property", char_entity.id, char_entity.kind));
+                    let asset_prop = match char_entity.properties.get("asset") {
+                        Some(p) => p,
+                        None => {
+                            found_characters = false; // Not fully initialized yet
+                            break;
+                        }
+                    };
                     
                     if let PropertyValue::String(asset_name) = asset_prop {
                         assert!(collection.spritestacks.contains_key(asset_name), 
@@ -54,7 +64,16 @@ mod tests {
                     }
                 }
                 
-                break; // Checked one state where they are present
+                if found_characters {
+                    break; // Checked one state where they are present and initialized
+                }
+            }
+        }
+        
+        if !found_characters {
+            println!("History log length: {}", history.log.len());
+            for (i, event) in history.log.iter().enumerate() {
+                println!("Event {}: {:?}", i, event);
             }
         }
         

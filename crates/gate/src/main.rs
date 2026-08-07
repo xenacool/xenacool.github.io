@@ -46,6 +46,10 @@ impl AppHandle {
     pub fn camera_nav(&self, direction: String) {
         let _ = self.sender.send(AppCommand::CameraNav(direction));
     }
+
+    pub fn action_nav(&self, direction: String) {
+        let _ = self.sender.send(AppCommand::ActionNav(direction));
+    }
 }
 
 #[wasm_bindgen]
@@ -105,12 +109,21 @@ pub fn run_app() -> Result<AppHandle, JsValue> {
         while let Some(output) = bridge_listener.next().await {
             if let ReliableOutput::Msg(envelope) = output {
                 match envelope.msg {
-                    WorkerOutput::LogUpdate { messages, total_errors } => {
-                        update_log_ui(messages, total_errors);
+                    WorkerOutput::LogUpdate { messages, total_errors, total_info } => {
+                        update_log_ui(messages, total_errors, total_info);
                     }
                     WorkerOutput::RuntimeResponse(res) => {
-                        if let RuntimeResponse::DemoLogGenerated(history) = *res {
-                            let _ = app_tx_clone.send(AppCommand::UpdateHistory(Box::new(history)));
+                        match *res {
+                            RuntimeResponse::DemoLogGenerated(history) => {
+                                let _ = app_tx_clone.send(AppCommand::UpdateHistory(Box::new(history)));
+                            }
+                            RuntimeResponse::DemoSimulationStarted(history) => {
+                                let _ = app_tx_clone.send(AppCommand::UpdateHistory(Box::new(history)));
+                            }
+                            RuntimeResponse::DemoSimulationStepped(history) => {
+                                let _ = app_tx_clone.send(AppCommand::AppendHistory(Box::new(history)));
+                            }
+                            _ => {}
                         }
                     }
                 }
@@ -139,7 +152,7 @@ pub fn run_app() -> Result<AppHandle, JsValue> {
 #[wasm_bindgen]
 extern "C" {
     #[wasm_bindgen(js_namespace = window)]
-    fn update_log_ui(messages: Vec<String>, total_errors: u32);
+    fn update_log_ui(messages: Vec<String>, total_errors: u32, total_info: u32);
 }
 
 async fn fetch_assets() -> Result<(String, Vec<u8>, u32), JsValue> {

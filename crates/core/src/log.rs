@@ -1,7 +1,7 @@
 use serde::{Serialize, Deserialize};
 use hexx::Hex;
 use glam::Vec3;
-use crate::domain::{HexGrid, HexMap, Material, LightingConfig, Shape3D, Skeleton, Spritestack};
+use crate::domain::{HexGrid, HexMap, Material, LightingConfig, Shape3D, Spritestack};
 use crate::animation::InactiveFSMDefinition;
 use std::collections::HashMap;
 
@@ -16,7 +16,6 @@ pub enum PropertyValue {
     Material(Material),
     Lighting(LightingConfig),
     Shape3D(Shape3D),
-    Skeleton(Skeleton),
     Spritestack(Spritestack),
     AssetRef(String),
 }
@@ -63,6 +62,10 @@ pub enum Event {
         name: String,
         data: Vec<u8>,
     },
+    Log {
+        msg: String,
+    },
+    Segno(u64),
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
@@ -91,7 +94,7 @@ impl EntityState {
         if kind == "world" {
             properties.insert("map".to_string(), PropertyValue::HexMap(crate::domain::HexMap::new()));
             properties.insert("lighting".to_string(), PropertyValue::Lighting(crate::domain::LightingConfig::default()));
-        } else if kind == "sprite" || kind == "arrow" || kind == "rock" || kind == "skeleton_minion" || kind == "necromancer" || kind == "caveman" || kind == "mage" || kind == "character" {
+        } else if kind == "sprite" || kind == "arrow" || kind == "rock" || kind == "skeleton_minion" || kind == "necromancer" || kind == "caveman" || kind == "mage" || kind == "character" || kind == "prompt" {
             properties.insert("scale".to_string(), PropertyValue::Float(1.0));
             properties.insert("z".to_string(), PropertyValue::Float(0.0));
             properties.insert("rotation_x".to_string(), PropertyValue::Float(0.0));

@@ -87,6 +87,14 @@
         <button id="nav-left" title="Camera Left">Left</button>
         <button id="nav-right" title="Camera Right">Right</button>
     </div>
+    <div class="controls-row" id="action-controls" style="display: none; background: rgba(0, 100, 200, 0.3); padding: 5px; border-radius: 5px;">
+        <button id="action-up">▲</button>
+        <button id="action-down">▼</button>
+        <button id="action-left">◀</button>
+        <button id="action-right">▶</button>
+        <button id="action-confirm" style="background: #228b22;">Action</button>
+        <button id="action-return" style="background: #b22222;">Return</button>
+    </div>
     <div style="font-size: 8px; color: #666; margin-top: 5px; text-align: center;">
         Icons by Lucide (lucide.dev)
     </div>
@@ -113,16 +121,32 @@
         document.getElementById('nav-right').style.display = right ? 'block' : 'none';
     };
 
-    window.update_log_ui = (messages, totalErrors) => {
+    window.update_action_buttons = (visible, up, down, left, right, confirm, ret) => {
+        const container = document.getElementById('action-controls');
+        container.style.display = visible ? 'flex' : 'none';
+        document.getElementById('action-up').style.display = up ? 'block' : 'none';
+        document.getElementById('action-down').style.display = down ? 'block' : 'none';
+        document.getElementById('action-left').style.display = left ? 'block' : 'none';
+        document.getElementById('action-right').style.display = right ? 'block' : 'none';
+        document.getElementById('action-confirm').style.display = confirm ? 'block' : 'none';
+        document.getElementById('action-return').style.display = ret ? 'block' : 'none';
+    };
+
+    window.update_log_ui = (messages, totalErrors, totalInfo) => {
         const logContainer = document.getElementById('log-container');
         logContainer.innerText = messages.join('\n');
         
         const errorDisplay = document.getElementById('error-display');
-        errorDisplay.innerText = `Error: ${totalErrors}`;
-        if (totalErrors > 0) {
-            errorDisplay.style.color = 'red';
-        } else {
+        if (totalInfo > 0 && totalErrors === 0) {
+            errorDisplay.innerText = `Info: ${totalInfo}`;
             errorDisplay.style.color = 'white';
+        } else {
+            errorDisplay.innerText = `Error: ${totalErrors}`;
+            if (totalErrors > 0) {
+                errorDisplay.style.color = 'red';
+            } else {
+                errorDisplay.style.color = 'white';
+            }
         }
     };
 
@@ -172,6 +196,13 @@
         document.getElementById('nav-down').addEventListener('click', () => app.camera_nav('down'));
         document.getElementById('nav-left').addEventListener('click', () => app.camera_nav('left'));
         document.getElementById('nav-right').addEventListener('click', () => app.camera_nav('right'));
+
+        document.getElementById('action-up').addEventListener('click', () => app.action_nav('up'));
+        document.getElementById('action-down').addEventListener('click', () => app.action_nav('down'));
+        document.getElementById('action-left').addEventListener('click', () => app.action_nav('left'));
+        document.getElementById('action-right').addEventListener('click', () => app.action_nav('right'));
+        document.getElementById('action-confirm').addEventListener('click', () => app.action_nav('confirm'));
+        document.getElementById('action-return').addEventListener('click', () => app.action_nav('return'));
 
         const debugCheckbox = document.getElementById('debug-checkbox');
         debugCheckbox.addEventListener('change', (e) => {

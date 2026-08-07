@@ -1,10 +1,9 @@
 use glam::{Mat4, Vec3};
 use pystral_core::log::{EntityState, WorldState};
-use pystral_core::domain::{Shape3D, Joint};
+use pystral_core::domain::Shape3D;
 use web_sys::WebGlRenderingContext as GL;
 use crate::render::context::RenderContext;
 use crate::render::draw_utils::{set_model_matrix, set_material};
-use crate::render::utils::{EntityExt, RenderResultExt};
 
 
 pub fn draw_spritestack(ctx: &mut RenderContext, worker_tx: &futures::channel::mpsc::UnboundedSender<crate::WorkerInput>, entity: &EntityState, state: &WorldState, sprite_pos: Vec3, _billboard_rot: glam::Mat4, entity_scale: f32, _cam_forward: Vec3, yaw: f32) {
@@ -57,7 +56,7 @@ fn attach_assets(ctx: &mut RenderContext, worker_tx: &futures::channel::mpsc::Un
             let collection = pystral_compiler::assets::AssetCollection::from_binary(data);
             ctx.asset_collection_cache.insert(collection_name.clone(), collection);
         } else {
-            let _ = worker_tx.unbounded_send(crate::WorkerInput::Log(format!("Asset collection {} not found in state", collection_name)));
+            let _ = worker_tx.unbounded_send(crate::WorkerInput::LogError(format!("Asset collection {} not found in state", collection_name)));
         }
     }
 
@@ -79,146 +78,9 @@ fn attach_assets(ctx: &mut RenderContext, worker_tx: &futures::channel::mpsc::Un
                     aabb: stack.aabb,
                 });
             } else {
-                let _ = worker_tx.unbounded_send(crate::WorkerInput::Log(format!("Asset {} not found in collection {}", asset_name, collection_name)));
+                let _ = worker_tx.unbounded_send(crate::WorkerInput::LogError(format!("Asset {} not found in collection {}", asset_name, collection_name)));
             }
         }
-    }
-}
-
-pub fn draw_skeleton(ctx: &mut RenderContext, worker_tx: &futures::channel::mpsc::UnboundedSender<crate::WorkerInput>, entity: &EntityState, state: &pystral_core::log::WorldState, sprite_pos: Vec3, entity_scale: f32, cam_right: Vec3, billboard_up: Vec3, cam_forward: Vec3, skeleton: &pystral_core::domain::Skeleton, debug_mode: bool, side: crate::render::painter::ViewSide, render_rotation_z: f32, _rotation_y: f32) {
-    set_material(&ctx.gl, &ctx.uniforms, [1.0, 1.0, 1.0], 0.0, 0.0, 1.0);
-    
-    if debug_mode {
-        ctx.gl.disable(GL::DEPTH_TEST);
-    }
-
-    let cos_z = render_rotation_z.cos();
-    let sin_z = render_rotation_z.sin();
-
-    let get_joint_billboard_pos = |joint: &Joint| -> (f32, f32, f32) {
-        let (jx, jy, jz) = match joint {
-            Joint::Constant(x, y, z) => (*x, *y, *z),
-            Joint::Property(prop) => {
-                let px = format!("{}_x", prop);
-                let py = format!("{}_y", prop);
-                let pz = format!("{}_z", prop);
-                (
-                    entity.get_float(&px, 0.0).log_fallback(worker_tx),
-                    entity.get_float(&py, 0.0).log_fallback(worker_tx),
-                    entity.get_float(&pz, 0.0).log_fallback(worker_tx),
-                )
-            }
-        };
-        
-        let rx = jx * cos_z - jy * sin_z;
-        let ry = jx * sin_z + jy * cos_z;
-        let rz = jz;
-
-        let engine_offset = Vec3::new(rx, rz, ry);
-        (
-            engine_offset.dot(cam_right),
-            engine_offset.dot(billboard_up),
-            engine_offset.dot(cam_forward),
-        )
-    };
-
-    for (i, bone) in skeleton.bones.iter().enumerate() {
-        let (sx, sy, sz) = get_joint_billboard_pos(&bone.start);
-        let (ex, ey, ez) = get_joint_billboard_pos(&bone.end);
-        let start = sprite_pos + cam_right * (sx * entity_scale) + billboard_up * (sy * entity_scale) + cam_forward * (sz * entity_scale);
-        let end = sprite_pos + cam_right * (ex * entity_scale) + billboard_up * (ey * entity_scale) + cam_forward * (ez * entity_scale);
-        let dir = end - start;
-        let len = dir.length();
-        
-        if len > 0.001 {
-            let center = (start + end) * 0.5;
-            let up = dir.normalize();
-            let forward = -cam_forward;
-            let right = up.cross(forward).normalize();
-            
-            let bone_rot = Mat4::from_cols(right.extend(0.0), up.extend(0.0), forward.extend(0.0), glam::Vec4::W);
-            
-            if !bone.painter_commands.is_empty() {
-                let cache_key = (entity.id, i);
-                let needs_update = if let Some((old_cmds, _)) = ctx.bone_textures.get(&cache_key) {
-                    old_cmds != &bone.painter_commands
-                } else {
-                    true
-                };
-                
-                if needs_update {
-                    let front_tex = crate::render::painter::render_commands_to_texture(&ctx.gl, &bone.painter_commands, 256, 256, crate::render::painter::ViewSide::Front);
-                    let mirrored_tex = crate::render::painter::render_commands_to_texture(&ctx.gl, &bone.painter_commands, 256, 256, crate::render::painter::ViewSide::Mirrored);
-                    
-                    if let (Some(f), Some(m)) = (front_tex, mirrored_tex)
-                        && let Some((_, old_set)) = ctx.bone_textures.insert(cache_key, (bone.painter_commands.clone(), crate::render::context::TextureSet { front: f, mirrored: m })) {
-                        ctx.gl.delete_texture(Some(&old_set.front));
-                        ctx.gl.delete_texture(Some(&old_set.mirrored));
-                    }
-                }
-                
-                if let Some((_, tex_set)) = ctx.bone_textures.get(&cache_key) {
-                    let tex = if side == crate::render::painter::ViewSide::Front { &tex_set.front } else { &tex_set.mirrored };
-                    ctx.gl.active_texture(GL::TEXTURE0);
-                    ctx.gl.bind_texture(GL::TEXTURE_2D, Some(tex));
-                    ctx.gl.uniform1i(ctx.uniforms.texture.as_ref(), 0);
-                    ctx.gl.uniform1i(ctx.uniforms.use_tex.as_ref(), 1);
-                    
-                    let offset_center = center + cam_forward * 0.01;
-                    let bone_width = 0.05 * entity_scale;
-                    let bone_model_offset = Mat4::from_translation(offset_center) * bone_rot * Mat4::from_scale(Vec3::new(bone_width, len, 1.0));
-                    set_model_matrix(&ctx.gl, &ctx.uniforms, &bone_model_offset);
-                    
-                    ctx.sprite_mesh.draw(&ctx.gl, ctx.attribs.pos, ctx.attribs.norm, ctx.attribs.uv);
-                }
-            }
-            
-            if let Some((collection_name, asset_name)) = &bone.spritestack {
-                let asset_cache_key = format!("{}:{}", collection_name, asset_name);
-                attach_assets(ctx, worker_tx, state, collection_name, asset_name, &asset_cache_key);
-                
-                if let Some(textures) = ctx.spritestack_assets.get(&asset_cache_key) {
-                    let quad_scale = textures.aabb.x * bone.scale * entity_scale;
-                    let total_height = textures.aabb.y * bone.scale * entity_scale;
-                    let num_layers = textures.color_textures.len() as f32;
-                    
-                    for (i, (color_tex, normal_tex)) in textures.color_textures.iter().zip(textures.normal_textures.iter()).enumerate() {
-                        let z_offset = if num_layers > 1.0 {
-                            (i as f32 / (num_layers - 1.0) - 0.5) * total_height
-                        } else {
-                            0.0
-                        };
-                        
-                        let slice_pos = center + up * z_offset;
-                        let slice_model = Mat4::from_translation(slice_pos) * bone_rot * Mat4::from_rotation_x(-std::f32::consts::FRAC_PI_2) * Mat4::from_scale(Vec3::splat(quad_scale));
-                        set_model_matrix(&ctx.gl, &ctx.uniforms, &slice_model);
-                        
-                        ctx.gl.active_texture(GL::TEXTURE0);
-                        ctx.gl.bind_texture(GL::TEXTURE_2D, Some(color_tex));
-                        ctx.gl.uniform1i(ctx.uniforms.texture.as_ref(), 0);
-                        ctx.gl.active_texture(GL::TEXTURE1);
-                        ctx.gl.bind_texture(GL::TEXTURE_2D, Some(normal_tex));
-                        ctx.gl.uniform1i(ctx.uniforms.normal_map.as_ref(), 1);
-                        ctx.gl.uniform1i(ctx.uniforms.use_tex.as_ref(), 1);
-                        ctx.gl.uniform1i(ctx.uniforms.use_normal_map.as_ref(), 1);
-                        ctx.sprite_mesh.draw(&ctx.gl, ctx.attribs.pos, ctx.attribs.norm, ctx.attribs.uv);
-                    }
-                    ctx.gl.uniform1i(ctx.uniforms.use_normal_map.as_ref(), 0);
-                }
-            }
-
-            if debug_mode {
-                let rotation = glam::Quat::from_rotation_arc(Vec3::Z, dir / len);
-                let bone_model = Mat4::from_translation(start + dir * 0.5) * Mat4::from_quat(rotation) * Mat4::from_scale(Vec3::new(0.02 * entity_scale, 0.02 * entity_scale, len));
-                set_model_matrix(&ctx.gl, &ctx.uniforms, &bone_model);
-                ctx.gl.uniform1i(ctx.uniforms.use_tex.as_ref(), 0);
-                ctx.cylinder_mesh.draw_wireframe(&ctx.gl, ctx.attribs.pos);
-            }
-        }
-    }
-    
-    if debug_mode {
-        ctx.gl.enable(GL::DEPTH_TEST);
     }
 }
 

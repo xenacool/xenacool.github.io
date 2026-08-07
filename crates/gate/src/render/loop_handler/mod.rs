@@ -65,6 +65,12 @@ impl LoopHandler {
         // Update Nav Buttons based on current camera neighbors
         self.sync_nav_buttons(&state);
 
+        // Update Action Buttons based on current prompt entity
+        self.sync_action_buttons(&state);
+
+        // Handle Segno ACKs
+        self.handle_segno_acks();
+
         // 6. Draw Scene
         draw_scene(&mut self.ctx, &self.worker_tx, &state, cam_right, cam_up, cam_forward, debug_mode, now, is_playing_anims);
     }
@@ -92,19 +98,41 @@ impl LoopHandler {
                     crate::render::set_ui_slider_max(self.history_manager.log.len() as u32);
                     crate::render::update_ui_slider(self.history_manager.current_index as u32);
                 }
+                AppCommand::AppendHistory(history) => {
+                    for event in history.log {
+                        self.history_manager.log.push(event);
+                    }
+                    // We don't necessarily want to jump to the end, 
+                    // but we want to update the slider.
+                    crate::render::set_ui_slider_max(self.history_manager.log.len() as u32);
+                }
                 AppCommand::CameraNav(direction) => {
                     let mut target_cam_id = None;
                     
+                    if self.ctx.active_camera_id.is_none() {
+                        if let Some(first_cam) = self.history_manager.current_state.entities.iter().find(|e| e.kind == "camera") {
+                            self.ctx.active_camera_id = Some(first_cam.id);
+                        }
+                    }
+
                     let cam = if let Some(id) = self.ctx.active_camera_id {
                         self.history_manager.current_state.entities.iter().find(|e| e.id == id && e.kind == "camera")
                     } else {
-                        self.history_manager.current_state.entities.iter().find(|e| e.kind == "camera")
+                        None
                     };
 
                     if let Some(cam) = cam {
                         let prop_name = format!("neighbor_{}", direction);
-                        if let Some(pystral_core::log::PropertyValue::Float(id)) = cam.properties.get(&prop_name) {
-                            target_cam_id = Some(*id as u64);
+                        if let Some(val) = cam.properties.get(&prop_name) {
+                             match val {
+                                 pystral_core::log::PropertyValue::Float(id) => target_cam_id = Some(*id as u64),
+                                 pystral_core::log::PropertyValue::String(id_str) => {
+                                     if let Ok(id) = id_str.parse::<u64>() {
+                                         target_cam_id = Some(id);
+                                     }
+                                 }
+                                 _ => {}
+                             }
                         }
                     }
 
@@ -112,8 +140,11 @@ impl LoopHandler {
                         self.ctx.active_camera_id = Some(id);
                     } else {
                         let msg = format!("Camera navigation error: No {} neighbor found", direction);
-                        let _ = self.worker_tx.unbounded_send(WorkerInput::Log(msg));
+                        let _ = self.worker_tx.unbounded_send(WorkerInput::LogError(msg));
                     }
+                }
+                AppCommand::ActionNav(direction) => {
+                    let _ = self.worker_tx.unbounded_send(WorkerInput::LogInfo(format!("Action input: {}", direction)));
                 }
             }
         }
@@ -158,6 +189,49 @@ impl LoopHandler {
         }
 
         crate::render::update_nav_buttons(up, down, left, right);
+    }
+
+    fn sync_action_buttons(&self, state: &WorldState) {
+        let mut visible = false;
+        let mut up = false;
+        let mut down = false;
+        let mut left = false;
+        let mut right = false;
+        let mut confirm = false;
+        let mut ret = false;
+
+        if let Some(prompt) = state.entities.iter().find(|e| e.kind == "prompt") {
+            visible = match prompt.properties.get("visible") {
+                Some(pystral_core::log::PropertyValue::String(s)) => s == "true",
+                _ => false,
+            };
+            if visible {
+                let get_bool = |name: &str| -> bool {
+                    match prompt.properties.get(name) {
+                        Some(pystral_core::log::PropertyValue::String(s)) => s == "true",
+                        _ => false,
+                    }
+                };
+                up = get_bool("up");
+                down = get_bool("down");
+                left = get_bool("left");
+                right = get_bool("right");
+                confirm = get_bool("confirm");
+                ret = get_bool("return");
+            }
+        }
+
+        crate::render::update_action_buttons(visible, up, down, left, right, confirm, ret);
+    }
+
+    fn handle_segno_acks(&mut self) {
+        let current_idx = self.history_manager.current_index;
+        if current_idx > 0 {
+            let event = &self.history_manager.log[current_idx - 1];
+            if let pystral_core::log::Event::Segno(n) = event {
+                let _ = self.worker_tx.unbounded_send(WorkerInput::Ack(*n));
+            }
+        }
     }
 
     fn get_current_state(&mut self, now: f64, is_playing_anims: bool) -> WorldState {
@@ -261,7 +335,7 @@ impl LoopHandler {
                         .or_insert_with(|| ActiveFSM::new(fsm_def.clone(), entity.animation_state.clone(), now));
                 } else {
                     let msg = format!("FSM definition {} not found for entity {}", fsm_name, entity.id);
-                    let _ = self.worker_tx.unbounded_send(WorkerInput::Log(msg));
+                    let _ = self.worker_tx.unbounded_send(WorkerInput::LogError(msg));
                 }
             }
         }
