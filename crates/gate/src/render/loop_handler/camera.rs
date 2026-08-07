@@ -70,9 +70,5 @@ pub fn setup_camera(ctx: &mut RenderContext, worker_tx: &futures::channel::mpsc:
     ctx.gl.uniform_matrix4fv_with_f32_array(ctx.uniforms.view.as_ref(), false, &view.to_cols_array());
     ctx.gl.uniform_matrix4fv_with_f32_array(ctx.uniforms.proj.as_ref(), false, &proj.to_cols_array());
 
-    if ctx.active_camera_id.is_some() {
-        let _ = worker_tx.unbounded_send(crate::WorkerInput::LogInfo(format!("Cam {} matrix: {:?} at angle {}", ctx.active_camera_id.unwrap(), view.to_cols_array(), angle)));
-    }
-
     (view, proj, cam_right, cam_up, cam_forward)
 }
