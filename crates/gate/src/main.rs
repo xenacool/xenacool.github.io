@@ -145,12 +145,18 @@ extern "C" {
 async fn fetch_assets() -> Result<(String, Vec<u8>, u32), JsValue> {
     let window = web_sys::window().expect("No global window found");
     
-    let resp_atlas = wasm_bindgen_futures::JsFuture::from(window.fetch_with_str("/web/atlas.json")).await?;
+    let resp_atlas = wasm_bindgen_futures::JsFuture::from(window.fetch_with_str("web/atlas.json")).await?;
     let resp_atlas: web_sys::Response = resp_atlas.dyn_into()?;
+    if !resp_atlas.ok() {
+        return Err(format!("Failed to fetch atlas: {} {}", resp_atlas.status(), resp_atlas.status_text()).into());
+    }
     let atlas_json = wasm_bindgen_futures::JsFuture::from(resp_atlas.text()?).await?.as_string().unwrap();
     
-    let resp_img = wasm_bindgen_futures::JsFuture::from(window.fetch_with_str("/web/spritesheet.png")).await?;
+    let resp_img = wasm_bindgen_futures::JsFuture::from(window.fetch_with_str("web/spritesheet.png")).await?;
     let resp_img: web_sys::Response = resp_img.dyn_into()?;
+    if !resp_img.ok() {
+        return Err(format!("Failed to fetch spritesheet: {} {}", resp_img.status(), resp_img.status_text()).into());
+    }
     let blob = wasm_bindgen_futures::JsFuture::from(resp_img.blob()?).await?;
     let blob: web_sys::Blob = blob.dyn_into()?;
     
