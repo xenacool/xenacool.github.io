@@ -1,4 +1,4 @@
-use crate::{ReliableInput, ReliableOutput, WorkerInput, WorkerOutput, Envelope};
+use crate::{ReliableInput, ReliableOutput, WorkerInput, WorkerOutput, Envelope, RuntimeResponse};
 use gloo_worker::reactor::{Reactor, ReactorScope};
 use std::future::Future;
 use std::pin::Pin;
@@ -103,9 +103,29 @@ impl Future for UnifiedWorker {
                             }
                             
                             let (res, logs) = self.runtime.process_request(t);
+                            let mut has_logs = !logs.is_empty();
                             for log in logs {
                                 self.logger.apply_command(pystral_core::ui_log::LogCommand::Error(log));
                             }
+                            if let RuntimeResponse::Error(ref e) = res {
+                                self.logger.apply_command(pystral_core::ui_log::LogCommand::Error(format!("Runtime Error: {}", e)));
+                                has_logs = true;
+                            }
+
+                            if has_logs {
+                                let log_msg = WorkerOutput::LogUpdate {
+                                    messages: self.logger.get_messages(),
+                                    total_errors: self.logger.total_errors as u32,
+                                    total_info: self.logger.total_info as u32,
+                                };
+                                let out_envelope = Envelope {
+                                    seq: self.next_output_seq,
+                                    msg: log_msg,
+                                };
+                                self.next_output_seq += 1;
+                                self.outbox.push_back(ReliableOutput::Msg(Box::new(out_envelope)));
+                            }
+                            
                             Some(WorkerOutput::RuntimeResponse(Box::new(res)))
                         }
                         WorkerInput::Ack(segno) => {
@@ -155,8 +175,27 @@ impl Future for UnifiedWorker {
                 self.is_simulating = false;
             } else {
                 let (res, logs) = self.runtime.process_request(pystral_runtime::RuntimeRequest::StepDemoSimulation);
+                let mut has_logs = !logs.is_empty();
                 for log in logs {
                     self.logger.apply_command(pystral_core::ui_log::LogCommand::Error(log));
+                }
+                if let RuntimeResponse::Error(ref e) = res {
+                    self.logger.apply_command(pystral_core::ui_log::LogCommand::Error(format!("Runtime Step Error: {}", e)));
+                    has_logs = true;
+                }
+
+                if has_logs {
+                    let log_msg = WorkerOutput::LogUpdate {
+                        messages: self.logger.get_messages(),
+                        total_errors: self.logger.total_errors as u32,
+                        total_info: self.logger.total_info as u32,
+                    };
+                    let out_envelope = Envelope {
+                        seq: self.next_output_seq,
+                        msg: log_msg,
+                    };
+                    self.next_output_seq += 1;
+                    self.outbox.push_back(ReliableOutput::Msg(Box::new(out_envelope)));
                 }
                 
                 self.last_sent_segno += 1;

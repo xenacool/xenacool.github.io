@@ -86,6 +86,12 @@ impl Runtime {
                 
                 if let Some(h) = scope.get_value::<HistoryManager>("history") {
                     history = h;
+                    #[cfg(target_arch = "wasm32")]
+                    {
+                        if let Some(cam) = history.current_state.entities.iter().find(|e| e.id == 101) {
+                            web_sys::console::log_1(&format!("History from scope: Cam 101 angle is {:?}", cam.properties.get("angle")).into());
+                        }
+                    }
                 }
                 
                 let sim = scope.get_value::<demo::simulation::TacticalSimulation>("sim");
@@ -107,9 +113,18 @@ impl Runtime {
                     
                     for id in ready_agents {
                         let pos = sim.get_agent_position(id.0 as i64);
+                        let hex = hexx::Hex::new(pos.0, pos.1);
+                        
+                        let layout = hexx::HexLayout {
+                            orientation: hexx::HexOrientation::Pointy,
+                            scale: glam::Vec2::splat(1.0),
+                            origin: glam::Vec2::ZERO,
+                        };
+                        let world_pos = layout.hex_to_world_pos(hex);
+
                         history.push_and_apply(pystral_core::log::Event::MoveSprite {
                             id: id.0 as u64,
-                            destination: hexx::Hex::new(pos.0, pos.1),
+                            destination: hex,
                             duration_ms: Some(500),
                         });
                         

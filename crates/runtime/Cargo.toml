@@ -7,7 +7,6 @@ edition = "2024"
 pystral_core = { path = "../core" }
 pystral_compiler = { path = "../compiler" }
 pystral_games = { path = "../games" }
-pystral_macros = { path = "../macros" }
 npc-engine-core = { git = "https://github.com/xenacool/npc-engine.git" }
 npc-engine-utils = { git = "https://github.com/xenacool/npc-engine.git" }
 serde = { version = "1.0", features = ["derive"] }

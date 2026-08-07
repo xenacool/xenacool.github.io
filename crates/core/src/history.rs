@@ -5,6 +5,8 @@ impl WorldState {
     pub fn apply_event(&mut self, event: &Event) {
         match event {
             Event::SpawnEntity { id, kind, hex } => {
+                #[cfg(target_arch = "wasm32")]
+                web_sys::console::log_1(&format!("apply_event: SpawnEntity id={} kind={}", id, kind).into());
                 self.entities.push(EntityState::new(*id, kind.clone(), *hex));
             }
             Event::DespawnEntity { id } => {
@@ -16,6 +18,8 @@ impl WorldState {
                 }
             }
             Event::UpdateProperty { id, property, value } => {
+                #[cfg(target_arch = "wasm32")]
+                web_sys::console::log_1(&format!("apply_event: UpdateProperty id={} prop={} val={:?}", id, property, value).into());
                 if let Some(entity) = self.entities.iter_mut().find(|e| e.id == *id) {
                     entity.properties.insert(property.clone(), value.clone());
                     if property == "fsm" && let crate::log::PropertyValue::String(s) = value {
@@ -132,6 +136,12 @@ impl HistoryManager {
     }
 
     pub fn push_and_apply(&mut self, event: Event) {
+        #[cfg(target_arch = "wasm32")]
+        if let Event::UpdateProperty { id, property, value } = &event {
+            if *id >= 100 && *id <= 101 && property == "angle" {
+                web_sys::console::log_1(&format!("push_and_apply: angle for {} set to {:?}", id, value).into());
+            }
+        }
         if self.current_index < self.log.len() {
             self.log.truncate(self.current_index);
             self.checkpoints.retain(|c| c.event_index <= self.current_index);

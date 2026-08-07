@@ -27,7 +27,11 @@ pub fn setup_camera(ctx: &mut RenderContext, worker_tx: &futures::channel::mpsc:
     let mut target = Vec3::ZERO;
 
     let cam = if let Some(id) = ctx.active_camera_id {
-        state.entities.iter().find(|e| e.id == id && e.kind == "camera")
+        let found = state.entities.iter().find(|e| e.id == id && e.kind == "camera");
+        if found.is_none() {
+             let _ = worker_tx.unbounded_send(crate::WorkerInput::LogError(format!("Active camera {} not found in state", id)));
+        }
+        found
     } else {
         state.entities.iter().find(|e| e.kind == "camera")
     };
@@ -65,6 +69,10 @@ pub fn setup_camera(ctx: &mut RenderContext, worker_tx: &futures::channel::mpsc:
 
     ctx.gl.uniform_matrix4fv_with_f32_array(ctx.uniforms.view.as_ref(), false, &view.to_cols_array());
     ctx.gl.uniform_matrix4fv_with_f32_array(ctx.uniforms.proj.as_ref(), false, &proj.to_cols_array());
+
+    if ctx.active_camera_id.is_some() {
+        let _ = worker_tx.unbounded_send(crate::WorkerInput::LogInfo(format!("Cam {} matrix: {:?} at angle {}", ctx.active_camera_id.unwrap(), view.to_cols_array(), angle)));
+    }
 
     (view, proj, cam_right, cam_up, cam_forward)
 }

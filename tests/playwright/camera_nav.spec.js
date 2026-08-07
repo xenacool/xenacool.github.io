@@ -2,6 +2,7 @@ const { test, expect } = require('@playwright/test');
 
 test.describe('Camera Navigation and History Slider', () => {
   test.beforeEach(async ({ page }) => {
+    page.on('console', msg => console.log('BROWSER CONSOLE:', msg.text()));
     await page.goto('/');
     // Wait for the app to be initialized
     await page.waitForFunction(() => window.app !== undefined, { timeout: 10000 });
