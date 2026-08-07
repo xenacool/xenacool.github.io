@@ -130,7 +130,7 @@
         console.log('Main thread starting run()...');
         
         try {
-            await init('/web/pystral_gate_bg.wasm');
+            await init('web/pystral_gate_bg.wasm');
             const app = await run_app();
             window.app = app;
         } catch (err) {
