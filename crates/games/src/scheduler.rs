@@ -28,8 +28,11 @@ impl CTScheduler {
                 ready.sort_by(|a, b| {
                     let agent_a = &state.agents[a];
                     let agent_b = &state.agents[b];
+                    let pos_a = self.agents.iter().position(|&id| id == *a).unwrap_or(usize::MAX);
+                    let pos_b = self.agents.iter().position(|&id| id == *b).unwrap_or(usize::MAX);
                     agent_b.ct.cmp(&agent_a.ct)
                         .then(agent_b.stats.wits.cmp(&agent_a.stats.wits))
+                        .then(pos_a.cmp(&pos_b)) // flipped because we want the lower value to take precedence
                 });
                 return ready;
             }
