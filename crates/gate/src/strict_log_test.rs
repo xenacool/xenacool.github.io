@@ -11,8 +11,9 @@ mod tests {
         // If it fails, do NOT apply local fixes or bypass checks; instead, resolve
         // the root cause in a principled way.
 
+        let (atlas_json, spritesheet_rgba, width) = crate::load_test_assets();
         let mut history = HistoryManager::new();
-        generate_demo_log(&mut history);
+        generate_demo_log(&mut history, &atlas_json, &spritesheet_rgba, width);
 
         let total_steps = history.log.len();
         let (worker_tx, _) = futures::channel::mpsc::unbounded::<crate::WorkerInput>();
@@ -39,9 +40,7 @@ mod tests {
                 }
             }
         }
-        
-        // In a real environment, we would check if ui_log was called.
-        // Since we can't easily capture it here without mocking, 
-        // we at least ensure the logic runs without panics.
+
+
     }
 }

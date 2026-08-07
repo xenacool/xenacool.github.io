@@ -3,6 +3,9 @@ name = "pystral_gate"
 version = "0.1.0"
 edition = "2024"
 
+[features]
+test-utils = []
+
 [dependencies]
 pystral_core = { path = "../core" }
 pystral_compiler = { path = "../compiler" }
@@ -22,13 +25,14 @@ wasm-bindgen-futures = "0.4"
 futures = "0.3"
 gloo-timers = { version = "0.3.0", features = ["futures"] }
 parry3d = "0.30.0"
+png = "0.18.1"
 
 [dev-dependencies]
 proptest = "1.0"
 
 [dependencies.web-sys]
 version = "0.3"
-features = ["Window", "Document", "HtmlCanvasElement", "HtmlElement", "CssStyleDeclaration", "CanvasRenderingContext2d", "WebGlRenderingContext", "WebGlProgram", "WebGlShader", "WebGlBuffer", "WebGlUniformLocation", "WebGlTexture", "Performance", "DedicatedWorkerGlobalScope", "console"]
+features = ["Window", "Document", "HtmlCanvasElement", "HtmlElement", "CssStyleDeclaration", "CanvasRenderingContext2d", "WebGlRenderingContext", "WebGlProgram", "WebGlShader", "WebGlBuffer", "WebGlUniformLocation", "WebGlTexture", "Performance", "DedicatedWorkerGlobalScope", "console", "Blob", "ImageBitmap", "ImageData", "Response"]
 
 [target.'cfg(all(target_family = "wasm", any(target_os = "unknown", target_os = "none")))'.dependencies]
 getrandom = { version = "0.3", features = ["wasm_js"] }

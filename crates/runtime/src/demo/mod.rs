@@ -21,7 +21,7 @@ pub fn setup_spritestack_assets(history: &mut HistoryManager) {
     });
 }
 
-pub fn generate_demo_log(history: &mut HistoryManager) {
+pub fn generate_demo_log(history: &mut HistoryManager, atlas_json: &str, spritesheet_rgba: &[u8], spritesheet_width: u32) {
     let script = include_str!("../../../../assets/scripts/demo.rhai");
-    scripting::generate_demo_log_rhai(history, script).expect("Rhai execution failed");
+    scripting::generate_demo_log_rhai(history, script, atlas_json, spritesheet_rgba, spritesheet_width).expect("Rhai execution failed");
 }

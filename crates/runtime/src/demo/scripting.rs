@@ -7,12 +7,41 @@ use hexx::Hex;
 use glam::Vec3;
 use std::collections::HashMap;
 use pystral_compiler::physics::TrajectorySystem;
-use pystral_compiler::assets::AssetCollection;
-use pystral_macros::include_layers;
+use pystral_compiler::assets::{AssetCollection, SpriteAtlas};
 
-pub fn generate_demo_log_rhai(history: &mut HistoryManager, script: &str) -> Result<(), Box<rhai::EvalAltResult>> {
+pub fn generate_demo_log_rhai(
+    history: &mut HistoryManager, 
+    script: &str,
+    atlas_json: &str,
+    spritesheet_rgba: &[u8],
+    spritesheet_width: u32
+) -> Result<(), Box<rhai::EvalAltResult>> {
     let mut engine = Engine::new();
 
+    register_basic_types(&mut engine);
+    register_domain_types(&mut engine);
+    register_animation_types(&mut engine);
+    register_asset_management(&mut engine);
+    register_png_assets(&mut engine);
+    register_physics(&mut engine);
+    register_history_methods(&mut engine);
+
+    let mut scope = Scope::new();
+    scope.push("history", history.clone());
+    scope.push("atlas_json", atlas_json.to_string());
+    scope.push("spritesheet_rgba", rhai::Blob::from(spritesheet_rgba.to_vec()));
+    scope.push("spritesheet_width", spritesheet_width as i64);
+
+    engine.run_with_scope(&mut scope, script)?;
+
+    if let Some(h) = scope.get_value::<HistoryManager>("history") {
+        *history = h;
+    }
+
+    Ok(())
+}
+
+fn register_basic_types(engine: &mut Engine) {
     // Register basic types
     engine.register_type_with_name::<Hex>("Hex")
         .register_fn("hex", |q: i64, r: i64| Hex::new(q as i32, r as i32));
@@ -22,7 +51,9 @@ pub fn generate_demo_log_rhai(history: &mut HistoryManager, script: &str) -> Res
         .register_get("x", |v: &mut Vec3| v.x as f64)
         .register_get("y", |v: &mut Vec3| v.y as f64)
         .register_get("z", |v: &mut Vec3| v.z as f64);
+}
 
+fn register_domain_types(engine: &mut Engine) {
     // Register Domain Types
     engine.register_type_with_name::<Material>("Material")
         .register_fn("material", |r: f64, g: f64, b: f64| Material {
@@ -37,7 +68,9 @@ pub fn generate_demo_log_rhai(history: &mut HistoryManager, script: &str) -> Res
 
     engine.register_type_with_name::<HexMap>("HexMap")
         .register_fn("create_demo_map", || crate::demo::world::create_demo_world());
+}
 
+fn register_animation_types(engine: &mut Engine) {
     // Register Animation Types
     engine.register_type_with_name::<LoopBehavior>("LoopBehavior");
     engine.register_static_module("LoopBehavior", rhai::exported_module!(loop_behavior_module).into());
@@ -55,11 +88,18 @@ pub fn generate_demo_log_rhai(history: &mut HistoryManager, script: &str) -> Res
         });
 
     engine.register_type_with_name::<PropertyTrack>("PropertyTrack");
+}
 
-
+fn register_asset_management(engine: &mut Engine) {
     // Register Asset Management
+    engine.register_type_with_name::<SpriteAtlas>("SpriteAtlas")
+        .register_fn("load_atlas", |json: &str| SpriteAtlas::from_json(json).expect("Failed to parse atlas JSON"));
+
     engine.register_type_with_name::<AssetCollection>("AssetCollection")
         .register_fn("new_asset_collection", || AssetCollection::new())
+        .register_fn("add_atlas_spritestack", |collection: &mut AssetCollection, name: &str, spacing: f64, atlas: SpriteAtlas, spritesheet_rgba: rhai::Blob, width: i64| {
+             collection.add_atlas_spritestack(name, spacing as f32, &atlas, &spritesheet_rgba, width as u32);
+        })
         .register_fn("add_arrow", |collection: &mut AssetCollection, name: &str, color: rhai::Array, spacing: f64| {
             let r = color.get(0).and_then(|v| v.as_int().ok()).unwrap_or(255) as u8;
             let g = color.get(1).and_then(|v| v.as_int().ok()).unwrap_or(255) as u8;
@@ -68,21 +108,21 @@ pub fn generate_demo_log_rhai(history: &mut HistoryManager, script: &str) -> Res
             let color = [r, g, b, a];
             let spacing = spacing as f32;
 
-            let size = 32;
+            let resolution = 32;
             let mut slices = Vec::new();
-            let pixel_count = (size * size) as usize;
+            let pixel_count = (resolution * resolution) as usize;
             
-            for i in 0..size {
+            for i in 0..resolution {
                 let mut color_data = vec![0u8; pixel_count * 4];
                 let mut normal_data = vec![0u8; pixel_count * 4];
                 
-                for y in 0..size {
-                    for x in 0..size {
-                        let idx = (y * size + x) as usize * 4;
+                for y in 0..resolution {
+                    for x in 0..resolution {
+                        let idx = (y * resolution + x) as usize * 4;
                         
-                        let fx = x as f32 / (size - 1) as f32;
-                        let fy = y as f32 / (size - 1) as f32;
-                        let fi = i as f32 / (size - 1) as f32;
+                        let fx = x as f32 / (resolution - 1) as f32;
+                        let fy = y as f32 / (resolution - 1) as f32;
+                        let fi = i as f32 / (resolution - 1) as f32;
                         
                         let cx = fx - 0.5;
                         let cy = fy - 0.5;
@@ -135,18 +175,8 @@ pub fn generate_demo_log_rhai(history: &mut HistoryManager, script: &str) -> Res
                 
                 slices.push(SpritestackSlice { color_data, normal_data });
             }
-            
-            collection.spritestacks.insert(name.to_string(), Spritestack {
-                width: size,
-                height: size,
-                spacing,
-                aabb: Vec3::new(
-                    (size as f32 - 0.5) * spacing,
-                    (slices.len() as f32 - 1.0) * spacing,
-                    (size as f32 - 0.5) * spacing,
-                ),
-                slices,
-            });
+
+            add_to_sprite_stacks(collection, name, spacing, resolution, resolution, slices);
         })
         .register_fn("add_rock", |collection: &mut AssetCollection, name: &str, size: i64, color: rhai::Array, spacing: f64| {
             let r = color.get(0).and_then(|v| v.as_int().ok()).unwrap_or(255) as u8;
@@ -193,66 +223,9 @@ pub fn generate_demo_log_rhai(history: &mut HistoryManager, script: &str) -> Res
                 
                 slices.push(SpritestackSlice { color_data, normal_data });
             }
-            
-            collection.spritestacks.insert(name.to_string(), Spritestack {
-                width: res,
-                height: res,
-                spacing,
-                aabb: Vec3::new(
-                    (res as f32 - 0.5) * spacing,
-                    (slices.len() as f32 - 1.0) * spacing,
-                    (res as f32 - 0.5) * spacing,
-                ),
-                slices,
-            });
+
+            add_to_sprite_stacks(collection, name, spacing, res, res, slices);
         });
-
-    engine.register_fn("add_png_spritestack", |collection: &mut AssetCollection, name: &str, path: &str, spacing: f64, height: f64| {
-        let name_to_load = if path.contains("skeleton_minion") {
-            "SkeletonMinion"
-        } else if path.contains("necromancer") {
-            "Necromancer"
-        } else if path.contains("caveman") {
-            "Caveman"
-        } else if path.contains("mage") {
-            "Mage"
-        } else {
-            name
-        };
-
-        match name_to_load {
-            "SkeletonMinion" => {
-                let layers = include_layers!(1..=300, "../../../../assets/spritestacks/skeleton_minion/layer-{}.png").to_vec();
-                collection.add_png_spritestack(name, spacing as f32, layers);
-                if let Some(stack) = collection.spritestacks.get_mut(name) {
-                    stack.aabb.y = height as f32;
-                }
-            }
-            "Necromancer" => {
-                let layers = include_layers!(1..=300, "../../../../assets/spritestacks/necromancer/layer-{}.png").to_vec();
-                collection.add_png_spritestack(name, spacing as f32, layers);
-                if let Some(stack) = collection.spritestacks.get_mut(name) {
-                    stack.aabb.y = height as f32;
-                }
-            }
-            "Caveman" => {
-                let layers = include_layers!(1..=300, "../../../../assets/spritestacks/caveman/layer-{}.png").to_vec();
-                collection.add_png_spritestack(name, spacing as f32, layers);
-                if let Some(stack) = collection.spritestacks.get_mut(name) {
-                    stack.aabb.y = height as f32;
-                }
-            }
-            "Mage" => {
-                let layers = include_layers!(1..=300, "../../../../assets/spritestacks/mage/layer-{}.png").to_vec();
-                collection.add_png_spritestack(name, spacing as f32, layers);
-                if let Some(stack) = collection.spritestacks.get_mut(name) {
-                    stack.aabb.y = height as f32;
-                }
-            }
-            _ => {}
-        }
-    });
-
 
     engine.register_fn("define_asset_collection", |history: &mut HistoryManager, name: &str, collection: AssetCollection| {
         history.push_and_apply(Event::DefineAssetCollection {
@@ -260,7 +233,29 @@ pub fn generate_demo_log_rhai(history: &mut HistoryManager, script: &str) -> Res
             data: collection.to_binary(),
         });
     });
+}
 
+fn add_to_sprite_stacks(collection: &mut AssetCollection, name: &str, spacing: f32, width: u32, height: u32, slices: Vec<SpritestackSlice>) {
+    collection.spritestacks.insert(name.to_string(), Spritestack {
+        width,
+        height,
+        spacing,
+        aabb: Vec3::new(
+            (width as f32 - 0.5) * spacing,
+            (slices.len() as f32 - 1.0) * spacing,
+            (height as f32 - 0.5) * spacing,
+        ),
+        slices,
+    });
+}
+
+fn register_png_assets(engine: &mut Engine) {
+    engine.register_fn("add_png_spritestack", |collection: &mut AssetCollection, name: &str, spacing: f64, atlas: SpriteAtlas, spritesheet_rgba: rhai::Blob, width: i64| {
+        collection.add_atlas_spritestack(name, spacing as f32, &atlas, &spritesheet_rgba, width as u32);
+    });
+}
+
+fn register_physics(engine: &mut Engine) {
     // Physics
     engine.register_type_with_name::<TrajectorySystem>("TrajectorySystem")
         .register_fn("new_trajectory_system", || TrajectorySystem::new());
@@ -273,7 +268,9 @@ pub fn generate_demo_log_rhai(history: &mut HistoryManager, script: &str) -> Res
         }
         arr
     });
+}
 
+fn register_history_methods(engine: &mut Engine) {
     // Register HistoryManager methods
     engine.register_type_with_name::<HistoryManager>("History");
 
@@ -346,17 +343,6 @@ pub fn generate_demo_log_rhai(history: &mut HistoryManager, script: &str) -> Res
             state: state.to_string(),
         });
     });
-
-    let mut scope = Scope::new();
-    scope.push("history", history.clone());
-
-    engine.run_with_scope(&mut scope, script)?;
-
-    if let Some(h) = scope.get_value::<HistoryManager>("history") {
-        *history = h;
-    }
-
-    Ok(())
 }
 
 #[rhai::plugin::export_module]
@@ -374,7 +360,7 @@ mod tests {
     fn test_invalid_script() {
         let mut history = HistoryManager::new();
         let script = "syntax error here";
-        let result = generate_demo_log_rhai(&mut history, script);
+        let result = generate_demo_log_rhai(&mut history, script, "", &[], 0);
         assert!(result.is_err());
     }
 
@@ -382,7 +368,7 @@ mod tests {
     fn test_runtime_error_script() {
         let mut history = HistoryManager::new();
         let script = "history.spawn(\"world\", hex(0, 0)); history.non_existent_function();";
-        let result = generate_demo_log_rhai(&mut history, script);
+        let result = generate_demo_log_rhai(&mut history, script, "", &[], 0);
         assert!(result.is_err());
     }
 }

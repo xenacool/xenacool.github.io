@@ -83,7 +83,7 @@ build-wasm:
 	mkdir -p web
 	wasm-bindgen --target web --out-dir web --no-typescript target/wasm32-unknown-unknown/debug/pystral_gate.wasm
 
-test: playwright-test
+test: playwright-test check-func-length check-loc
 	cargo test
 
 
@@ -98,8 +98,10 @@ deploy: build-wasm
 	git merge main --no-edit
 	grep -v "web/pystral_gate.js" .gitignore > .gitignore.tmp && mv .gitignore.tmp .gitignore
 	grep -v "web/pystral_gate_bg.wasm" .gitignore > .gitignore.tmp && mv .gitignore.tmp .gitignore
+	grep -v "web/spritesheet.png" .gitignore > .gitignore.tmp && mv .gitignore.tmp .gitignore
+	grep -v "web/atlas.json" .gitignore > .gitignore.tmp && mv .gitignore.tmp .gitignore
 	wasm-bindgen --target web --out-dir web --no-typescript target/wasm32-unknown-unknown/debug/pystral_gate.wasm
-	git add index.html web/pystral_gate.js web/pystral_gate_bg.wasm .gitignore
+	git add index.html web/pystral_gate.js web/pystral_gate_bg.wasm web/spritesheet.png web/atlas.json .gitignore
 	git commit -m "Update web release artifacts"
 	git checkout main
 

@@ -10,8 +10,9 @@ use pystral_runtime::demo::generate_demo_log;
 fn debug_ui_log_errors() {
     let (tx, mut rx) = mpsc::unbounded::<WorkerInput>();
 
+    let (atlas_json, spritesheet_rgba, width) = pystral_gate::load_test_assets();
     let mut history = HistoryManager::new();
-    generate_demo_log(&mut history);
+    generate_demo_log(&mut history, &atlas_json, &spritesheet_rgba, width);
     
     let steps = history.log.len();
     
