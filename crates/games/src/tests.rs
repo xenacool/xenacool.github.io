@@ -24,10 +24,10 @@ mod tests {
             passive_slots_count: 2,
             reaction_slots_count: 1,
             secondary_job_slots_count: 1,
-            innate_abilities: vec![],
-            innate_passives: vec![],
-            innate_reactions: vec![],
-            innate_movement: MovementId(0),
+            abilities: vec![],
+            passives: vec![],
+            reactions: vec![],
+            movement: MovementId(0),
         };
 
         let unit = UnitState {

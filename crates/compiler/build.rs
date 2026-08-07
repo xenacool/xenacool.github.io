@@ -105,6 +105,7 @@ fn main() {
             regions.push(SpriteRegion { x: 0, y: current_y, w, h });
             current_y += h;
         }
+        println!("Adding img from {}", name);
         atlas.spritestacks.insert(name, regions);
     }
 

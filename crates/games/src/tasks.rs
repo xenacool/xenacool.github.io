@@ -92,7 +92,7 @@ impl Behavior<TacticalDomain> for AbilityBehavior {
         let unit = ctx.state_diff.get_agent(ctx.agent).unwrap();
         
         let job = &state.job_registry[&unit.primary_job];
-        for &ability_id in &job.innate_abilities {
+        for &ability_id in &job.abilities {
             let ability_def = &state.ability_registry[&ability_id];
             let mut tag_bag = unit.turn_tags.clone();
             let cost = ability_def.get_ap_cost(&mut tag_bag);

@@ -81,10 +81,10 @@ pub struct JobDef {
     pub passive_slots_count: u8,
     pub reaction_slots_count: u8,
     pub secondary_job_slots_count: u8,
-    pub innate_abilities: Vec<AbilityId>,
-    pub innate_passives: Vec<PassiveId>,
-    pub innate_reactions: Vec<ReactionId>,
-    pub innate_movement: MovementId,
+    pub abilities: Vec<AbilityId>,
+    pub passives: Vec<PassiveId>,
+    pub reactions: Vec<ReactionId>,
+    pub movement: MovementId,
 }
 
 pub const JOB_CAVEMAN: JobId = JobId(1);
@@ -115,10 +115,10 @@ pub fn get_job_defs() -> HashMap<JobId, JobDef> {
             passive_slots_count: 1,
             reaction_slots_count: 1,
             secondary_job_slots_count: 1,
-            innate_abilities: vec![AbilityId(101), AbilityId(102), AbilityId(103)],
-            innate_passives: vec![PassiveId(101)],
-            innate_reactions: vec![ReactionId(101)],
-            innate_movement: MovementId(101),
+            abilities: vec![AbilityId(101), AbilityId(102), AbilityId(103)],
+            passives: vec![PassiveId(101)],
+            reactions: vec![ReactionId(101)],
+            movement: MovementId(101),
         },
     );
 
@@ -142,10 +142,10 @@ pub fn get_job_defs() -> HashMap<JobId, JobDef> {
             passive_slots_count: 1,
             reaction_slots_count: 1,
             secondary_job_slots_count: 1,
-            innate_abilities: vec![AbilityId(201), AbilityId(202), AbilityId(203)],
-            innate_passives: vec![PassiveId(201)],
-            innate_reactions: vec![ReactionId(201)],
-            innate_movement: MovementId(201),
+            abilities: vec![AbilityId(201), AbilityId(202), AbilityId(203)],
+            passives: vec![PassiveId(201)],
+            reactions: vec![ReactionId(201)],
+            movement: MovementId(201),
         },
     );
 
@@ -169,10 +169,10 @@ pub fn get_job_defs() -> HashMap<JobId, JobDef> {
             passive_slots_count: 1,
             reaction_slots_count: 1,
             secondary_job_slots_count: 1,
-            innate_abilities: vec![AbilityId(301), AbilityId(302), AbilityId(303)],
-            innate_passives: vec![PassiveId(301)],
-            innate_reactions: vec![ReactionId(301)],
-            innate_movement: MovementId(301),
+            abilities: vec![AbilityId(301), AbilityId(302), AbilityId(303)],
+            passives: vec![PassiveId(301)],
+            reactions: vec![ReactionId(301)],
+            movement: MovementId(301),
         },
     );
 
@@ -196,10 +196,10 @@ pub fn get_job_defs() -> HashMap<JobId, JobDef> {
             passive_slots_count: 1,
             reaction_slots_count: 1,
             secondary_job_slots_count: 1,
-            innate_abilities: vec![AbilityId(401), AbilityId(402), AbilityId(403)],
-            innate_passives: vec![PassiveId(401)],
-            innate_reactions: vec![ReactionId(401)],
-            innate_movement: MovementId(401),
+            abilities: vec![AbilityId(401), AbilityId(402), AbilityId(403)],
+            passives: vec![PassiveId(401)],
+            reactions: vec![ReactionId(401)],
+            movement: MovementId(401),
         },
     );
 
