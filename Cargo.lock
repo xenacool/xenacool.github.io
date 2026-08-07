@@ -1158,6 +1158,7 @@ dependencies = [
  "serde",
  "serde_json",
  "wasm-bindgen",
+ "web-sys",
 ]
 
 [[package]]
@@ -1203,15 +1204,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "pystral_macros"
-version = "0.1.0"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.119",
-]
-
-[[package]]
 name = "pystral_runtime"
 version = "0.1.0"
 dependencies = [
@@ -1224,7 +1216,6 @@ dependencies = [
  "pystral_compiler",
  "pystral_core",
  "pystral_games",
- "pystral_macros",
  "rhai",
  "serde",
  "wasm-bindgen",

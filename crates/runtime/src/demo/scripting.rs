@@ -5,7 +5,7 @@ use pystral_core::log::{Event, PropertyValue};
 use pystral_core::domain::{HexMap, Material, LightingConfig, Spritestack, SpritestackSlice};
 use pystral_core::animation::{InactiveFSMDefinition, AnimationState, PropertyTrack, LoopBehavior};
 use hexx::Hex;
-use glam::Vec3;
+use glam::{Vec2, Vec3};
 use std::collections::HashMap;
 use pystral_compiler::physics::TrajectorySystem;
 use pystral_compiler::assets::{AssetCollection, SpriteAtlas};
@@ -47,7 +47,16 @@ pub fn generate_demo_log_rhai(
 fn register_basic_types(engine: &mut Engine) {
     // Register basic types
     engine.register_type_with_name::<Hex>("Hex")
-        .register_fn("hex", |q: i64, r: i64| Hex::new(q as i32, r as i32));
+        .register_fn("hex", |q: i64, r: i64| Hex::new(q as i32, r as i32))
+        .register_fn("hex_to_world", |hex: Hex| {
+            let layout = hexx::HexLayout {
+                orientation: hexx::HexOrientation::Pointy,
+                scale: Vec2::splat(1.0),
+                origin: Vec2::ZERO,
+            };
+            let pos = layout.hex_to_world_pos(hex);
+            Vec3::new(pos.x, 0.0, pos.y)
+        });
 
     engine.register_type_with_name::<Vec3>("Vec3")
         .register_fn("vec3", |x: f64, y: f64, z: f64| Vec3::new(x as f32, y as f32, z as f32))
@@ -294,6 +303,9 @@ fn register_history_methods(engine: &mut Engine) {
     });
 
     engine.register_fn("set", |history: &mut HistoryManager, id: i64, prop: &str, value: Dynamic| {
+        #[cfg(target_arch = "wasm32")]
+        web_sys::console::log_1(&format!("Setting property {} for entity {} to {:?}", prop, id, value).into());
+
         let val = if let Some(f) = value.as_float().ok() {
             PropertyValue::Float(f as f32)
         } else if let Some(i) = value.as_int().ok() {

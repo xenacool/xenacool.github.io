@@ -100,11 +100,10 @@ impl LoopHandler {
                 }
                 AppCommand::AppendHistory(history) => {
                     for event in history.log {
-                        self.history_manager.log.push(event);
+                        self.history_manager.push_and_apply(event);
                     }
-                    // We don't necessarily want to jump to the end, 
-                    // but we want to update the slider.
                     crate::render::set_ui_slider_max(self.history_manager.log.len() as u32);
+                    crate::render::update_ui_slider(self.history_manager.current_index as u32);
                 }
                 AppCommand::CameraNav(direction) => {
                     let mut target_cam_id = None;
@@ -137,9 +136,11 @@ impl LoopHandler {
                     }
 
                     if let Some(id) = target_cam_id {
+                        let msg = format!("Switched to camera {}", id);
+                        let _ = self.worker_tx.unbounded_send(WorkerInput::LogInfo(msg));
                         self.ctx.active_camera_id = Some(id);
                     } else {
-                        let msg = format!("Camera navigation error: No {} neighbor found", direction);
+                        let msg = format!("Camera navigation error: No {} neighbor found for camera {:?}", direction, self.ctx.active_camera_id);
                         let _ = self.worker_tx.unbounded_send(WorkerInput::LogError(msg));
                     }
                 }

@@ -58,7 +58,7 @@ impl Logger {
         } else {
             self.entries.push_back(LogEntry { message, count: 1 });
         }
-        if self.entries.len() > 30 {
+        if self.entries.len() > 7 {
             self.entries.pop_front();
         }
     }
