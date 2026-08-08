@@ -66,46 +66,60 @@ fn main() {
         });
     }
 
-    let mut total_width = 0u32;
-    let mut total_height = 0u32;
+    let mut max_tile_w = 0u32;
+    let mut max_tile_h = 0u32;
     let mut char_images = Vec::new();
 
     let mut sorted_char_names: Vec<_> = characters.keys().cloned().collect();
     sorted_char_names.sort();
 
+    let mut total_tiles = 0;
     for name in sorted_char_names {
         let layers = &characters[&name];
         let mut char_layer_images = Vec::new();
         for layer_path in layers {
             let img = image::open(layer_path).unwrap().to_rgba8();
-            total_width = total_width.max(img.width());
+            max_tile_w = max_tile_w.max(img.width());
+            max_tile_h = max_tile_h.max(img.height());
             char_layer_images.push(img);
         }
+        total_tiles += char_layer_images.len();
         char_images.push((name, char_layer_images));
     }
 
-    for (_, layers) in &char_images {
-        for img in layers {
-            total_height += img.height();
-        }
+    if total_tiles == 0 {
+        println!("cargo:warning=No tiles to pack");
+        return;
     }
 
-    let mut spritesheet = RgbaImage::new(total_width, total_height);
-    let mut current_y = 0u32;
+    // Grid packing: keep width within 4096 pixels
+    let columns = if max_tile_w > 0 { 4096 / max_tile_w } else { 1 };
+    let columns = columns.max(1).min(total_tiles as u32);
+    let rows = (total_tiles as f32 / columns as f32).ceil() as u32;
+    
+    let atlas_width = columns * max_tile_w;
+    let atlas_height = rows * max_tile_h;
 
-    atlas.width = total_width;
-    atlas.height = total_height;
+    let mut spritesheet = RgbaImage::new(atlas_width, atlas_height);
+    let mut current_tile = 0;
+
+    atlas.width = atlas_width;
+    atlas.height = atlas_height;
 
     for (name, layers) in char_images {
         let mut regions = Vec::new();
         for img in layers {
             let w = img.width();
             let h = img.height();
-            spritesheet.copy_from(&img, 0, current_y).expect("Failed to copy image to spritesheet");
-            regions.push(SpriteRegion { x: 0, y: current_y, w, h });
-            current_y += h;
+            
+            let x = (current_tile % columns) * max_tile_w;
+            let y = (current_tile / columns) * max_tile_h;
+            
+            spritesheet.copy_from(&img, x, y).expect("Failed to copy image to spritesheet");
+            regions.push(SpriteRegion { x, y, w, h });
+            current_tile += 1;
         }
-        println!("Adding img from {}", name);
+
         atlas.spritestacks.insert(name, regions);
     }
 
