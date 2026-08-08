@@ -5,10 +5,6 @@ impl WorldState {
     pub fn apply_event(&mut self, event: &Event) {
         match event {
             Event::SpawnEntity { id, kind, hex } => {
-                #[cfg(target_arch = "wasm32")]
-                web_sys::console::log_1(
-                    &format!("apply_event: SpawnEntity id={} kind={}", id, kind).into(),
-                );
                 self.entities
                     .push(EntityState::new(*id, kind.clone(), *hex));
             }
@@ -30,14 +26,6 @@ impl WorldState {
                 property,
                 value,
             } => {
-                #[cfg(target_arch = "wasm32")]
-                web_sys::console::log_1(
-                    &format!(
-                        "apply_event: UpdateProperty id={} prop={} val={:?}",
-                        id, property, value
-                    )
-                    .into(),
-                );
                 if let Some(entity) = self.entities.iter_mut().find(|e| e.id == *id) {
                     entity.properties.insert(property.clone(), value.clone());
                     if property == "fsm"
@@ -211,6 +199,21 @@ impl HistoryManager {
                 state: self.current_state.clone(),
             });
         }
+    }
+
+    pub fn append_events(&mut self, events: impl IntoIterator<Item = Event>) {
+        let was_at_end = self.current_index == self.log.len();
+        let start = self.log.len();
+        self.log.extend(events);
+
+        if was_at_end {
+            for event in &self.log[start..] {
+                self.current_state.apply_event(event);
+            }
+            self.current_index = self.log.len();
+        }
+
+        self.checkpoints.clear();
     }
 
     pub fn jump_to(&mut self, target_index: usize) {

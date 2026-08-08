@@ -52,13 +52,11 @@ pub fn setup_camera(
             .entities
             .iter()
             .find(|e| e.id == id && e.kind == "camera");
-        if found.is_none() {
-            let _ = worker_tx.unbounded_send(crate::WorkerInput::LogError(format!(
-                "Active camera {} not found in state",
-                id
-            )));
-        }
-        found
+        found.or_else(|| {
+            ctx.camera_ids.iter().find_map(|camera_id| {
+                state.entities.iter().find(|e| e.id == *camera_id && e.kind == "camera")
+            })
+        })
     } else {
         state.entities.iter().find(|e| e.kind == "camera")
     };
@@ -75,8 +73,18 @@ pub fn setup_camera(
         let config = state.transition_configs.get(&cam.id);
         if let Some((previous_id, previous_pose)) = ctx.camera_pose {
             if previous_id != cam.id {
-                ctx.camera_tween = None;
-                ctx.camera_pose = Some((cam.id, target_values));
+                if let Some(config) = config {
+                    ctx.camera_tween = Some(CameraTween::new(
+                        cam.id,
+                        previous_pose,
+                        target_values,
+                        config,
+                    ));
+                    ctx.camera_pose = Some((cam.id, previous_pose));
+                } else {
+                    ctx.camera_tween = None;
+                    ctx.camera_pose = Some((cam.id, target_values));
+                }
             } else {
                 let current = if let Some(tween) = &mut ctx.camera_tween {
                     tween.advance(delta_ms)
