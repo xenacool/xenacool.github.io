@@ -7,3 +7,6 @@
 # This file contains environment-specific configuration like linker settings
 .cargo/config.toml
 /assets
+.make-test.log
+web/atlas.json
+web/spritesheet.png

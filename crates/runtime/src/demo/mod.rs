@@ -1,7 +1,6 @@
 pub mod animation;
 pub mod scripting;
 pub mod simulation;
-pub mod world;
 
 use pystral_compiler::assets::AssetCollection;
 use pystral_core::history::HistoryManager;

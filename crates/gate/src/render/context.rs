@@ -1,10 +1,10 @@
-use web_sys::{WebGlRenderingContext as GL, WebGlProgram, WebGlUniformLocation};
-use std::collections::HashMap;
+use crate::render::mesh::Mesh;
+use crate::render::state::{CameraTween, MovementTween, PropertyTween};
 use hexx::HexOrientation;
 use pystral_core::animation::ActiveFSM;
-use crate::render::state::{MovementTween, PropertyTween};
-use crate::render::mesh::Mesh;
+use std::collections::HashMap;
 use web_sys::WebGlTexture;
+use web_sys::{WebGlProgram, WebGlRenderingContext as GL, WebGlUniformLocation};
 
 pub struct TextureSet {
     pub front: WebGlTexture,
@@ -56,10 +56,13 @@ pub struct RenderContext {
     pub active_fsms: HashMap<u64, ActiveFSM>,
     pub movement_tweens: HashMap<u64, MovementTween>,
     pub property_tweens: HashMap<(u64, String), PropertyTween>,
+    pub camera_tween: Option<CameraTween>,
+    pub camera_pose: Option<(u64, [f32; 6])>,
     pub last_index: Option<usize>,
     pub uniforms: UniformLocations,
     pub attribs: AttribLocations,
-    pub bone_textures: HashMap<(u64, usize), (Vec<pystral_core::domain::PainterCommand>, TextureSet)>,
+    pub bone_textures:
+        HashMap<(u64, usize), (Vec<pystral_core::domain::PainterCommand>, TextureSet)>,
     pub spritestack_assets: HashMap<String, SpritestackTextures>,
     pub asset_collection_cache: HashMap<String, pystral_compiler::assets::AssetCollection>,
     pub active_camera_id: Option<u64>,
@@ -67,16 +70,28 @@ pub struct RenderContext {
 }
 
 impl RenderContext {
-    pub fn new(gl: GL, program: WebGlProgram, sprite_mesh: Mesh, sphere_mesh: Mesh, cylinder_mesh: Mesh) -> Self {
+    pub fn new(
+        gl: GL,
+        program: WebGlProgram,
+        sprite_mesh: Mesh,
+        sphere_mesh: Mesh,
+        cylinder_mesh: Mesh,
+    ) -> Self {
         let uniforms = UniformLocations {
             model: gl.get_uniform_location(&program, "uModel"),
             view: gl.get_uniform_location(&program, "uView"),
             proj: gl.get_uniform_location(&program, "uProjection"),
             ambient_color: gl.get_uniform_location(&program, "uAmbientColor"),
             ambient_intensity: gl.get_uniform_location(&program, "uAmbientIntensity"),
-            lights_dir: (0..4).map(|i| gl.get_uniform_location(&program, &format!("uLights[{}].direction", i))).collect(),
-            lights_color: (0..4).map(|i| gl.get_uniform_location(&program, &format!("uLights[{}].color", i))).collect(),
-            lights_intensity: (0..4).map(|i| gl.get_uniform_location(&program, &format!("uLights[{}].intensity", i))).collect(),
+            lights_dir: (0..4)
+                .map(|i| gl.get_uniform_location(&program, &format!("uLights[{}].direction", i)))
+                .collect(),
+            lights_color: (0..4)
+                .map(|i| gl.get_uniform_location(&program, &format!("uLights[{}].color", i)))
+                .collect(),
+            lights_intensity: (0..4)
+                .map(|i| gl.get_uniform_location(&program, &format!("uLights[{}].intensity", i)))
+                .collect(),
             obj_color: gl.get_uniform_location(&program, "uObjectColor"),
             use_tex: gl.get_uniform_location(&program, "uUseTexture"),
             texture: gl.get_uniform_location(&program, "uTexture"),
@@ -104,6 +119,8 @@ impl RenderContext {
             active_fsms: HashMap::new(),
             movement_tweens: HashMap::new(),
             property_tweens: HashMap::new(),
+            camera_tween: None,
+            camera_pose: None,
             last_index: None,
             uniforms,
             attribs,

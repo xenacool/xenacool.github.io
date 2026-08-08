@@ -34,6 +34,12 @@ extern "C" {
 
     #[wasm_bindgen(js_namespace = window)]
     pub fn update_action_buttons(visible: bool, up: bool, down: bool, left: bool, right: bool, confirm: bool, ret: bool);
+
+    #[wasm_bindgen(js_namespace = window)]
+    pub fn update_entity_viewer(json: &str);
+
+    #[wasm_bindgen(js_namespace = window)]
+    pub fn update_history_log(json: &str);
 }
 
 

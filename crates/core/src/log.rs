@@ -1,8 +1,8 @@
-use serde::{Serialize, Deserialize};
-use hexx::Hex;
-use glam::Vec3;
-use crate::domain::{HexGrid, HexMap, Material, LightingConfig, Shape3D, Spritestack};
 use crate::animation::InactiveFSMDefinition;
+use crate::domain::{HexGrid, HexMap, LightingConfig, Material, Shape3D, Spritestack};
+use glam::Vec3;
+use hexx::Hex;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -20,6 +20,18 @@ pub enum PropertyValue {
     AssetRef(String),
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum TweenKind {
+    SineInOut,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct TransitionConfig {
+    pub duration_ms: u32,
+    pub delta_time_ms: f32,
+    pub tween: TweenKind,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Event {
     SpawnEntity {
@@ -33,12 +45,16 @@ pub enum Event {
     MoveSprite {
         id: u64,
         destination: Hex,
-        duration_ms: Option<u32>,
+        transition: Option<TransitionConfig>,
     },
     UpdateProperty {
         id: u64,
         property: String,
         value: PropertyValue,
+    },
+    ConfigureTransition {
+        id: u64,
+        config: TransitionConfig,
     },
     SetAnimationState {
         id: u64,
@@ -56,7 +72,7 @@ pub enum Event {
         id: u64,
         property: String,
         value: PropertyValue,
-        duration_ms: u32,
+        transition: TransitionConfig,
     },
     DefineAssetCollection {
         name: String,
@@ -74,6 +90,7 @@ pub struct WorldState {
     pub materials: HashMap<String, Material>,
     pub fsms: HashMap<String, InactiveFSMDefinition>,
     pub asset_collections: HashMap<String, Vec<u8>>,
+    pub transition_configs: HashMap<u64, TransitionConfig>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -89,12 +106,27 @@ pub struct EntityState {
 impl EntityState {
     pub fn new(id: u64, kind: String, hex: hexx::Hex) -> Self {
         let mut properties = HashMap::new();
-        
+
         // Add kind-based defaults to avoid log errors during setup
         if kind == "world" {
-            properties.insert("map".to_string(), PropertyValue::HexMap(crate::domain::HexMap::new()));
-            properties.insert("lighting".to_string(), PropertyValue::Lighting(crate::domain::LightingConfig::default()));
-        } else if kind == "sprite" || kind == "arrow" || kind == "rock" || kind == "skeleton_minion" || kind == "necromancer" || kind == "caveman" || kind == "mage" || kind == "character" || kind == "prompt" {
+            properties.insert(
+                "map".to_string(),
+                PropertyValue::HexMap(crate::domain::HexMap::new()),
+            );
+            properties.insert(
+                "lighting".to_string(),
+                PropertyValue::Lighting(crate::domain::LightingConfig::default()),
+            );
+        } else if kind == "sprite"
+            || kind == "arrow"
+            || kind == "rock"
+            || kind == "skeleton_minion"
+            || kind == "necromancer"
+            || kind == "caveman"
+            || kind == "mage"
+            || kind == "character"
+            || kind == "prompt"
+        {
             properties.insert("scale".to_string(), PropertyValue::Float(1.0));
             properties.insert("z".to_string(), PropertyValue::Float(0.0));
             properties.insert("rotation_x".to_string(), PropertyValue::Float(0.0));
@@ -106,13 +138,30 @@ impl EntityState {
             properties.insert("x_offset".to_string(), PropertyValue::Float(0.0));
             properties.insert("y_offset".to_string(), PropertyValue::Float(0.0));
             properties.insert("z_offset".to_string(), PropertyValue::Float(0.0));
-            
+
             // Joint defaults to avoid log errors during character setup
             let joints = vec![
-                "chest", "neck", "head", "l_shoulder", "r_shoulder", "pelvis",
-                "l_hip", "r_hip", "l_elbow", "l_hand", "r_elbow", "r_hand",
-                "l_knee", "l_foot", "r_knee", "r_foot",
-                "spine_1", "tail_1", "tail_2", "tail_3", "tail_4"
+                "chest",
+                "neck",
+                "head",
+                "l_shoulder",
+                "r_shoulder",
+                "pelvis",
+                "l_hip",
+                "r_hip",
+                "l_elbow",
+                "l_hand",
+                "r_elbow",
+                "r_hand",
+                "l_knee",
+                "l_foot",
+                "r_knee",
+                "r_foot",
+                "spine_1",
+                "tail_1",
+                "tail_2",
+                "tail_3",
+                "tail_4",
             ];
             for j in joints {
                 properties.insert(format!("{j}_x"), PropertyValue::Float(0.0));
@@ -120,19 +169,25 @@ impl EntityState {
                 properties.insert(format!("{j}_z"), PropertyValue::Float(0.0));
             }
 
-            properties.insert("material".to_string(), PropertyValue::Material(crate::domain::Material {
-                color: [1.0, 1.0, 1.0],
-                roughness: 0.5,
-                metalness: 0.0,
-                emissive: 0.0,
-            }));
-            properties.insert("spritestack".to_string(), PropertyValue::Spritestack(crate::domain::Spritestack {
-                width: 0,
-                height: 0,
-                spacing: 0.1,
-                aabb: Vec3::ZERO,
-                slices: Vec::new(),
-            }));
+            properties.insert(
+                "material".to_string(),
+                PropertyValue::Material(crate::domain::Material {
+                    color: [1.0, 1.0, 1.0],
+                    roughness: 0.5,
+                    metalness: 0.0,
+                    emissive: 0.0,
+                }),
+            );
+            properties.insert(
+                "spritestack".to_string(),
+                PropertyValue::Spritestack(crate::domain::Spritestack {
+                    width: 0,
+                    height: 0,
+                    spacing: 0.1,
+                    aabb: Vec3::ZERO,
+                    slices: Vec::new(),
+                }),
+            );
         } else if kind == "camera" {
             properties.insert("angle".to_string(), PropertyValue::Float(0.0));
             properties.insert("distance".to_string(), PropertyValue::Float(20.0));

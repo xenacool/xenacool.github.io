@@ -1,5 +1,7 @@
 .PHONY: install build-wasm run-web deploy test nuke-deploy playwright-install playwright-test playwright
 
+TEST_LOG := .make-test.log
+
 install:
 	@if [ ! -d "assets" ]; then \
 		echo "Cloning assets..."; \
@@ -86,8 +88,11 @@ build-wasm:
 	mkdir -p web
 	wasm-bindgen --target web --out-dir web --no-typescript target/wasm32-unknown-unknown/debug/pystral_gate.wasm
 
-test: playwright-test check-func-length check-loc
-	cargo test
+test:
+	@$(MAKE) --no-print-directory playwright-test check-func-length check-loc > $(TEST_LOG) 2>&1 && cargo test >> $(TEST_LOG) 2>&1; \
+	status=$$?; \
+	echo "Test output written to $(TEST_LOG)"; \
+	exit $$status
 
 
 run-web: build-wasm

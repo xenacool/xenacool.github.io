@@ -1,14 +1,14 @@
-use pystral_runtime::{RuntimeRequest, RuntimeResponse};
 use pystral_core::history::HistoryManager;
+use pystral_runtime::{RuntimeRequest, RuntimeResponse};
 use serde::{Deserialize, Serialize};
 
 pub mod render;
 pub mod worker;
 
 #[cfg(test)]
-mod strict_log_test;
-#[cfg(test)]
 mod character_test;
+#[cfg(test)]
+mod strict_log_test;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Envelope<T> {
@@ -39,7 +39,11 @@ pub enum WorkerInput {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum WorkerOutput {
-    LogUpdate { messages: Vec<String>, total_errors: u32, total_info: u32 },
+    LogUpdate {
+        messages: Vec<String>,
+        total_errors: u32,
+        total_info: u32,
+    },
     RuntimeResponse(Box<RuntimeResponse>),
 }
 
@@ -48,6 +52,7 @@ pub enum AppCommand {
     TogglePlayLog,
     TogglePlayAnimations,
     SetDebugMode(bool),
+    SetHistoryStepMs(f64),
     UpdateHistory(Box<HistoryManager>),
     AppendHistory(Box<HistoryManager>),
     CameraNav(String),
@@ -57,17 +62,27 @@ pub enum AppCommand {
 #[cfg(any(test, debug_assertions))]
 pub fn load_test_assets() -> (String, Vec<u8>, u32) {
     let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap();
-    let root = std::path::Path::new(&manifest_dir).parent().unwrap().parent().unwrap();
+    let root = std::path::Path::new(&manifest_dir)
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap();
     let web = root.join("web");
-    
-    let atlas = std::fs::read_to_string(web.join("atlas.json")).expect("Failed to load atlas.json for test");
-    let spritesheet = std::fs::read(web.join("spritesheet.png")).expect("Failed to load spritesheet.png for test");
-    
+
+    let atlas = std::fs::read_to_string(web.join("atlas.json"))
+        .expect("Failed to load atlas.json for test");
+    let spritesheet = std::fs::read(web.join("spritesheet.png"))
+        .expect("Failed to load spritesheet.png for test");
+
     let decoder = png::Decoder::new(std::io::Cursor::new(&spritesheet));
-    let mut reader = decoder.read_info().expect("Failed to read spritesheet info for test");
+    let mut reader = decoder
+        .read_info()
+        .expect("Failed to read spritesheet info for test");
     let mut buf = vec![0; reader.output_buffer_size().unwrap()];
-    let info = reader.next_frame(&mut buf).expect("Failed to read spritesheet frame for test");
-    
+    let info = reader
+        .next_frame(&mut buf)
+        .expect("Failed to read spritesheet frame for test");
+
     let rgba = match info.color_type {
         png::ColorType::Rgba => buf,
         png::ColorType::Rgb => {
@@ -80,8 +95,11 @@ pub fn load_test_assets() -> (String, Vec<u8>, u32) {
             }
             rgba
         }
-        _ => panic!("Unsupported spritesheet color type in test: {:?}", info.color_type),
+        _ => panic!(
+            "Unsupported spritesheet color type in test: {:?}",
+            info.color_type
+        ),
     };
-    
+
     (atlas, rgba, info.width)
 }
