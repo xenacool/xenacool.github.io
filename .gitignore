@@ -8,5 +8,3 @@
 .cargo/config.toml
 /assets
 .make-test.log
-web/atlas.json
-web/spritesheet.png
