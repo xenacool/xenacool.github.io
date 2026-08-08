@@ -68,6 +68,9 @@ impl LoopHandler {
         // Update Action Buttons based on current prompt entity
         self.sync_action_buttons(&state);
 
+        // Sync Debug Panels
+        self.sync_debug_panels(&state);
+
         // Handle Segno ACKs
         self.handle_segno_acks();
 
@@ -85,6 +88,7 @@ impl LoopHandler {
                 }
                 AppCommand::TogglePlayLog => {
                     self.playback_state.playing_log = !self.playback_state.playing_log;
+                    self.accumulator = 0.0;
                 }
                 AppCommand::TogglePlayAnimations => {
                     self.playback_state.playing_animations = !self.playback_state.playing_animations;
@@ -225,7 +229,41 @@ impl LoopHandler {
         crate::render::update_action_buttons(visible, up, down, left, right, confirm, ret);
     }
 
+    fn sync_debug_panels(&mut self, state: &WorldState) {
+        let debug_enabled = self.playback_state.debug_mode;
+        let index_changed = self.playback_state.last_debug_index != self.history_manager.current_index;
+        let log_len_changed = self.playback_state.last_history_log_len != self.history_manager.log.len();
+        let mode_toggled = self.playback_state.last_debug_mode != debug_enabled;
+
+        if debug_enabled && (index_changed || log_len_changed || mode_toggled) {
+            // Push Entity Data
+            if let Ok(json) = serde_json::to_string(&state.entities) {
+                crate::render::update_entity_viewer(&json);
+            }
+
+            // Push History Log Data
+            if log_len_changed || mode_toggled {
+                if let Ok(json) = serde_json::to_string(&self.history_manager.log) {
+                    crate::render::update_history_log(&json);
+                }
+            }
+
+            self.playback_state.last_debug_index = self.history_manager.current_index;
+            self.playback_state.last_history_log_len = self.history_manager.log.len();
+
+            // When mode is toggled or log changed, ensure highlighting is correct
+            if mode_toggled || log_len_changed {
+                 crate::render::update_ui_slider(self.history_manager.current_index as u32);
+            }
+        }
+
+        self.playback_state.last_debug_mode = debug_enabled;
+    }
+
     fn handle_segno_acks(&mut self) {
+        if !self.playback_state.playing_animations {
+            return;
+        }
         let current_idx = self.history_manager.current_index;
         if current_idx > 0 {
             let event = &self.history_manager.log[current_idx - 1];

@@ -123,6 +123,7 @@ fn main() {
         atlas.spritestacks.insert(name, regions);
     }
 
+
     spritesheet.save(web_dir.join("spritesheet.png")).expect("Failed to save spritesheet");
     
     let atlas_json = serde_json::to_string_pretty(&atlas).unwrap();

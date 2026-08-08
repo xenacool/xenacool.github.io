@@ -6,6 +6,9 @@ pub struct PlaybackState {
     pub playing_animations: bool,
     pub debug_mode: bool,
     pub last_tick_ms: f64,
+    pub last_debug_mode: bool,
+    pub last_history_log_len: usize,
+    pub last_debug_index: usize,
 }
 
 impl Default for PlaybackState {
@@ -15,6 +18,9 @@ impl Default for PlaybackState {
             playing_animations: true,
             debug_mode: false,
             last_tick_ms: 0.0,
+            last_debug_mode: false,
+            last_history_log_len: 0,
+            last_debug_index: 999999,
         }
     }
 }
