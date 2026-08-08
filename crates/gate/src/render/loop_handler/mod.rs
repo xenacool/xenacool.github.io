@@ -49,7 +49,7 @@ impl LoopHandler {
         self.process_commands();
 
         // 1. Playback & History Update
-        let (is_playing_anims, debug_mode, _delta) = self.update_playback_and_history(now);
+        let (is_playing_anims, debug_mode, delta) = self.update_playback_and_history(now);
 
         // 2. Get State & Update Logic
         let state = self.get_current_state(now, is_playing_anims);
@@ -60,7 +60,7 @@ impl LoopHandler {
         self.ctx.gl.clear(GL::COLOR_BUFFER_BIT | GL::DEPTH_BUFFER_BIT);
 
         // 5. Camera & View Matrices
-        let (_view, _proj, cam_right, cam_up, cam_forward) = setup_camera(&mut self.ctx, &self.worker_tx, &state, width, height);
+        let (_view, _proj, cam_right, cam_up, cam_forward) = setup_camera(&mut self.ctx, &self.worker_tx, &state, width, height, delta);
 
         // Update Nav Buttons based on current camera neighbors
         self.sync_nav_buttons(&state);
@@ -96,9 +96,15 @@ impl LoopHandler {
                 AppCommand::SetDebugMode(enabled) => {
                     self.playback_state.debug_mode = enabled;
                 }
+                AppCommand::SetHistoryStepMs(value) => {
+                    self.playback_state.history_step_ms = value.clamp(1.0, 10_000.0);
+                    self.accumulator = 0.0;
+                }
                 AppCommand::UpdateHistory(history) => {
                     self.history_manager = *history;
                     self.ctx.active_camera_id = None;
+                    self.ctx.camera_tween = None;
+                    self.ctx.camera_pose = None;
                     crate::render::set_ui_slider_max(self.history_manager.log.len() as u32);
                     crate::render::update_ui_slider(self.history_manager.current_index as u32);
                 }
@@ -162,14 +168,18 @@ impl LoopHandler {
         let is_playing_anims = self.playback_state.playing_animations;
         let debug_mode = self.playback_state.debug_mode;
 
-        if self.playback_state.playing_log {
+        let transition_active = !self.ctx.movement_tweens.is_empty()
+            || !self.ctx.property_tweens.is_empty()
+            || self.ctx.camera_tween.is_some();
+        if self.playback_state.playing_log && !transition_active {
             self.accumulator += delta;
-            if self.accumulator > 100.0 {
-                let steps = (self.accumulator / 100.0) as usize;
-                self.history_manager.jump_to(self.history_manager.current_index + steps);
-                self.accumulator %= 100.0;
+            if self.accumulator > self.playback_state.history_step_ms {
+                self.history_manager.jump_to(self.history_manager.current_index + 1);
+                self.accumulator %= self.playback_state.history_step_ms;
                 update_ui_slider(self.history_manager.current_index as u32);
             }
+        } else if transition_active {
+            self.accumulator = 0.0;
         }
         (is_playing_anims, debug_mode, delta)
     }
@@ -315,24 +325,26 @@ impl LoopHandler {
     }
 
     fn handle_event_tweens_static(ctx: &mut RenderContext, event: &Event, history: &HistoryManager, prev_idx: usize, now: f64) {
-        if let Event::MoveSprite { id, destination, duration_ms } = event {
-            if let Some(duration) = duration_ms {
+        if let Event::MoveSprite { id, destination, transition } = event {
+            if let Some(transition) = transition {
                 let from_hex = Self::get_prev_entity_hex_static(history, prev_idx, *id).unwrap_or(*destination);
                 ctx.movement_tweens.insert(*id, MovementTween {
                     from_hex,
                     to_hex: *destination,
                     start_time_ms: now,
-                    duration_ms: *duration as f64,
+                    duration_ms: f64::from(transition.duration_ms),
+                    transition: transition.clone(),
+                    tweeners: None,
                 });
             }
-        } else if let Event::TweenProperty { id, property, value, duration_ms } = event {
+        } else if let Event::TweenProperty { id, property, value, transition } = event {
             let from_value = Self::get_prev_property_value_static(history, prev_idx, *id, property).unwrap_or_else(|| value.clone());
             ctx.property_tweens.insert((*id, property.clone()), PropertyTween {
                 property: property.clone(),
                 from_value,
                 to_value: value.clone(),
                 start_time_ms: now,
-                duration_ms: *duration_ms as f64,
+                duration_ms: f64::from(transition.duration_ms),
             });
         }
     }

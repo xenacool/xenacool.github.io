@@ -1,7 +1,7 @@
 use crate::demo::simulation::TacticalSimulation;
 use rhai::{Engine, Scope, Dynamic};
 use pystral_core::history::HistoryManager;
-use pystral_core::log::{Event, PropertyValue};
+use pystral_core::log::{Event, PropertyValue, TransitionConfig, TweenKind};
 use pystral_core::domain::{HexMap, HexTile, Material, LightingConfig, Spritestack, SpritestackSlice};
 use pystral_core::animation::{InactiveFSMDefinition, AnimationState, PropertyTrack, LoopBehavior};
 use hexx::Hex;
@@ -294,6 +294,17 @@ fn register_physics(engine: &mut Engine) {
 fn register_history_methods(engine: &mut Engine) {
     // Register HistoryManager methods
     engine.register_type_with_name::<HistoryManager>("History");
+    engine.register_type_with_name::<TransitionConfig>("Transition")
+        .register_fn("transition", |duration_ms: i64, delta_time_ms: f64, tween: &str| {
+            TransitionConfig {
+                duration_ms: duration_ms.max(1) as u32,
+                delta_time_ms: delta_time_ms.max(0.0) as f32,
+                tween: match tween { "SineInOut" => TweenKind::SineInOut, _ => TweenKind::SineInOut },
+            }
+        });
+    engine.register_fn("configure_transition", |history: &mut HistoryManager, id: i64, config: TransitionConfig| {
+        history.push_and_apply(Event::ConfigureTransition { id: id as u64, config });
+    });
 
     engine.register_fn("spawn_entity", |history: &mut HistoryManager, id: i64, kind: &str, hex: Hex| {
         history.push_and_apply(Event::SpawnEntity {
@@ -355,11 +366,11 @@ fn register_history_methods(engine: &mut Engine) {
         });
     });
 
-    engine.register_fn("move_sprite", |history: &mut HistoryManager, id: i64, destination: Hex, duration_ms: i64| {
+    engine.register_fn("move_sprite", |history: &mut HistoryManager, id: i64, destination: Hex, transition: TransitionConfig| {
         history.push_and_apply(Event::MoveSprite {
             id: id as u64,
             destination,
-            duration_ms: Some(duration_ms as u32),
+            transition: Some(transition),
         });
     });
 

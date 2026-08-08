@@ -125,6 +125,10 @@
             <input type="checkbox" id="debug-checkbox">
             <label for="debug-checkbox" style="font-size: 12px; cursor: pointer;">Debug</label>
         </div>
+        <div id="history-step-control" style="margin-left: 10px; display: none; align-items: center; gap: 5px;">
+            <label for="history-step-ms" style="font-size: 12px;">Step ms</label>
+            <input id="history-step-ms" type="number" min="1" max="10000" step="1" value="100" style="width: 65px;">
+        </div>
         <div style="margin-left: 10px; display: flex; align-items: center; gap: 5px;">
             <span id="error-display" style="font-size: 12px; cursor: pointer; color: white;">Error: 0</span>
         </div>
@@ -324,6 +328,11 @@
             app.set_debug_mode(isChecked);
             document.getElementById('entity-viewer').style.display = isChecked ? 'block' : 'none';
             document.getElementById('history-viewer').style.display = isChecked ? 'block' : 'none';
+            document.getElementById('history-step-control').style.display = isChecked ? 'flex' : 'none';
+        });
+
+        document.getElementById('history-step-ms').addEventListener('change', (e) => {
+            app.set_history_step_ms(Number(e.target.value));
         });
         
         let errorMode = false;
