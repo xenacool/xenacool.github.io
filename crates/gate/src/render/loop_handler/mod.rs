@@ -53,6 +53,7 @@ impl LoopHandler {
 
         // 2. Get State & Update Logic
         let state = self.get_current_state(now, is_playing_anims);
+        self.sync_camera_selection(&state);
         // 3. Canvas & Viewport
         let (width, height) = update_canvas_size(&self.ctx);
 
@@ -105,13 +106,13 @@ impl LoopHandler {
                     self.ctx.active_camera_id = None;
                     self.ctx.camera_tween = None;
                     self.ctx.camera_pose = None;
+                    self.ctx.camera_ids.clear();
+                    self.history_manager.jump_to(0);
                     crate::render::set_ui_slider_max(self.history_manager.log.len() as u32);
-                    crate::render::update_ui_slider(self.history_manager.current_index as u32);
+                    crate::render::update_ui_slider(0);
                 }
                 AppCommand::AppendHistory(history) => {
-                    for event in history.log {
-                        self.history_manager.push_and_apply(event);
-                    }
+                    self.history_manager.append_events(history.log);
                     crate::render::set_ui_slider_max(self.history_manager.log.len() as u32);
                     crate::render::update_ui_slider(self.history_manager.current_index as u32);
                 }
@@ -204,6 +205,37 @@ impl LoopHandler {
         }
 
         crate::render::update_nav_buttons(up, down, left, right);
+    }
+
+    fn sync_camera_selection(&mut self, state: &WorldState) {
+        let present: Vec<u64> = state
+            .entities
+            .iter()
+            .filter(|entity| entity.kind == "camera")
+            .map(|entity| entity.id)
+            .collect();
+
+        self.ctx.camera_ids.retain(|id| present.contains(id));
+        for id in present {
+            if !self.ctx.camera_ids.contains(&id) {
+                self.ctx.camera_ids.push(id);
+            }
+        }
+
+        if self.ctx.active_camera_id.is_none_or(|id| !self.ctx.camera_ids.contains(&id)) {
+            self.ctx.active_camera_id = self.ctx.camera_ids.first().copied();
+        }
+
+        if let Some(id) = self.ctx.active_camera_id {
+            self.ctx.camera_ids.retain(|candidate| *candidate != id);
+            self.ctx.camera_ids.insert(0, id);
+        }
+
+        if self.ctx.camera_ids.is_empty() {
+            self.ctx.active_camera_id = None;
+            self.ctx.camera_tween = None;
+            self.ctx.camera_pose = None;
+        }
     }
 
     fn sync_action_buttons(&self, state: &WorldState) {

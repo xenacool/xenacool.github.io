@@ -315,6 +315,10 @@ fn register_history_methods(engine: &mut Engine) {
         id
     });
 
+    engine.register_fn("despawn_entity", |history: &mut HistoryManager, id: i64| {
+        history.push_and_apply(Event::DespawnEntity { id: id as u64 });
+    });
+
     engine.register_fn("set", |history: &mut HistoryManager, id: i64, prop: &str, value: Dynamic| {
         #[cfg(target_arch = "wasm32")]
         web_sys::console::log_1(&format!("Setting property {} for entity {} to {:?}", prop, id, value).into());

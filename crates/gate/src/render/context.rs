@@ -66,6 +66,7 @@ pub struct RenderContext {
     pub spritestack_assets: HashMap<String, SpritestackTextures>,
     pub asset_collection_cache: HashMap<String, pystral_compiler::assets::AssetCollection>,
     pub active_camera_id: Option<u64>,
+    pub camera_ids: Vec<u64>,
     pub next_seq: u64,
 }
 
@@ -128,6 +129,7 @@ impl RenderContext {
             spritestack_assets: HashMap::new(),
             asset_collection_cache: HashMap::new(),
             active_camera_id: None,
+            camera_ids: Vec::new(),
             next_seq: 1,
         }
     }
