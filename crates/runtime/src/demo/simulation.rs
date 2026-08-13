@@ -141,6 +141,14 @@ impl TacticalSimulation {
         if planning_tasks.is_empty() {
             planning_tasks = tasks.iter().collect();
         }
+        // Multiple engine tasks can represent the same gameplay action (for
+        // example, equivalent composite movement/action variants). MCTS only
+        // returns a display action and the runtime revalidates that action, so
+        // retaining duplicate display actions creates redundant root edges,
+        // task clones, and rollouts. Keep the first task to preserve the
+        // deterministic ordering supplied by TacticalDomain::get_tasks.
+        let mut seen_actions = HashSet::new();
+        planning_tasks.retain(|task| seen_actions.insert(task.display_action()));
         let root_tasks = planning_tasks.iter().map(|task| task.box_clone()).collect();
         // TODO: Late-game branching can otherwise monopolize the simulation worker?
         // need to reduce symmetry of search options.
@@ -151,15 +159,23 @@ impl TacticalSimulation {
             search_config.visits = search_config.visits.min(1);
             search_config.depth = search_config.depth.min(1);
         }
-        let mut mcts = MCTS::<TacticalDomain>::new_with_root_tasks(
-            self.state.clone(),
-            agent,
-            root_tasks,
-            search_config,
-        );
-        let candidate = mcts.run();
+        // A one-visit/one-ply late-turn search cannot learn anything beyond
+        // the immediate root-action heuristic below, but constructing MCTS
+        // still clones the complete state and allocates a search tree. Skip
+        // that setup in the explicitly capped mode. The root scorer remains
+        // deterministic and the same action validation/fallback path applies.
+        let candidate = if search_config.visits <= 1 && search_config.depth <= 1 {
+            None
+        } else {
+            let mut mcts = MCTS::<TacticalDomain>::new_with_root_tasks(
+                self.state.clone(),
+                agent,
+                root_tasks,
+                search_config,
+            );
+            mcts.run()
+        };
         let score_after = |task: &Box<dyn npc_engine_core::Task<TacticalDomain>>| {
-            let mut next = self.state.clone();
             let mut task_diff = TacticalDiff::default();
             task.execute(ContextMut {
                 tick: 0,
@@ -169,10 +185,14 @@ impl TacticalSimulation {
                 },
                 agent,
             });
-            TacticalDomain::apply(&mut next, &self.state, &task_diff);
+            // The value function reads through StateDiffRef, which overlays
+            // changed agents on the immutable snapshot. Applying the diff to
+            // a cloned TacticalState here duplicated that overlay work and
+            // cloned the grid, registries, collision map, RNG, and logger for
+            // every root task. Score directly against the diff instead.
             TacticalDomain::get_current_value(
                 0,
-                Context::with_state_and_diff(0, &next, &TacticalDiff::default(), agent).state_diff,
+                Context::with_state_and_diff(0, &self.state, &task_diff, agent).state_diff,
                 agent,
             )
         };

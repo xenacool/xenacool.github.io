@@ -211,7 +211,9 @@ impl UnifiedWorker {
                     self.transient_state.clone(),
                 )));
             }
-            PendingSimulation::PreviewRefresh { invalidate_selection } => {
+            PendingSimulation::PreviewRefresh {
+                invalidate_selection,
+            } => {
                 self.apply_preview_response(&response, invalidate_selection);
                 self.push_output(WorkerOutput::RuntimeResponse(Box::new(response)));
             }
