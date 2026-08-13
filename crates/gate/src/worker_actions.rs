@@ -320,7 +320,11 @@ impl UnifiedWorker {
         {
             let wait = action == "wait";
             self.pending_barrier = Some((*barrier_id, wait));
-            self.refresh_preview_after_barrier = action == "move";
+            // NPC moves are followed by the automatic boundary handoff, not
+            // a player move preview. Refreshing here during an NPC barrier
+            // sends OpenMovePreview while runtime awaits MCTS and forces the
+            // continuation into RecoverRejected.
+            self.refresh_preview_after_barrier = action == "move" && !self.is_simulating;
             self.last_sent_sequence_number = *barrier_id;
             self.transient_state.preview = None;
             self.transient_state.ability_targets = None;

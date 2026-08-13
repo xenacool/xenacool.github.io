@@ -7,8 +7,8 @@ collection.add_atlas_spritestack("Mage", scaling, atlas, spritesheet_rgba, sprit
 history.define_asset_collection("primitives", collection);
 
 let mcts = new_mcts_config();
-mcts.set_visits(4);
-mcts.set_depth(2);
+mcts.set_visits(50);
+mcts.set_depth(10);
 mcts.set_seed(42);
 let scenario = new_skirmish_config(42);
 scenario.set_maximum_turn_count(12);
