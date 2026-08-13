@@ -96,11 +96,18 @@ impl TacticalSimulation {
         let context = Context::with_state_and_diff(0, &self.state, &diff, agent);
         let tasks = TacticalDomain::get_tasks(context);
         let root_tasks = tasks.iter().map(|task| task.box_clone()).collect();
+        // TODO: Late-game branching can otherwise monopolize the simulation worker?
+        // need to reduce symmetry of search options.
+        let mut search_config = self.config.clone();
+        if self.completed_turns.len() > 2 {
+            search_config.visits = search_config.visits.min(1);
+            search_config.depth = search_config.depth.min(1);
+        }
         let mut mcts = MCTS::<TacticalDomain>::new_with_root_tasks(
             self.state.clone(),
             agent,
             root_tasks,
-            self.config.clone(),
+            search_config,
         );
         let candidate = mcts.run();
         let score_after = |task: &Box<dyn npc_engine_core::Task<TacticalDomain>>| {

@@ -207,6 +207,15 @@ impl UnifiedWorker {
                             resume_boundary: false,
                         },
                     );
+                } else if let RuntimeResponse::ActionRejected { request_id, .. } = response {
+                    // NPC decisions are automatic confirmations. Recover the
+                    // runtime boundary immediately instead of leaving the
+                    // unified worker in RecoverRejected, where every poll
+                    // would defer another automatic step forever.
+                    self.enqueue_simulation_request(
+                        RuntimeRequest::ResumeRejected { request_id },
+                        PendingSimulation::ResumeRejected { preview: None },
+                    );
                 } else {
                     self.push_output(WorkerOutput::RuntimeResponse(Box::new(response)));
                 }
