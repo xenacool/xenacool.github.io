@@ -120,6 +120,16 @@ impl UnifiedWorker {
         self.snapshot_fingerprint = snapshot_fingerprint;
         self.last_simulation_progress_seq = response_request_seq;
         self.transient_state.unit_states = self.unit_states.clone();
+        if matches!(
+            self.continuation,
+            RuntimeContinuation::AwaitPlayerDecision { .. }
+        ) && !self.transient_state.action_pending
+        {
+            // Preview/target responses can return directly to the player
+            // boundary without passing through the auto-step publisher.
+            // Re-enable input at the authoritative continuation as well.
+            self.transient_state.input_enabled = true;
+        }
         self.emit_runtime_logs(logs, &response);
         if let RuntimeResponse::Error(error) = &response {
             // A failed simulation request must not leave the controller in a
@@ -130,6 +140,7 @@ impl UnifiedWorker {
             self.is_simulating = false;
             self.transient_state.action_pending = false;
             self.transient_state.wait_pending = false;
+            self.transient_state.input_enabled = false;
             self.transient_state.action_feedback = Some(format!("Simulation failed: {error}"));
             self.push_debug_trace(format!(
                 "simulation response error request seq {}: {error}",
@@ -155,6 +166,7 @@ impl UnifiedWorker {
                     self.continuation,
                     RuntimeContinuation::AwaitPlayerDecision { .. }
                 );
+                self.transient_state.input_enabled = !self.is_simulating;
                 self.push_output(WorkerOutput::RuntimeResponse(Box::new(response)));
             }
             PendingSimulation::Action { is_confirm } => {
@@ -166,6 +178,7 @@ impl UnifiedWorker {
                 refresh_preview,
             } => {
                 self.transient_state.action_pending = false;
+                self.transient_state.input_enabled = false;
                 if wait {
                     self.transient_state.wait_pending = false;
                     self.boundary_resume_pending = true;
@@ -178,15 +191,30 @@ impl UnifiedWorker {
                             request_id,
                             unit_id,
                         },
-                        PendingSimulation::PreviewRefresh,
+                        PendingSimulation::PreviewRefresh {
+                            invalidate_selection: false,
+                        },
                     );
+                } else if matches!(
+                    self.continuation,
+                    RuntimeContinuation::AwaitPlayerDecision { .. }
+                ) {
+                    // A non-turn-ending player ability returns directly to
+                    // the player boundary after its animation barrier. There
+                    // is no auto-step that can publish PlayerReady for this
+                    // path, so restore ownership here from the authoritative
+                    // continuation.
+                    self.is_simulating = false;
+                    self.transient_state.input_enabled = true;
                 }
                 self.push_output(WorkerOutput::TransientState(Box::new(
                     self.transient_state.clone(),
                 )));
             }
-            PendingSimulation::PreviewRefresh => {
-                self.apply_preview_response(&response, false);
+            PendingSimulation::PreviewRefresh {
+                invalidate_selection,
+            } => {
+                self.apply_preview_response(&response, invalidate_selection);
                 self.push_output(WorkerOutput::RuntimeResponse(Box::new(response)));
             }
             PendingSimulation::AutoStep { resume_boundary } => {
@@ -229,7 +257,9 @@ impl UnifiedWorker {
                             request_id,
                             unit_id: preview.unit_id,
                         },
-                        PendingSimulation::PreviewRefresh,
+                        PendingSimulation::PreviewRefresh {
+                            invalidate_selection: true,
+                        },
                     );
                 }
             }

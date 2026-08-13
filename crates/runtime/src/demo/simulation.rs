@@ -5,11 +5,27 @@ use pystral_games::*;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::hash::{Hash, Hasher};
 
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct NpcPlanningPolicy {
+    pub minimum_hit_probability: f32,
+    pub allow_desperation: bool,
+}
+
+impl Default for NpcPlanningPolicy {
+    fn default() -> Self {
+        Self {
+            minimum_hit_probability: 0.20,
+            allow_desperation: false,
+        }
+    }
+}
+
 #[derive(Clone)]
 pub struct TacticalSimulation {
     pub state: TacticalState,
     pub scheduler: CTScheduler,
     pub config: MCTSConfiguration,
+    pub planning_policy: NpcPlanningPolicy,
     pub maximum_turn_count: u32,
     pub completed_rounds: u32,
     completed_turns: HashSet<AgentId>,
@@ -20,6 +36,28 @@ pub struct TacticalSimulation {
 #[path = "simulation_tests.rs"]
 mod tests;
 impl TacticalSimulation {
+    fn action_is_plannable(&self, agent: AgentId, action: &TacticalDisplayAction) -> bool {
+        match action {
+            TacticalDisplayAction::Ability { target, ability } => {
+                let probability =
+                    ability_success_probability(&self.state, agent, *target, *ability);
+                probability >= self.planning_policy.minimum_hit_probability
+                    || (self.planning_policy.allow_desperation
+                        && ability_can_kill_with_any_modifier(
+                            &self.state,
+                            agent,
+                            *target,
+                            *ability,
+                        ))
+            }
+            // Reactions are forced responses and must not be filtered by the
+            // ordinary attack policy.
+            TacticalDisplayAction::Reaction { .. }
+            | TacticalDisplayAction::Move { .. }
+            | TacticalDisplayAction::Wait => true,
+        }
+    }
+
     pub fn new(config: MCTSConfiguration) -> Self {
         Self::from_scenario(SkirmishConfig::new(42), config)
     }
@@ -35,6 +73,7 @@ impl TacticalSimulation {
             state,
             scheduler,
             config,
+            planning_policy: NpcPlanningPolicy::default(),
             maximum_turn_count: scenario.maximum_turn_count,
             completed_rounds: 0,
             completed_turns: HashSet::new(),
@@ -95,23 +134,48 @@ impl TacticalSimulation {
         let diff = TacticalDiff::default();
         let context = Context::with_state_and_diff(0, &self.state, &diff, agent);
         let tasks = TacticalDomain::get_tasks(context);
-        let root_tasks = tasks.iter().map(|task| task.box_clone()).collect();
+        let mut planning_tasks = tasks
+            .iter()
+            .filter(|task| self.action_is_plannable(agent, &task.display_action()))
+            .collect::<Vec<_>>();
+        if planning_tasks.is_empty() {
+            planning_tasks = tasks.iter().collect();
+        }
+        // Multiple engine tasks can represent the same gameplay action (for
+        // example, equivalent composite movement/action variants). MCTS only
+        // returns a display action and the runtime revalidates that action, so
+        // retaining duplicate display actions creates redundant root edges,
+        // task clones, and rollouts. Keep the first task to preserve the
+        // deterministic ordering supplied by TacticalDomain::get_tasks.
+        let mut seen_actions = HashSet::new();
+        planning_tasks.retain(|task| seen_actions.insert(task.display_action()));
+        let root_tasks = planning_tasks.iter().map(|task| task.box_clone()).collect();
         // TODO: Late-game branching can otherwise monopolize the simulation worker?
         // need to reduce symmetry of search options.
         let mut search_config = self.config.clone();
+        let snapshot_seed = self.snapshot_fingerprint() ^ (agent.0 as u64).rotate_left(17);
+        search_config.seed = Some(search_config.seed.unwrap_or(0) ^ snapshot_seed);
         if self.completed_turns.len() > 2 {
             search_config.visits = search_config.visits.min(1);
             search_config.depth = search_config.depth.min(1);
         }
-        let mut mcts = MCTS::<TacticalDomain>::new_with_root_tasks(
-            self.state.clone(),
-            agent,
-            root_tasks,
-            search_config,
-        );
-        let candidate = mcts.run();
+        // A one-visit/one-ply late-turn search cannot learn anything beyond
+        // the immediate root-action heuristic below, but constructing MCTS
+        // still clones the complete state and allocates a search tree. Skip
+        // that setup in the explicitly capped mode. The root scorer remains
+        // deterministic and the same action validation/fallback path applies.
+        let candidate = if search_config.visits <= 1 && search_config.depth <= 1 {
+            None
+        } else {
+            let mut mcts = MCTS::<TacticalDomain>::new_with_root_tasks(
+                self.state.clone(),
+                agent,
+                root_tasks,
+                search_config,
+            );
+            mcts.run()
+        };
         let score_after = |task: &Box<dyn npc_engine_core::Task<TacticalDomain>>| {
-            let mut next = self.state.clone();
             let mut task_diff = TacticalDiff::default();
             task.execute(ContextMut {
                 tick: 0,
@@ -121,14 +185,18 @@ impl TacticalSimulation {
                 },
                 agent,
             });
-            TacticalDomain::apply(&mut next, &self.state, &task_diff);
+            // The value function reads through StateDiffRef, which overlays
+            // changed agents on the immutable snapshot. Applying the diff to
+            // a cloned TacticalState here duplicated that overlay work and
+            // cloned the grid, registries, collision map, RNG, and logger for
+            // every root task. Score directly against the diff instead.
             TacticalDomain::get_current_value(
                 0,
-                Context::with_state_and_diff(0, &next, &TacticalDiff::default(), agent).state_diff,
+                Context::with_state_and_diff(0, &self.state, &task_diff, agent).state_diff,
                 agent,
             )
         };
-        let scored_tasks = tasks
+        let scored_tasks = planning_tasks
             .iter()
             .map(|task| (task.display_action(), score_after(task)))
             .collect::<Vec<_>>();
@@ -138,7 +206,7 @@ impl TacticalSimulation {
         let baseline = best.1 - 5.0;
         let candidate_action = candidate.as_ref().map(|task| task.display_action());
         let current_root_task = candidate_action.as_ref().and_then(|action| {
-            tasks
+            planning_tasks
                 .iter()
                 .find(|task| task.display_action() == *action && task.is_valid(context))
         });
@@ -244,9 +312,11 @@ impl TacticalSimulation {
         task.execute(context);
         let previous = self.state.clone();
         TacticalDomain::apply(&mut self.state, &previous, &diff);
-        if matches!(action, TacticalDisplayAction::Wait) {
-            self.record_completed_turn(agent);
-        }
+        // Every committed NPC action ends that unit's turn. Restricting this
+        // to Wait left move/ability turns out of the round ledger, so the
+        // late-turn MCTS cap never activated during real combat and the
+        // worker could monopolize the browser on repeated NPC actions.
+        self.record_completed_turn(agent);
         Ok(action)
     }
 

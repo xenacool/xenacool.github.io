@@ -7,9 +7,11 @@ collection.add_atlas_spritestack("Mage", scaling, atlas, spritesheet_rgba, sprit
 history.define_asset_collection("primitives", collection);
 
 let mcts = new_mcts_config();
-mcts.set_visits(50);
-mcts.set_depth(10);
+mcts.set_visits(24);
+mcts.set_depth(6);
 mcts.set_seed(42);
+mcts.set_minimum_hit_probability(0.20);
+mcts.set_allow_desperation(false);
 let scenario = new_skirmish_config(42);
 scenario.set_maximum_turn_count(12);
 let thick_skin = new_script_passive("Thick Skin");

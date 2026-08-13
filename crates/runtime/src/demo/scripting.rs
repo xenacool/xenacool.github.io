@@ -19,6 +19,8 @@ pub struct RhaiMctsConfig {
     visits: i64,
     depth: i64,
     seed: Option<i64>,
+    minimum_hit_probability: f32,
+    allow_desperation: bool,
 }
 
 impl RhaiMctsConfig {

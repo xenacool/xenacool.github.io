@@ -1,5 +1,5 @@
 use super::RhaiMctsConfig;
-use crate::demo::simulation::TacticalSimulation;
+use crate::demo::simulation::{NpcPlanningPolicy, TacticalSimulation};
 use pystral_compiler::physics::ProjectileCollider;
 use pystral_games::{
     GridCell, GridMap, ScriptAbilityDef, ScriptJobDef, ScriptMovementDef, ScriptPassiveDef,
@@ -156,6 +156,14 @@ pub(super) fn register_simulation(engine: &mut Engine) {
         .register_fn("set_seed", |c: &mut RhaiMctsConfig, v: i64| {
             c.seed = Some(v)
         })
+        .register_fn(
+            "set_minimum_hit_probability",
+            |c: &mut RhaiMctsConfig, value: f64| c.minimum_hit_probability = value as f32,
+        )
+        .register_fn(
+            "set_allow_desperation",
+            |c: &mut RhaiMctsConfig, value: bool| c.allow_desperation = value,
+        )
         .register_fn("clear_seed", |c: &mut RhaiMctsConfig| c.seed = None);
     engine.register_fn("new_mcts_config", default_mcts_config);
     engine.register_fn(
@@ -163,9 +171,17 @@ pub(super) fn register_simulation(engine: &mut Engine) {
         |scenario: SkirmishConfig,
          config: RhaiMctsConfig|
          -> Result<TacticalSimulation, Box<rhai::EvalAltResult>> {
+            let policy = NpcPlanningPolicy {
+                minimum_hit_probability: config.minimum_hit_probability.clamp(0.0, 1.0),
+                allow_desperation: config.allow_desperation,
+            };
             config
                 .to_native()
-                .map(|native| TacticalSimulation::from_scenario(scenario, native))
+                .map(|native| {
+                    let mut simulation = TacticalSimulation::from_scenario(scenario, native);
+                    simulation.planning_policy = policy;
+                    simulation
+                })
                 .map_err(runtime_error)
         },
     );
@@ -250,5 +266,7 @@ fn default_mcts_config() -> RhaiMctsConfig {
         visits: 50,
         depth: 10,
         seed: Some(42),
+        minimum_hit_probability: 0.20,
+        allow_desperation: false,
     }
 }

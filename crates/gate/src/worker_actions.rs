@@ -116,7 +116,10 @@ impl UnifiedWorker {
     }
 
     pub(crate) fn route_action_input(&mut self, direction: String) -> Option<WorkerOutput> {
-        if self.pending_simulation.is_some() || self.pending_barrier.is_some() {
+        if !self.transient_state.input_enabled
+            || self.pending_simulation.is_some()
+            || self.pending_barrier.is_some()
+        {
             return None;
         }
         self.push_debug_trace(format!("unified worker accepted action input {direction}"));
@@ -333,6 +336,7 @@ impl UnifiedWorker {
             }
             self.transient_state.action_pending = true;
             self.transient_state.wait_pending = wait;
+            self.transient_state.input_enabled = false;
             let display_action = action.get(..1).map_or_else(
                 || action.clone(),
                 |first| first.to_ascii_uppercase() + &action[1..],

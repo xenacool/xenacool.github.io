@@ -407,7 +407,7 @@ pub struct TacticalDiff {
     pub turn_completed: bool,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Hash, Serialize, Deserialize, PartialEq, Eq)]
 pub enum TacticalDisplayAction {
     Move {
         to: GridCell,

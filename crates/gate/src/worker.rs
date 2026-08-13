@@ -31,7 +31,7 @@ pub(crate) enum PendingSimulation {
     Initial,
     Action { is_confirm: bool },
     AnimationAck { wait: bool, refresh_preview: bool },
-    PreviewRefresh,
+    PreviewRefresh { invalidate_selection: bool },
     AutoStep { resume_boundary: bool },
     MctsDecision { request_id: u64, state_version: u64 },
     ResumeRejected { preview: Option<MovePreview> },
@@ -79,6 +79,7 @@ fn transient_state_from_history(
                 ability_targets: None,
                 action_pending: false,
                 wait_pending: false,
+                input_enabled: false,
                 game_completed: false,
             })
         } else {
@@ -450,6 +451,7 @@ impl UnifiedWorker {
                     self.transient_state = transient;
                     self.transient_state.unit_states = self.unit_states.clone();
                     self.is_simulating = false;
+                    self.transient_state.input_enabled = true;
                     self.push_debug_trace(format!(
                         "unified worker published player transient active_unit={:?} actions={}",
                         self.transient_state.active_unit_id,

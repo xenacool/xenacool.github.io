@@ -108,6 +108,9 @@ pub struct TransientState {
     pub ability_targets: Option<AbilityTargetMenu>,
     pub action_pending: bool,
     pub wait_pending: bool,
+    /// True only after the worker has released simulation/barrier ownership.
+    #[serde(default)]
+    pub input_enabled: bool,
     pub game_completed: bool,
 }
 

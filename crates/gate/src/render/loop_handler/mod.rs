@@ -383,6 +383,19 @@ impl LoopHandler {
             visible = false;
         }
 
+        if !self.transient_state.input_enabled {
+            visible = false;
+            up = false;
+            down = false;
+            left = false;
+            right = false;
+            layer_up = false;
+            layer_down = false;
+            confirm = false;
+            ret = false;
+            wait = false;
+        }
+
         if self.transient_state.action_pending {
             visible = true;
             up = false;
