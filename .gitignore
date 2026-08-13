@@ -5,8 +5,6 @@
 /target
 # This file contains environment-specific configuration like linker settings
 .cargo/config.toml
-web/pystral_gate.js
-web/pystral_gate_bg.wasm
 /assets
 .make-test.log
 # TLA+/TLC local tools and generated model-checker output
@@ -14,6 +12,4 @@ web/pystral_gate_bg.wasm
 /spec/_build/
 /spec/*.bin
 *.class
-web/atlas.json
-web/spritesheet.png
 web/favicon.ico
