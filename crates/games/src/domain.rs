@@ -1,7 +1,7 @@
 use crate::{
-    AbilityBehavior, AbilityDef, CombatVector, LogCommand, Logger, ModifierCard, MoveBehavior,
-    ReactionBehavior, TacticalAccess, TacticalDiff, TacticalDisplayAction, TacticalState,
-    UnitState, WaitBehavior,
+    AbilityBehavior, AbilityDef, AbilityId, CombatVector, LogCommand, Logger, ModifierCard,
+    MoveBehavior, ReactionBehavior, TacticalAccess, TacticalDiff, TacticalDisplayAction,
+    TacticalState, UnitState, WaitBehavior,
 };
 pub use npc_engine_core::{
     AgentId, AgentValue, Context, ContextMut, Domain, StateDiffRef, StateDiffRefMut,
@@ -10,6 +10,84 @@ use npc_engine_utils::GlobalDomain;
 use std::collections::BTreeSet;
 
 pub struct TacticalDomain;
+
+/// Estimate the chance that an ability produces positive damage for the
+/// current modifier deck. This is a planning query: it never draws a card or
+/// mutates the authoritative state.
+pub fn ability_success_probability(
+    state: &TacticalState,
+    agent: AgentId,
+    target: AgentId,
+    ability_id: AbilityId,
+) -> f32 {
+    let Some(attacker) = state.agents.get(&agent) else {
+        return 0.0;
+    };
+    let Some(defender) = state.agents.get(&target) else {
+        return 0.0;
+    };
+    let Some(ability) = state.ability_registry.get(&ability_id) else {
+        return 0.0;
+    };
+    let mut cards = attacker.modifier_deck.draw_pile.clone();
+    if cards.is_empty() {
+        cards = attacker.modifier_deck.discard_pile.clone();
+    }
+    if cards.is_empty() {
+        cards.push(ModifierCard::Plus0);
+    }
+    let card_count = cards.len();
+    let successes = cards
+        .into_iter()
+        .filter(|card| {
+            calculate_damage(
+                attacker,
+                defender,
+                ability,
+                *card,
+                "CON",
+                &mut Logger::default(),
+            ) > 0
+        })
+        .count();
+    successes as f32 / card_count.max(1) as f32
+}
+
+/// Returns whether at least one possible modifier can kill the target. This
+/// is used only for the explicitly permitted desperation exception.
+pub fn ability_can_kill_with_any_modifier(
+    state: &TacticalState,
+    agent: AgentId,
+    target: AgentId,
+    ability_id: AbilityId,
+) -> bool {
+    let Some(attacker) = state.agents.get(&agent) else {
+        return false;
+    };
+    let Some(defender) = state.agents.get(&target) else {
+        return false;
+    };
+    let Some(ability) = state.ability_registry.get(&ability_id) else {
+        return false;
+    };
+    let mut cards = attacker.modifier_deck.draw_pile.clone();
+    if cards.is_empty() {
+        cards = attacker.modifier_deck.discard_pile.clone();
+    }
+    if cards.is_empty() {
+        cards.push(ModifierCard::Plus0);
+    }
+    cards.into_iter().any(|card| {
+        calculate_damage(
+            attacker,
+            defender,
+            ability,
+            card,
+            "CON",
+            &mut Logger::default(),
+        ) >= defender.health
+    })
+}
 
 impl Domain for TacticalDomain {
     type State = TacticalState;

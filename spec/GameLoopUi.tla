@@ -27,7 +27,7 @@ VARIABLES phase, runtimeVersion, runtimeFingerprint, legalTargets,
           targetSession, targetVersion, targetFingerprint, nextSession,
           uiTargetOpen, uiTargetUnit, uiTargetAbility, uiTargetSession,
           uiTargetTarget, uiTargetVersion, uiTargetFingerprint,
-          animationPlaying, barrier, pending,
+          animationPlaying, barrier, pending, inputEnabled,
           acknowledgedBarrier, staleRejection
 
 vars == << phase, runtimeVersion, runtimeFingerprint, legalTargets,
@@ -35,7 +35,7 @@ vars == << phase, runtimeVersion, runtimeFingerprint, legalTargets,
            targetSession, targetVersion, targetFingerprint, nextSession, uiTargetOpen,
            uiTargetUnit, uiTargetAbility, uiTargetSession, uiTargetVersion,
            uiTargetTarget, uiTargetFingerprint, animationPlaying, barrier,
-           pending, acknowledgedBarrier, staleRejection >>
+           pending, inputEnabled, acknowledgedBarrier, staleRejection >>
 
 Init ==
     /\ phase = AwaitPlayer
@@ -60,12 +60,14 @@ Init ==
     /\ animationPlaying = TRUE
     /\ barrier = 0
     /\ pending = FALSE
+    /\ inputEnabled = FALSE
     /\ acknowledgedBarrier = 0
     /\ staleRejection = FALSE
 
 OpenTargets(unit, ability, target) ==
     /\ phase = AwaitPlayer
     /\ ~pending
+    /\ inputEnabled
     /\ unit \in Units
     /\ ability \in Abilities
     /\ [unit |-> unit, ability |-> ability, target |-> target] \in legalTargets
@@ -82,7 +84,7 @@ OpenTargets(unit, ability, target) ==
                     uiTargetOpen, uiTargetUnit, uiTargetAbility,
                     uiTargetTarget, uiTargetSession, uiTargetVersion,
                     uiTargetFingerprint,
-                    animationPlaying, barrier, pending,
+                    animationPlaying, barrier, pending, inputEnabled,
                     acknowledgedBarrier >>
 
 RenderTargets ==
@@ -97,7 +99,7 @@ RenderTargets ==
     /\ UNCHANGED << phase, runtimeVersion, runtimeFingerprint, legalTargets,
                     targetOpen, targetUnit, targetAbility, targetTarget,
                     targetSession, targetVersion, targetFingerprint, nextSession,
-                    animationPlaying, barrier, pending,
+                    animationPlaying, barrier, pending, inputEnabled,
                     acknowledgedBarrier, staleRejection >>
 
 (* A new authoritative snapshot may arrive while the browser still displays
@@ -116,13 +118,14 @@ RuntimeStateAdvance(nextLegalTargets) ==
                     targetFingerprint, nextSession, uiTargetOpen, uiTargetUnit,
                     uiTargetAbility, uiTargetTarget, uiTargetSession,
                     uiTargetVersion, uiTargetFingerprint,
-                    animationPlaying, barrier, pending,
+                    animationPlaying, barrier, pending, inputEnabled,
                     acknowledgedBarrier, staleRejection >>
 
 CommitTarget ==
     /\ phase = AwaitPlayer
     /\ uiTargetOpen
     /\ pending = FALSE
+    /\ inputEnabled
     /\ barrier < MaxActions
     /\ IF targetOpen
           /\ uiTargetSession = targetSession
@@ -135,12 +138,14 @@ CommitTarget ==
        THEN
           /\ phase' = AwaitAck
           /\ pending' = TRUE
+          /\ inputEnabled' = FALSE
           /\ barrier' = barrier + 1
           /\ staleRejection' = FALSE
        ELSE
           /\ phase' = AwaitPlayer
           /\ pending' = FALSE
           /\ staleRejection' = TRUE
+          /\ inputEnabled' = FALSE
           /\ UNCHANGED << barrier >>
     /\ UNCHANGED << runtimeVersion, runtimeFingerprint, legalTargets,
                     targetOpen, targetUnit, targetAbility, targetTarget,
@@ -158,6 +163,7 @@ Acknowledge ==
     /\ pending
     /\ phase' = AwaitPlayer
     /\ pending' = FALSE
+    /\ inputEnabled' = FALSE
     /\ acknowledgedBarrier' = barrier
     /\ UNCHANGED << runtimeVersion, runtimeFingerprint, legalTargets,
                     targetOpen, targetUnit, targetAbility, targetTarget,
@@ -165,7 +171,7 @@ Acknowledge ==
                     uiTargetOpen, uiTargetUnit, uiTargetAbility,
                     uiTargetTarget, uiTargetSession, uiTargetVersion,
                     uiTargetFingerprint, animationPlaying,
-                    barrier, staleRejection >>
+                    barrier, inputEnabled, staleRejection >>
 
 ToggleAnimation ==
     /\ animationPlaying' = ~animationPlaying
@@ -174,7 +180,22 @@ ToggleAnimation ==
                     targetSession, targetVersion, targetFingerprint, nextSession,
                     uiTargetOpen, uiTargetUnit, uiTargetAbility,
                     uiTargetTarget, uiTargetSession, uiTargetVersion,
-                    uiTargetFingerprint, barrier, pending,
+                    uiTargetFingerprint, barrier, pending, inputEnabled,
+                    acknowledgedBarrier, staleRejection >>
+
+(* A continuation can report AwaitPlayer before the worker publishes the
+   authoritative transient. Rendering is not input ownership. *)
+PlayerReady ==
+    /\ phase = AwaitPlayer
+    /\ ~pending
+    /\ ~inputEnabled
+    /\ inputEnabled' = TRUE
+    /\ UNCHANGED << phase, runtimeVersion, runtimeFingerprint, legalTargets,
+                    targetOpen, targetUnit, targetAbility, targetTarget,
+                    targetSession, targetVersion, targetFingerprint, nextSession,
+                    uiTargetOpen, uiTargetUnit, uiTargetAbility,
+                    uiTargetTarget, uiTargetSession, uiTargetVersion,
+                    uiTargetFingerprint, animationPlaying, barrier, pending,
                     acknowledgedBarrier, staleRejection >>
 
 Complete ==
@@ -188,7 +209,7 @@ Complete ==
                     uiTargetOpen, uiTargetUnit, uiTargetAbility,
                     uiTargetTarget, uiTargetSession, uiTargetVersion,
                     uiTargetFingerprint, animationPlaying,
-                    barrier, pending, acknowledgedBarrier >>
+                    barrier, pending, inputEnabled, acknowledgedBarrier >>
 
 Stutter == UNCHANGED vars
 
@@ -200,6 +221,7 @@ Next ==
           RuntimeStateAdvance(nextLegalTargets)
     \/ CommitTarget
     \/ Acknowledge
+    \/ PlayerReady
     \/ ToggleAnimation
     \/ Complete
     \/ Stutter
@@ -217,6 +239,7 @@ TypeInvariant ==
     /\ uiTargetFingerprint \in 0..MaxActions
     /\ barrier \in 0..MaxActions
     /\ acknowledgedBarrier \in 0..MaxActions
+    /\ inputEnabled \in BOOLEAN
 
 NoStaleCommit ==
     pending =>
@@ -233,6 +256,9 @@ PendingOwnsBarrier == pending => barrier > acknowledgedBarrier
 RejectedStaleTargets == staleRejection => phase = AwaitPlayer /\ ~pending
 
 CompletedIsQuiescent == phase = Completed => ~pending
+
+InputOwnershipIsSafe ==
+    inputEnabled => phase = AwaitPlayer /\ ~pending
 
 Spec == Init /\ [][Next]_vars
 
