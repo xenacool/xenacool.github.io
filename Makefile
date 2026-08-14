@@ -161,7 +161,20 @@ test:
 		echo "ERROR: make test needs timeout or gtimeout for its $(TEST_BUDGET_SECONDS)s budget"; \
 		exit 1; \
 	fi; \
-	$(TEST_TIMEOUT) --signal=TERM $(TEST_BUDGET_SECONDS) sh -c '$(MAKE) --no-print-directory tla-check playwright-test check-func-length check-loc debug-fixture-check > $(TEST_LOG) 2>&1 && cargo test >> $(TEST_LOG) 2>&1'; \
+	$(TEST_TIMEOUT) --signal=TERM $(TEST_BUDGET_SECONDS) sh -c '\
+		status=0; \
+		run_step() { \
+			label="$$1"; shift; \
+			echo "=== $$label ==="; \
+			"$$@" || { echo "FAILED: $$label"; status=1; }; \
+		}; \
+		run_step tla-check $(MAKE) --no-print-directory tla-check; \
+		run_step playwright-test $(MAKE) --no-print-directory playwright-test; \
+		run_step check-func-length $(MAKE) --no-print-directory check-func-length; \
+		run_step check-loc $(MAKE) --no-print-directory check-loc; \
+		run_step debug-fixture-check $(MAKE) --no-print-directory debug-fixture-check; \
+		run_step cargo-test cargo test; \
+		exit $$status' > $(TEST_LOG) 2>&1; \
 	status=$$?; \
 	echo "Test output written to $(TEST_LOG)"; \
 	if [ $$status -eq 124 ]; then echo "ERROR: make test exceeded $(TEST_BUDGET_SECONDS)s"; fi; \

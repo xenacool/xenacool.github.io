@@ -109,6 +109,22 @@
     }
 
     #[test]
+    fn dead_ready_units_do_not_starve_living_units() {
+        let mut state = setup_2v2_skirmish();
+        let scheduler = CTScheduler::new(100);
+        scheduler.initialize_ct(&mut state);
+        state.agents.get_mut(&AgentId(1)).unwrap().health = 0;
+        state.agents.get_mut(&AgentId(1)).unwrap().ct = 100;
+        state.agents.get_mut(&AgentId(2)).unwrap().ct = 99;
+
+        let ready = scheduler
+            .tick_until_ready_budgeted(&mut state, 1)
+            .expect("a living unit should become ready");
+        assert!(!ready.contains(&AgentId(1)));
+        assert!(ready.contains(&AgentId(2)));
+    }
+
+    #[test]
     fn mcts_candidate_is_valid_for_the_snapshot_it_planned() {
         let state = setup_2v2_skirmish();
         let agent = AgentId(1);
