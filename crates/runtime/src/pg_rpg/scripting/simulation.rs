@@ -226,6 +226,12 @@ fn register_simulation_runtime(engine: &mut Engine) {
         "get_agent_health",
         |sim: &mut TacticalSimulation, id: i64| sim.get_agent_health(id),
     );
+    engine.register_fn(
+        "set_agent_health",
+        |sim: &mut TacticalSimulation, id: i64, health: i64| {
+            sim.set_agent_health(id, health).map_err(runtime_error)
+        },
+    );
     engine.register_fn("get_prompts", |sim: &mut TacticalSimulation, id: i64| {
         sim.get_prompts(id)
             .into_iter()

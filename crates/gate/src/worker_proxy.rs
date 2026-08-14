@@ -182,6 +182,15 @@ impl UnifiedWorker {
                 if wait {
                     self.transient_state.wait_pending = false;
                     self.boundary_resume_pending = true;
+                } else if matches!(self.continuation, RuntimeContinuation::AwaitBoundary) {
+                    // A non-wait action can still end the match when its
+                    // mutation kills the last living unit. Runtime routes
+                    // that actor through AwaitBoundary so terminal
+                    // classification occurs after presentation ACK. Resume
+                    // that boundary instead of leaving the worker with no
+                    // request in flight.
+                    self.is_simulating = true;
+                    self.boundary_resume_pending = true;
                 } else if refresh_preview {
                     let request_id = self.next_action_request_id;
                     self.next_action_request_id += 1;
