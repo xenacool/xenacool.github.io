@@ -183,6 +183,7 @@
     <div id="action-menu-status" role="status" aria-live="polite"></div>
     <div id="action-menu-items"></div>
 </section>
+<div id="game-completed" role="status" aria-live="assertive" data-outcome="" hidden></div>
 </div>
 <section id="diagnostics-panel" aria-label="Diagnostics" style="position: absolute; top: 10px; right: 10px; width: 340px; max-height: 70vh; overflow-y: auto; background: rgba(0,0,0,0.78); font-size: 11px; padding: 8px; color: #ffcc00; font-family: monospace; z-index: 110;">
     <strong>UI log</strong>
@@ -280,7 +281,7 @@
         window.__pystralHistoryExportSource = JSON.stringify({
             format: 'pystral-gate-replay-v1',
             replay: {
-                entrypoint: 'web/scripts/demo.rhai',
+                entrypoint: 'web/scripts/pg_rpg.rhai',
                 actionInputs: window.__pystralReplayInputs,
             },
         });
@@ -327,6 +328,7 @@
         const menu = document.getElementById('action-menu');
         const actions = state.available_actions;
         const status = document.getElementById('action-menu-status');
+        const completion = document.getElementById('game-completed');
         const items = document.getElementById('action-menu-items');
         window.__pystralLastTransientState = state;
         if (state.ability_targets) {
@@ -342,6 +344,13 @@
         }
         window.previewActive = Boolean(state.preview);
         menu.dataset.gameCompleted = state.game_completed ? 'true' : 'false';
+        const outcome = state.completion_outcome;
+        const outcomeName = outcome
+            ? (Object.keys(outcome)[0] || '')
+            : '';
+        completion.hidden = !state.game_completed;
+        completion.dataset.outcome = outcomeName;
+        completion.textContent = state.game_completed ? `${outcomeName} — Game completed.` : '';
         if (state.action_feedback) {
             window.pendingActionFeedback = state.action_feedback;
         } else if (!state.action_pending && !state.wait_pending) {

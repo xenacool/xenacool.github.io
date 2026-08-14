@@ -1,5 +1,5 @@
 use super::RhaiMctsConfig;
-use crate::demo::simulation::{NpcPlanningPolicy, TacticalSimulation};
+use crate::pg_rpg::simulation::{NpcPlanningPolicy, TacticalSimulation};
 use pystral_compiler::physics::ProjectileCollider;
 use pystral_games::{
     GridCell, GridMap, ScriptAbilityDef, ScriptJobDef, ScriptMovementDef, ScriptPassiveDef,

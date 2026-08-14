@@ -1,1 +1,1 @@
-{"files":["demo.rhai","common.rhai","assets/primitives.rhai","scenarios/skirmish.rhai","presentation/world.rhai","actions/demo_loop.rhai"]}
+{"files":["pg_rpg.rhai","common.rhai","assets/primitives.rhai","scenarios/skirmish.rhai","presentation/world.rhai","actions/pg_rpg_loop.rhai"]}

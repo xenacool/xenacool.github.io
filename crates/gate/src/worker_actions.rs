@@ -463,7 +463,7 @@ impl UnifiedWorker {
         if menu.targets.is_empty() {
             return;
         }
-        menu.selected_index = pystral_runtime::demo::ability_targets::next_ability_target(
+        menu.selected_index = pystral_runtime::pg_rpg::ability_targets::next_ability_target(
             &menu.targets,
             menu.selected_index,
             direction,

@@ -1,5 +1,5 @@
-use crate::demo::scripting;
-use crate::demo::simulation::TacticalSimulation;
+use crate::pg_rpg::scripting;
+use crate::pg_rpg::simulation::TacticalSimulation;
 use npc_engine_core::AgentId;
 use pystral_core::history::HistoryManager;
 use rhai::{AST, CallFnOptions, Engine, Scope};

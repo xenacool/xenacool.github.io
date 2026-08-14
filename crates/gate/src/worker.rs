@@ -81,6 +81,7 @@ fn transient_state_from_history(
                 wait_pending: false,
                 input_enabled: false,
                 game_completed: false,
+                completion_outcome: None,
             })
         } else {
             None
@@ -214,7 +215,7 @@ impl Future for UnifiedWorker {
                         WorkerInput::ActionNav(direction) => self.route_action_input(direction),
                         WorkerInput::RuntimeRequest(task) => {
                             let task = match task {
-                                RuntimeRequest::GenerateDemoLog {
+                                RuntimeRequest::GeneratePgRpgLog {
                                     bundle,
                                     atlas_json,
                                     spritesheet_rgba,
@@ -226,7 +227,7 @@ impl Future for UnifiedWorker {
                                     self.pending_barrier = None;
                                     self.highest_animation_ack = 0;
                                     self.boundary_resume_pending = false;
-                                    RuntimeRequest::StartDemoSimulation {
+                                    RuntimeRequest::StartPgRpgSimulation {
                                         bundle,
                                         atlas_json,
                                         spritesheet_rgba,
@@ -379,7 +380,7 @@ impl UnifiedWorker {
                     )
                 } else {
                     (
-                        RuntimeRequest::StepDemoSimulation,
+                        RuntimeRequest::StepPgRpgSimulation,
                         PendingSimulation::AutoStep {
                             resume_boundary: false,
                         },
@@ -432,14 +433,14 @@ impl UnifiedWorker {
                 if resume_boundary {
                     RuntimeRequest::ResumeBoundary
                 } else {
-                    RuntimeRequest::StepDemoSimulation
+                    RuntimeRequest::StepPgRpgSimulation
                 },
                 PendingSimulation::AutoStep { resume_boundary },
             );
             cx.waker().wake_by_ref();
             return;
         }
-        if let RuntimeResponse::DemoSimulationStepped(ref history)
+        if let RuntimeResponse::PgRpgSimulationStepped(ref history)
         | RuntimeResponse::GameCompleted { ref history, .. } = res
         {
             if let Some(transient) = transient_state_from_history(history) {
@@ -463,7 +464,7 @@ impl UnifiedWorker {
                 }
             }
         }
-        if matches!(res, RuntimeResponse::GameCompleted { .. }) {
+        if let RuntimeResponse::GameCompleted { outcome, .. } = &res {
             self.is_simulating = false;
             self.current_actions = None;
             self.transient_state.available_actions = None;
@@ -472,6 +473,7 @@ impl UnifiedWorker {
             self.transient_state.action_pending = false;
             self.transient_state.wait_pending = false;
             self.transient_state.game_completed = true;
+            self.transient_state.completion_outcome = Some(outcome.clone());
             self.transient_state.action_feedback = Some("Game completed".to_string());
             self.push_output(WorkerOutput::TransientState(Box::new(
                 self.transient_state.clone(),

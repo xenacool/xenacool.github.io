@@ -9,11 +9,11 @@ proptest! {
 
         for command in commands {
             let before_phase = runtime.continuation();
-            let before_history_len = runtime.demo_history.as_ref().unwrap().log.len();
+            let before_history_len = runtime.pg_rpg_history.as_ref().unwrap().log.len();
             let before_completed = before_phase == RuntimeContinuation::Completed;
 
             let (response, _logs) = match command % 7 {
-                0 => runtime.process_request(RuntimeRequest::StepDemoSimulation),
+                0 => runtime.process_request(RuntimeRequest::StepPgRpgSimulation),
                 1 => runtime.process_request(RuntimeRequest::CommitWait {
                     request_id: u64::from(command),
                     unit_id: 1,
@@ -33,7 +33,7 @@ proptest! {
                 5 => runtime.process_request(RuntimeRequest::ResumeRejected {
                     request_id: u64::from(command),
                 }),
-                _ => runtime.process_request(RuntimeRequest::StepDemoSimulation),
+                _ => runtime.process_request(RuntimeRequest::StepPgRpgSimulation),
             };
 
             if command % 7 == 0 && !before_completed
@@ -45,7 +45,7 @@ proptest! {
                 prop_assert!(matches!(response, RuntimeResponse::Error(_)));
             }
 
-            let after_history = runtime.demo_history.as_ref().unwrap();
+            let after_history = runtime.pg_rpg_history.as_ref().unwrap();
             prop_assert!(after_history.log.len() >= before_history_len);
             let completion_count = after_history
                 .log

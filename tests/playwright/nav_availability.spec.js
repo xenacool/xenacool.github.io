@@ -11,7 +11,7 @@ test.describe('Camera Navigation Availability', () => {
     const slider = page.locator('#history-slider');
     const logContainer = page.locator('#log-container');
     
-    // Wait for the worker to generate the initial demo log
+    // Wait for the worker to generate the initial pg_rpg log
     await page.waitForFunction(() => {
       const slider = document.getElementById('history-slider');
       return parseInt(slider.getAttribute('max'), 10) > 0;

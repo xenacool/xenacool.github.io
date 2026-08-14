@@ -1,11 +1,11 @@
 use super::*;
-use crate::demo::simulation::TacticalSimulation;
+use crate::pg_rpg::simulation::TacticalSimulation;
 use pystral_core::log::Event;
 use pystral_games::{GridCell, SkirmishConfig};
 
 fn test_runtime(scenario: SkirmishConfig) -> Runtime {
     let mut runtime = Runtime::new();
-    runtime.demo_sim = Some(TacticalSimulation::from_scenario(
+    runtime.pg_rpg_sim = Some(TacticalSimulation::from_scenario(
         scenario,
         npc_engine_core::MCTSConfiguration {
             visits: 1,
@@ -14,9 +14,9 @@ fn test_runtime(scenario: SkirmishConfig) -> Runtime {
             ..Default::default()
         },
     ));
-    runtime.demo_history = Some(HistoryManager::new());
-    let history = runtime.demo_history.clone().unwrap();
-    let simulation = runtime.demo_sim.clone().unwrap();
+    runtime.pg_rpg_history = Some(HistoryManager::new());
+    let history = runtime.pg_rpg_history.clone().unwrap();
+    let simulation = runtime.pg_rpg_sim.clone().unwrap();
     runtime.rhai_session = Some(
         crate::rhai_session::RhaiSession::from_simulation(history, simulation)
             .expect("test Rhai session"),
@@ -35,9 +35,9 @@ fn npc_ability_uses_typed_candidate_revalidation_and_barrier() {
         .unwrap();
     let mut runtime = test_runtime(scenario);
     let target_health_before =
-        runtime.demo_sim.as_ref().unwrap().state.agents[&npc_engine_core::AgentId(1)].health;
+        runtime.pg_rpg_sim.as_ref().unwrap().state.agents[&npc_engine_core::AgentId(1)].health;
     let ability_id = runtime
-        .demo_sim
+        .pg_rpg_sim
         .as_ref()
         .unwrap()
         .get_available_actions(2)
@@ -82,7 +82,7 @@ fn npc_ability_uses_typed_candidate_revalidation_and_barrier() {
                     if *health < target_health_before
             )));
             assert!(
-                runtime.demo_sim.as_ref().unwrap().state.agents[&npc_engine_core::AgentId(1)]
+                runtime.pg_rpg_sim.as_ref().unwrap().state.agents[&npc_engine_core::AgentId(1)]
                     .health
                     < target_health_before
             );
@@ -117,7 +117,7 @@ fn rejected_npc_candidate_is_visible_before_fallback_wait() {
         .unwrap();
     let mut runtime = test_runtime(scenario);
     runtime
-        .demo_sim
+        .pg_rpg_sim
         .as_mut()
         .unwrap()
         .state
@@ -126,7 +126,7 @@ fn rejected_npc_candidate_is_visible_before_fallback_wait() {
         .unwrap()
         .action_points = 0;
     let fireball = runtime
-        .demo_sim
+        .pg_rpg_sim
         .as_ref()
         .unwrap()
         .state
@@ -180,7 +180,7 @@ fn rejected_npc_candidate_resolves_pending_reaction_before_fallback() {
         .unwrap();
     let mut runtime = test_runtime(scenario);
     runtime
-        .demo_sim
+        .pg_rpg_sim
         .as_mut()
         .unwrap()
         .state
@@ -215,7 +215,7 @@ fn rejected_npc_candidate_resolves_pending_reaction_before_fallback() {
     ));
     assert!(
         runtime
-            .demo_sim
+            .pg_rpg_sim
             .as_ref()
             .unwrap()
             .state
@@ -249,7 +249,7 @@ fn stale_and_duplicate_mcts_results_cannot_commit() {
         .0;
     assert!(matches!(stale, RuntimeResponse::Error(message)
         if message.contains("Stale MCTS result")));
-    assert!(runtime.demo_history.as_ref().unwrap().log.is_empty());
+    assert!(runtime.pg_rpg_history.as_ref().unwrap().log.is_empty());
     let committed = runtime
         .process_request(RuntimeRequest::MctsDecisionReady {
             request_id: 91,

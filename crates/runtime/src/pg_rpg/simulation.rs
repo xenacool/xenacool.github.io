@@ -489,7 +489,7 @@ impl TacticalSimulation {
         let mut prompts = HashMap::new();
         if let Some(_unit) = self.state.agents.get(&AgentId(agent_id as u32)) {
             // In a real game, this would depend on the unit's available actions
-            // For the demo, we'll just show some buttons for the active unit
+            // For the pg_rpg, we'll just show some buttons for the active unit
             prompts.insert("up".to_string(), true);
             prompts.insert("down".to_string(), true);
             prompts.insert("left".to_string(), true);

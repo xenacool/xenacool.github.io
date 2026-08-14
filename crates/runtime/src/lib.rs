@@ -1,8 +1,8 @@
-pub mod demo;
 mod game_loop;
 mod game_loop_helpers;
+pub mod pg_rpg;
 mod rhai_session;
-use demo::ScenarioBundle;
+use pg_rpg::ScenarioBundle;
 
 use hexx::Hex;
 use pystral_compiler::ik::{IkRequest, IkResponse, IkSystem};
@@ -97,19 +97,19 @@ pub enum RuntimeContinuation {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum RuntimeRequest {
     SolveIk(IkRequest),
-    GenerateDemoLog {
+    GeneratePgRpgLog {
         bundle: ScenarioBundle,
         atlas_json: String,
         spritesheet_rgba: Vec<u8>,
         spritesheet_width: u32,
     },
-    StartDemoSimulation {
+    StartPgRpgSimulation {
         bundle: ScenarioBundle,
         atlas_json: String,
         spritesheet_rgba: Vec<u8>,
         spritesheet_width: u32,
     },
-    StepDemoSimulation,
+    StepPgRpgSimulation,
     RequestMctsDecision {
         request_id: u64,
         unit_id: u64,
@@ -166,9 +166,9 @@ pub enum RuntimeRequest {
 pub enum RuntimeResponse {
     IkSolved(IkResponse),
     TrajectorySolved(TrajectoryResponse),
-    DemoLogGenerated(HistoryManager),
-    DemoSimulationStarted(HistoryManager),
-    DemoSimulationStepped(HistoryManager),
+    PgRpgLogGenerated(HistoryManager),
+    PgRpgSimulationStarted(HistoryManager),
+    PgRpgSimulationStepped(HistoryManager),
     SimulationProgress {
         work_units: u32,
     },
@@ -218,10 +218,10 @@ pub enum RuntimeResponse {
 #[derive(Default)]
 pub struct Runtime {
     ik_system: IkSystem,
-    demo_sim: Option<demo::simulation::TacticalSimulation>,
-    demo_history: Option<HistoryManager>,
-    demo_sequence_number: u64,
-    demo_completion_emitted: bool,
+    pg_rpg_sim: Option<pg_rpg::simulation::TacticalSimulation>,
+    pg_rpg_history: Option<HistoryManager>,
+    pg_rpg_sequence_number: u64,
+    pg_rpg_completion_emitted: bool,
     continuation: RuntimeContinuation,
     rhai_session: Option<RhaiSession>,
     next_npc_request_id: u64,
@@ -231,7 +231,7 @@ pub struct Runtime {
 
 impl Runtime {
     pub fn unit_states(&self) -> Vec<UnitStateInfo> {
-        self.demo_sim
+        self.pg_rpg_sim
             .as_ref()
             .map(|simulation| {
                 simulation
@@ -256,9 +256,9 @@ impl Runtime {
     }
 
     pub fn snapshot_fingerprint(&self) -> Option<u64> {
-        self.demo_sim
+        self.pg_rpg_sim
             .as_ref()
-            .map(demo::simulation::TacticalSimulation::snapshot_fingerprint)
+            .map(pg_rpg::simulation::TacticalSimulation::snapshot_fingerprint)
     }
 
     pub fn process_request(&mut self, request: RuntimeRequest) -> (RuntimeResponse, Vec<String>) {
@@ -274,23 +274,23 @@ impl Runtime {
                     RuntimeResponse::Error(e)
                 }
             },
-            RuntimeRequest::GenerateDemoLog {
+            RuntimeRequest::GeneratePgRpgLog {
                 bundle,
                 atlas_json,
                 spritesheet_rgba,
                 spritesheet_width,
             } => {
                 let mut history = HistoryManager::new();
-                demo::generate_demo_log_bundle(
+                pg_rpg::generate_pg_rpg_log_bundle(
                     &mut history,
                     &bundle,
                     &atlas_json,
                     &spritesheet_rgba,
                     spritesheet_width,
                 );
-                RuntimeResponse::DemoLogGenerated(history)
+                RuntimeResponse::PgRpgLogGenerated(history)
             }
-            RuntimeRequest::StartDemoSimulation {
+            RuntimeRequest::StartPgRpgSimulation {
                 bundle,
                 atlas_json,
                 spritesheet_rgba,
@@ -317,18 +317,18 @@ impl Runtime {
                     Ok(history) => history,
                     Err(error) => return (RuntimeResponse::Error(error), logs),
                 };
-                self.demo_sim = session.simulation().ok();
-                self.demo_history = Some(history.clone());
+                self.pg_rpg_sim = session.simulation().ok();
+                self.pg_rpg_history = Some(history.clone());
                 self.rhai_session = Some(session);
-                self.demo_sequence_number = 0;
-                self.demo_completion_emitted = false;
+                self.pg_rpg_sequence_number = 0;
+                self.pg_rpg_completion_emitted = false;
                 self.next_npc_request_id = 1;
                 self.next_target_session_id = 1;
                 self.active_target_session = None;
 
-                RuntimeResponse::DemoSimulationStarted(history)
+                RuntimeResponse::PgRpgSimulationStarted(history)
             }
-            RuntimeRequest::StepDemoSimulation => self.step_demo_simulation(),
+            RuntimeRequest::StepPgRpgSimulation => self.step_pg_rpg_simulation(),
             RuntimeRequest::RequestMctsDecision {
                 request_id,
                 unit_id,
@@ -377,7 +377,7 @@ impl Runtime {
                 request_id,
                 unit_id,
             } => {
-                let Some(sim) = self.demo_sim.as_ref() else {
+                let Some(sim) = self.pg_rpg_sim.as_ref() else {
                     return (
                         RuntimeResponse::ActionRejected {
                             request_id,
@@ -413,7 +413,7 @@ impl Runtime {
                 layer,
             } => {
                 let destination = GridCell::new(hex, layer);
-                let Some(sim) = self.demo_sim.as_mut() else {
+                let Some(sim) = self.pg_rpg_sim.as_mut() else {
                     return (
                         RuntimeResponse::Error("Simulation not started".to_string()),
                         logs,
@@ -460,7 +460,8 @@ impl Runtime {
     }
 
     fn sync_rhai_session(&mut self) {
-        let (Some(session), Some(simulation)) = (self.rhai_session.as_mut(), self.demo_sim.clone())
+        let (Some(session), Some(simulation)) =
+            (self.rhai_session.as_mut(), self.pg_rpg_sim.clone())
         else {
             return;
         };

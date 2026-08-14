@@ -4,7 +4,7 @@ use futures::channel::mpsc;
 use pystral_core::history::HistoryManager;
 use pystral_gate::WorkerInput;
 use pystral_gate::render::utils::{EntityExt, RenderResultExt};
-use pystral_runtime::demo::generate_demo_log;
+use pystral_runtime::pg_rpg::generate_pg_rpg_log;
 
 #[test]
 fn debug_ui_log_errors() {
@@ -12,7 +12,7 @@ fn debug_ui_log_errors() {
 
     let (atlas_json, spritesheet_rgba, width) = pystral_gate::load_test_assets();
     let mut history = HistoryManager::new();
-    generate_demo_log(&mut history, &atlas_json, &spritesheet_rgba, width);
+    generate_pg_rpg_log(&mut history, &atlas_json, &spritesheet_rgba, width);
 
     let steps = history.log.len();
 

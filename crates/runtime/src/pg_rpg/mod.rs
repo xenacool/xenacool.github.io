@@ -8,14 +8,14 @@ pub use bundle::{AssetManifest, NamedBinaryAsset, NamedTextAsset, ScenarioBundle
 use pystral_core::history::HistoryManager;
 use pystral_core::log::Event;
 
-pub fn generate_demo_log(
+pub fn generate_pg_rpg_log(
     history: &mut HistoryManager,
     atlas_json: &str,
     spritesheet_rgba: &[u8],
     spritesheet_width: u32,
 ) {
     match runtime_bundle() {
-        Ok(bundle) => generate_demo_log_bundle(
+        Ok(bundle) => generate_pg_rpg_log_bundle(
             history,
             &bundle,
             atlas_json,
@@ -28,7 +28,7 @@ pub fn generate_demo_log(
     }
 }
 
-pub fn generate_demo_log_bundle(
+pub fn generate_pg_rpg_log_bundle(
     history: &mut HistoryManager,
     bundle: &ScenarioBundle,
     atlas_json: &str,
@@ -44,7 +44,7 @@ pub fn generate_demo_log_bundle(
             return;
         }
     };
-    if let Err(e) = scripting::generate_demo_log_rhai(
+    if let Err(e) = scripting::generate_pg_rpg_log_rhai(
         history,
         &script,
         atlas_json,
@@ -75,7 +75,7 @@ mod tests {
     use pystral_core::log::Event;
 
     #[test]
-    fn manifest_demo_promotes_arrow_and_rock_generation_to_rhai() {
+    fn manifest_pg_rpg_promotes_arrow_and_rock_generation_to_rhai() {
         let mut history = HistoryManager::new();
         let atlas_json = r#"{
             "width": 1,
@@ -87,14 +87,14 @@ mod tests {
                 "Mage": [{"x": 0, "y": 0, "w": 1, "h": 1}]
             }
         }"#;
-        generate_demo_log(&mut history, atlas_json, &[255, 255, 255, 255], 1);
+        generate_pg_rpg_log(&mut history, atlas_json, &[255, 255, 255, 255], 1);
         assert!(history.log.iter().any(|event| matches!(
             event,
-            Event::Log { msg } if msg.contains("Rhai demo NPC playout")
+            Event::Log { msg } if msg.contains("Rhai pg_rpg NPC playout")
         )));
         for event in &history.log {
             if let Event::Log { msg } = event {
-                eprintln!("demo log: {msg}");
+                eprintln!("pg_rpg log: {msg}");
             }
         }
 
@@ -108,7 +108,7 @@ mod tests {
                     None
                 }
             })
-            .expect("the Rhai demo must define the primitives collection");
+            .expect("the Rhai pg_rpg must define the primitives collection");
 
         let collection = AssetCollection::from_binary(collection_data);
         let arrow = collection

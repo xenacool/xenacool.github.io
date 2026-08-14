@@ -13,7 +13,7 @@ EXTENDS Naturals
 (***************************************************************************)
 
 CONSTANTS MaxRequests, MaxWork, MaxHeartbeat
-RequestKinds == {"StepDemoSimulation", "ResumeBoundary", "RequestMctsDecision",
+RequestKinds == {"StepPgRpgSimulation", "ResumeBoundary", "RequestMctsDecision",
                  "AcknowledgeAnimation"}
 States == {"Idle", "Simulating", "AwaitingPlayerDecision", "Failed"}
 
@@ -140,7 +140,7 @@ Heartbeat ==
 Stutter == UNCHANGED vars
 
 Next ==
-    \/ Submit("StepDemoSimulation")
+    \/ Submit("StepPgRpgSimulation")
     \/ Submit("ResumeBoundary")
     \/ Submit("RequestMctsDecision")
     \/ Submit("AcknowledgeAnimation")

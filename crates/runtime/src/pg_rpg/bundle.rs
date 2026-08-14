@@ -52,8 +52,10 @@ impl ScenarioBundle {
         let mut output = String::new();
         let mut visiting = BTreeSet::new();
         let mut loaded = BTreeSet::new();
+        // `web/scripts/pg_rpg.rhai` is the browser URL; inside a fetched
+        // ScenarioBundle the web prefix is intentionally stripped.
         self.append_rhai(
-            "scripts/demo.rhai",
+            "scripts/pg_rpg.rhai",
             &files,
             &mut visiting,
             &mut loaded,
@@ -242,7 +244,7 @@ mod tests {
         let bundle = ScenarioBundle {
             rhai_files: vec![
                 text(
-                    "scripts/demo.rhai",
+                    "scripts/pg_rpg.rhai",
                     "// @include \"common.rhai\"\nlet root = 1;",
                 ),
                 text("scripts/common.rhai", "let common = 2;"),
@@ -258,7 +260,7 @@ mod tests {
     #[test]
     fn reports_missing_and_cyclic_files() {
         let missing = ScenarioBundle {
-            rhai_files: vec![text("scripts/demo.rhai", "// @include \"missing.rhai\"")],
+            rhai_files: vec![text("scripts/pg_rpg.rhai", "// @include \"missing.rhai\"")],
             ..Default::default()
         };
         assert!(
@@ -269,8 +271,8 @@ mod tests {
         );
         let cyclic = ScenarioBundle {
             rhai_files: vec![
-                text("scripts/demo.rhai", "// @include \"a.rhai\""),
-                text("scripts/a.rhai", "// @include \"demo.rhai\""),
+                text("scripts/pg_rpg.rhai", "// @include \"a.rhai\""),
+                text("scripts/a.rhai", "// @include \"pg_rpg.rhai\""),
             ],
             ..Default::default()
         };
@@ -294,7 +296,7 @@ mod tests {
 
     #[cfg(not(target_arch = "wasm32"))]
     #[test]
-    fn loads_the_runtime_demo_script_from_manifest() {
+    fn loads_the_runtime_pg_rpg_script_from_manifest() {
         let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../web");
         let bundle = ScenarioBundle::from_web_directory(&root).unwrap();
         let script = bundle.root_rhai().unwrap();

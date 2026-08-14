@@ -32,7 +32,7 @@ fn action_input_is_routed_without_history_mutation() {
     assert!(
         matches!(response, RuntimeResponse::ActionInputRouted(direction) if direction == "confirm")
     );
-    assert!(runtime.demo_history.as_ref().unwrap().log.is_empty());
+    assert!(runtime.pg_rpg_history.as_ref().unwrap().log.is_empty());
 }
 
 #[test]
@@ -47,7 +47,7 @@ fn move_preview_returns_reachable_cells_without_history_mutation() {
     assert!(
         matches!(response, RuntimeResponse::MovePreview { request_id: 21, unit_id: 1, source, reachable, selected_destination: Some(_) } if source.hex == hexx::Hex::ZERO && !reachable.is_empty())
     );
-    assert!(runtime.demo_history.as_ref().unwrap().log.is_empty());
+    assert!(runtime.pg_rpg_history.as_ref().unwrap().log.is_empty());
 }
 
 #[test]
@@ -60,14 +60,14 @@ fn occupied_destination_rejects_stale_preview_without_history_mutation() {
         .add_unit(2, 2, "Mage", GridCell::new(hexx::Hex::new(4, 0), 0))
         .unwrap();
     let mut runtime = Runtime::new();
-    runtime.demo_sim = Some(TacticalSimulation::from_scenario(
+    runtime.pg_rpg_sim = Some(TacticalSimulation::from_scenario(
         scenario,
         npc_engine_core::MCTSConfiguration {
             seed: Some(42),
             ..Default::default()
         },
     ));
-    runtime.demo_history = Some(HistoryManager::new());
+    runtime.pg_rpg_history = Some(HistoryManager::new());
 
     let preview = runtime
         .process_request(RuntimeRequest::OpenMovePreview {
@@ -83,7 +83,7 @@ fn occupied_destination_rejects_stale_preview_without_history_mutation() {
         other => panic!("expected preview, got {other:?}"),
     };
     runtime
-        .demo_sim
+        .pg_rpg_sim
         .as_mut()
         .unwrap()
         .state
@@ -104,9 +104,9 @@ fn occupied_destination_rejects_stale_preview_without_history_mutation() {
     assert!(
         matches!(rejected, RuntimeResponse::ActionRejected { request_id: 31, reason: ActionError::IllegalDestination(cell) } if cell == GridCell::new(destination.hex, destination.layer))
     );
-    assert!(runtime.demo_history.as_ref().unwrap().log.is_empty());
+    assert!(runtime.pg_rpg_history.as_ref().unwrap().log.is_empty());
     assert_eq!(
-        runtime.demo_sim.as_ref().unwrap().state.agents[&npc_engine_core::AgentId(1)].position,
+        runtime.pg_rpg_sim.as_ref().unwrap().state.agents[&npc_engine_core::AgentId(1)].position,
         GridCell::new(hexx::Hex::ZERO, 0)
     );
 }

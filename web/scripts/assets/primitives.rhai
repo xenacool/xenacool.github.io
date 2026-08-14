@@ -1,4 +1,4 @@
-// Procedural primitive assets shared by the multifile demo scenario. Pixel
+// Procedural primitive assets shared by the multifile pg_rpg scenario. Pixel
 // generation is intentionally script-owned; Rust only accepts the generic
 // RGBA/normal spritestack payload and serializes it for the renderer.
 let atlas = load_atlas(atlas_json);
