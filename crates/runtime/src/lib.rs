@@ -109,6 +109,11 @@ pub enum RuntimeRequest {
         spritesheet_rgba: Vec<u8>,
         spritesheet_width: u32,
     },
+    RunRhaiCase {
+        workspace: pg_rpg::VirtualRhaiWorkspace,
+        case_name: String,
+        seed: u64,
+    },
     StepPgRpgSimulation,
     RequestMctsDecision {
         request_id: u64,
@@ -175,6 +180,12 @@ pub enum RuntimeResponse {
     GameCompleted {
         outcome: GameOutcome,
         history: HistoryManager,
+    },
+    RhaiCaseResult {
+        case_name: String,
+        seed: u64,
+        replay_header: Option<crate::rhai_session::RhaiReplayHeader>,
+        details: String,
     },
     MovePreview {
         request_id: u64,
@@ -329,6 +340,34 @@ impl Runtime {
                 RuntimeResponse::PgRpgSimulationStarted(history)
             }
             RuntimeRequest::StepPgRpgSimulation => self.step_pg_rpg_simulation(),
+            RuntimeRequest::RunRhaiCase {
+                workspace,
+                case_name,
+                seed,
+            } => {
+                let mut session = match RhaiSession::from_virtual_workspace(
+                    &workspace,
+                    HistoryManager::new(),
+                    String::new(),
+                    Vec::new(),
+                    0,
+                    seed,
+                ) {
+                    Ok(session) => session,
+                    Err(error) => {
+                        return (RuntimeResponse::Error(format!("Rhai Error: {error}")), logs);
+                    }
+                };
+                match session.run_named_case_json(&case_name) {
+                    Ok(details) => RuntimeResponse::RhaiCaseResult {
+                        case_name,
+                        seed,
+                        replay_header: session.replay_header(),
+                        details,
+                    },
+                    Err(error) => RuntimeResponse::Error(format!("Rhai case error: {error}")),
+                }
+            }
             RuntimeRequest::RequestMctsDecision {
                 request_id,
                 unit_id,

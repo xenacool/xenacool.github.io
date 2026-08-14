@@ -81,3 +81,35 @@ fn virtual_workspace_sessions_are_isolated_and_replayable() {
     assert_eq!(first.replay_header(), second.replay_header());
     assert_eq!(first.replay_header().unwrap().entrypoint, "mod/main.rhai");
 }
+
+#[test]
+fn authored_case_protocol_runs_through_typed_runtime_request() {
+    let workspace = VirtualRhaiWorkspace::new(
+        "main.rhai",
+        vec![NamedTextAsset {
+            path: "main.rhai".into(),
+            contents: r#"fn authored_case() { #{ status: "passed", value: 7 } }"#.into(),
+        }],
+    )
+    .unwrap();
+    let (response, logs) = crate::Runtime::new().process_request(crate::RuntimeRequest::RunRhaiCase {
+        workspace,
+        case_name: "authored_case".into(),
+        seed: 99,
+    });
+    assert!(logs.is_empty());
+    match response {
+        crate::RuntimeResponse::RhaiCaseResult {
+            case_name,
+            seed,
+            replay_header,
+            details,
+        } => {
+            assert_eq!(case_name, "authored_case");
+            assert_eq!(seed, 99);
+            assert_eq!(replay_header.unwrap().seed, 99);
+            assert!(details.contains("\"value\":7"));
+        }
+        other => panic!("unexpected response: {other:?}"),
+    }
+}

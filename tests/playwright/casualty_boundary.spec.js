@@ -88,7 +88,7 @@ async function loadScenario(page, scenario) {
       ),
     });
   });
-  await page.goto('/');
+  await page.goto('/game.html');
   await page.waitForFunction(() => window.app !== undefined, { timeout: 10000 });
 }
 

@@ -182,6 +182,7 @@ impl Runtime {
                     | RuntimeRequest::AcknowledgeAnimation { .. }
                     | RuntimeRequest::ResumeBoundary
                     | RuntimeRequest::ResumeRejected { .. }
+                    | RuntimeRequest::RunRhaiCase { .. }
             )
         {
             return None;
