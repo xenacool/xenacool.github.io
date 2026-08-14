@@ -1,7 +1,7 @@
 {
   "format": "pystral-gate-replay-v1",
   "replay": {
-    "entrypoint": "web/scripts/demo.rhai",
+    "entrypoint": "web/scripts/pg_rpg.rhai",
     "actionInputs": [
       "menu-job:primary",
       "menu-ability:9",

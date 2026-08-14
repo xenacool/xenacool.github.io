@@ -179,6 +179,9 @@ test('spamming Fireball with both player characters reaches victory', async ({ p
     throw new Error(`game did not complete; fireballs=${fireballs}; casts=${JSON.stringify([...castsByUnit])}; diagnostics=${JSON.stringify(await diagnostics(page))}`);
   }
   await expect(page.locator('#action-menu-status')).toHaveText('Game completed.');
+  await expect(page.locator('#game-completed')).toHaveAttribute('data-outcome', 'Victory');
+  await expect(page.locator('#game-completed')).toContainText('Victory');
+  await expect(page.locator('#action-menu')).toHaveAttribute('data-game-completed', 'true');
   await expect(page.locator('#log-container')).toContainText(/victory/i);
   expect(fireballs).toBeGreaterThanOrEqual(2);
   expect(castsByUnit.get('Unit 1') || 0).toBeGreaterThan(0);

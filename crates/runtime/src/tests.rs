@@ -1,12 +1,12 @@
 use super::*;
-use crate::demo::simulation::TacticalSimulation;
+use crate::pg_rpg::simulation::TacticalSimulation;
 use proptest::prelude::*;
 use pystral_core::log::{Event, GameOutcome};
 use pystral_games::{GridCell, SkirmishConfig};
 
 fn attach_rhai_session(runtime: &mut Runtime) {
-    let history = runtime.demo_history.clone().unwrap_or_default();
-    let simulation = runtime.demo_sim.clone().expect("test simulation");
+    let history = runtime.pg_rpg_history.clone().unwrap_or_default();
+    let simulation = runtime.pg_rpg_sim.clone().expect("test simulation");
     runtime.rhai_session = Some(
         crate::rhai_session::RhaiSession::from_simulation(history, simulation)
             .expect("test Rhai session"),
@@ -19,14 +19,14 @@ fn runtime_with_unit() -> Runtime {
         .add_unit(1, 1, "Caveman", GridCell::new(hexx::Hex::ZERO, 0))
         .unwrap();
     let mut runtime = Runtime::new();
-    runtime.demo_sim = Some(TacticalSimulation::from_scenario(
+    runtime.pg_rpg_sim = Some(TacticalSimulation::from_scenario(
         scenario,
         npc_engine_core::MCTSConfiguration {
             seed: Some(42),
             ..Default::default()
         },
     ));
-    runtime.demo_history = Some(HistoryManager::new());
+    runtime.pg_rpg_history = Some(HistoryManager::new());
     attach_rhai_session(&mut runtime);
     runtime
 }
@@ -34,8 +34,8 @@ fn runtime_with_unit() -> Runtime {
 #[test]
 fn deterministic_startup_step_produces_continuation() {
     // This is the offline equivalent of the first two simulation-worker
-    // messages: StartDemoSimulation has established the session, then one
-    // StepDemoSimulation crosses the script boundary. It isolates runtime
+    // messages: StartPgRpgSimulation has established the session, then one
+    // StepPgRpgSimulation crosses the script boundary. It isolates runtime
     // state progression from Gloo worker startup and bridge delivery.
     let mut scenario = SkirmishConfig::new(42);
     scenario.set_maximum_turn_count(2).unwrap();
@@ -46,7 +46,7 @@ fn deterministic_startup_step_produces_continuation() {
         .add_unit(2, 2, "Mage", GridCell::new(hexx::Hex::new(4, 0), 0))
         .unwrap();
     let mut runtime = Runtime::new();
-    runtime.demo_sim = Some(TacticalSimulation::from_scenario(
+    runtime.pg_rpg_sim = Some(TacticalSimulation::from_scenario(
         scenario,
         npc_engine_core::MCTSConfiguration {
             visits: 1,
@@ -55,14 +55,14 @@ fn deterministic_startup_step_produces_continuation() {
             ..Default::default()
         },
     ));
-    runtime.demo_history = Some(HistoryManager::new());
+    runtime.pg_rpg_history = Some(HistoryManager::new());
     attach_rhai_session(&mut runtime);
     assert_eq!(runtime.continuation(), RuntimeContinuation::AwaitBoundary);
 
     let response = (0..16)
         .map(|_| {
             runtime
-                .process_request(RuntimeRequest::StepDemoSimulation)
+                .process_request(RuntimeRequest::StepPgRpgSimulation)
                 .0
         })
         .find(|response| !matches!(response, RuntimeResponse::SimulationProgress { .. }))
@@ -70,7 +70,7 @@ fn deterministic_startup_step_produces_continuation() {
 
     assert!(matches!(
         response,
-        RuntimeResponse::DemoSimulationStepped(_)
+        RuntimeResponse::PgRpgSimulationStepped(_)
     ));
     assert!(
         matches!(
@@ -87,7 +87,7 @@ fn deterministic_startup_step_produces_continuation() {
 fn commit_move_returns_history_delta_but_rejection_does_not() {
     let mut runtime = runtime_with_unit();
     let initial_ct =
-        runtime.demo_sim.as_ref().unwrap().state.agents[&npc_engine_core::AgentId(1)].ct;
+        runtime.pg_rpg_sim.as_ref().unwrap().state.agents[&npc_engine_core::AgentId(1)].ct;
     let accepted = runtime
         .process_request(RuntimeRequest::CommitMove {
             request_id: 11,
@@ -113,13 +113,14 @@ fn commit_move_returns_history_delta_but_rejection_does_not() {
     assert!(
         matches!(accepted_history.log[1], Event::UpdateProperty { id: 1, ref property, value: pystral_core::log::PropertyValue::Float(layer) } if property == "layer" && layer == 0.0)
     );
-    assert_eq!(runtime.demo_history.as_ref().unwrap().log.len(), 3);
+    assert_eq!(runtime.pg_rpg_history.as_ref().unwrap().log.len(), 3);
     assert_eq!(
-        runtime.demo_sim.as_ref().unwrap().state.agents[&npc_engine_core::AgentId(1)].ct,
+        runtime.pg_rpg_sim.as_ref().unwrap().state.agents[&npc_engine_core::AgentId(1)].ct,
         initial_ct
     );
     assert_eq!(
-        runtime.demo_sim.as_ref().unwrap().state.agents[&npc_engine_core::AgentId(1)].action_points,
+        runtime.pg_rpg_sim.as_ref().unwrap().state.agents[&npc_engine_core::AgentId(1)]
+            .action_points,
         3
     );
     assert!(matches!(
@@ -142,7 +143,7 @@ fn commit_move_returns_history_delta_but_rejection_does_not() {
         rejected,
         RuntimeResponse::ActionRejected { request_id: 12, .. }
     ));
-    assert_eq!(runtime.demo_history.as_ref().unwrap().log.len(), 3);
+    assert_eq!(runtime.pg_rpg_history.as_ref().unwrap().log.len(), 3);
 }
 
 #[test]
@@ -170,7 +171,7 @@ fn wait_commits_turn_boundary_without_preview_state() {
         matches!(history.log.get(1), Some(Event::UnitStateChanged { unit_id: 1, action_points, .. }) if *action_points > 0)
     );
     assert!(matches!(history.log.get(2), Some(Event::SequenceNumber(_))));
-    assert_eq!(runtime.demo_history.as_ref().unwrap().log.len(), 3);
+    assert_eq!(runtime.pg_rpg_history.as_ref().unwrap().log.len(), 3);
 }
 
 #[test]
@@ -252,7 +253,7 @@ fn stale_animation_acknowledgment_does_not_advance_or_mutate_state() {
             ..
         } if expected == barrier_id
     ));
-    assert_eq!(runtime.demo_history.as_ref().unwrap().log.len(), 3);
+    assert_eq!(runtime.pg_rpg_history.as_ref().unwrap().log.len(), 3);
 }
 
 #[test]
@@ -296,12 +297,12 @@ fn completion_emits_typed_draw_once_at_the_configured_round_limit() {
     );
     simulation.record_completed_turn(npc_engine_core::AgentId(1));
     simulation.record_completed_turn(npc_engine_core::AgentId(2));
-    runtime.demo_sim = Some(simulation);
-    runtime.demo_history = Some(HistoryManager::new());
+    runtime.pg_rpg_sim = Some(simulation);
+    runtime.pg_rpg_history = Some(HistoryManager::new());
     attach_rhai_session(&mut runtime);
 
     let response = runtime
-        .process_request(RuntimeRequest::StepDemoSimulation)
+        .process_request(RuntimeRequest::StepPgRpgSimulation)
         .0;
     let history = match response {
         RuntimeResponse::GameCompleted { outcome, history } => {
@@ -319,7 +320,7 @@ fn completion_emits_typed_draw_once_at_the_configured_round_limit() {
         1
     );
 
-    let (response, logs) = runtime.process_request(RuntimeRequest::StepDemoSimulation);
+    let (response, logs) = runtime.process_request(RuntimeRequest::StepPgRpgSimulation);
     assert!(
         matches!(response, RuntimeResponse::Error(message) if message.contains("after game completion"))
     );
@@ -351,7 +352,7 @@ fn terminal_ability_fixture(
         .unwrap();
 
     let mut runtime = Runtime::new();
-    runtime.demo_sim = Some(TacticalSimulation::from_scenario(
+    runtime.pg_rpg_sim = Some(TacticalSimulation::from_scenario(
         scenario,
         npc_engine_core::MCTSConfiguration {
             visits: 1,
@@ -360,9 +361,9 @@ fn terminal_ability_fixture(
             ..Default::default()
         },
     ));
-    runtime.demo_history = Some(HistoryManager::new());
+    runtime.pg_rpg_history = Some(HistoryManager::new());
     runtime
-        .demo_sim
+        .pg_rpg_sim
         .as_mut()
         .unwrap()
         .state
@@ -377,7 +378,7 @@ fn terminal_ability_fixture(
         "Club Smash"
     };
     let ability_id = runtime
-        .demo_sim
+        .pg_rpg_sim
         .as_ref()
         .unwrap()
         .state
@@ -425,7 +426,7 @@ fn terminal_ability_proves_victory_through_commit_ack_and_boundary() {
         RuntimeResponse::GameCompleted { outcome, history } => {
             assert_eq!(outcome, GameOutcome::Victory { winning_team: 1 });
             assert_eq!(
-                runtime.demo_sim.as_ref().unwrap().state.agents[&npc_engine_core::AgentId(2)]
+                runtime.pg_rpg_sim.as_ref().unwrap().state.agents[&npc_engine_core::AgentId(2)]
                     .health,
                 0
             );
@@ -442,7 +443,7 @@ fn terminal_ability_proves_victory_through_commit_ack_and_boundary() {
         1
     );
     assert!(matches!(
-        runtime.process_request(RuntimeRequest::StepDemoSimulation).0,
+        runtime.process_request(RuntimeRequest::StepPgRpgSimulation).0,
         RuntimeResponse::Error(message) if message.contains("after game completion")
     ));
     assert!(matches!(
@@ -482,7 +483,7 @@ fn terminal_ability_proves_defeat_through_commit_ack_and_boundary() {
         RuntimeResponse::GameCompleted { outcome, .. } => {
             assert_eq!(outcome, GameOutcome::Defeat { winning_team: 2 });
             assert_eq!(
-                runtime.demo_sim.as_ref().unwrap().state.agents[&npc_engine_core::AgentId(1)]
+                runtime.pg_rpg_sim.as_ref().unwrap().state.agents[&npc_engine_core::AgentId(1)]
                     .health,
                 0
             );
@@ -502,7 +503,7 @@ fn turn_limit_contract_preserves_move_wait_barriers_and_completion() {
         .add_unit(2, 2, "Mage", GridCell::new(hexx::Hex::new(4, 0), 0))
         .unwrap();
     let mut runtime = Runtime::new();
-    runtime.demo_sim = Some(TacticalSimulation::from_scenario(
+    runtime.pg_rpg_sim = Some(TacticalSimulation::from_scenario(
         scenario,
         npc_engine_core::MCTSConfiguration {
             visits: 1,
@@ -511,16 +512,16 @@ fn turn_limit_contract_preserves_move_wait_barriers_and_completion() {
             ..Default::default()
         },
     ));
-    runtime.demo_history = Some(HistoryManager::new());
+    runtime.pg_rpg_history = Some(HistoryManager::new());
     attach_rhai_session(&mut runtime);
 
     let mut initial = runtime
-        .process_request(RuntimeRequest::StepDemoSimulation)
+        .process_request(RuntimeRequest::StepPgRpgSimulation)
         .0;
     loop {
         while matches!(initial, RuntimeResponse::SimulationProgress { .. }) {
             initial = runtime
-                .process_request(RuntimeRequest::StepDemoSimulation)
+                .process_request(RuntimeRequest::StepPgRpgSimulation)
                 .0;
         }
         let RuntimeContinuation::AwaitMctsDecision {
@@ -562,7 +563,7 @@ fn turn_limit_contract_preserves_move_wait_barriers_and_completion() {
     }
     assert!(matches!(
         initial,
-        RuntimeResponse::DemoSimulationStepped(ref history)
+        RuntimeResponse::PgRpgSimulationStepped(ref history)
             if history.log.iter().any(|event| matches!(
                 event,
                 Event::TurnStarted { unit_id: 1 }
@@ -600,7 +601,7 @@ fn turn_limit_contract_preserves_move_wait_barriers_and_completion() {
         other => panic!("expected committed move, got {other:?}"),
     };
     assert_eq!(
-        runtime.demo_sim.as_ref().unwrap().state.agents[&npc_engine_core::AgentId(1)].position,
+        runtime.pg_rpg_sim.as_ref().unwrap().state.agents[&npc_engine_core::AgentId(1)].position,
         GridCell::new(hexx::Hex::new(1, 0), 0)
     );
     assert!(matches!(
@@ -666,7 +667,7 @@ fn turn_limit_contract_preserves_move_wait_barriers_and_completion() {
             .count(),
         1
     );
-    assert_eq!(runtime.demo_sim.as_ref().unwrap().completed_rounds, 1);
+    assert_eq!(runtime.pg_rpg_sim.as_ref().unwrap().completed_rounds, 1);
     assert_eq!(runtime.continuation, RuntimeContinuation::Completed);
 }
 
@@ -681,7 +682,7 @@ fn repeated_player_npc_handoffs_reach_completion_exactly_once() {
         .add_unit(2, 2, "Mage", GridCell::new(hexx::Hex::new(4, 0), 0))
         .unwrap();
     let mut runtime = Runtime::new();
-    runtime.demo_sim = Some(TacticalSimulation::from_scenario(
+    runtime.pg_rpg_sim = Some(TacticalSimulation::from_scenario(
         scenario,
         npc_engine_core::MCTSConfiguration {
             visits: 1,
@@ -690,11 +691,11 @@ fn repeated_player_npc_handoffs_reach_completion_exactly_once() {
             ..Default::default()
         },
     ));
-    runtime.demo_history = Some(HistoryManager::new());
+    runtime.pg_rpg_history = Some(HistoryManager::new());
     attach_rhai_session(&mut runtime);
 
     let mut response = runtime
-        .process_request(RuntimeRequest::StepDemoSimulation)
+        .process_request(RuntimeRequest::StepPgRpgSimulation)
         .0;
     let mut player_turns = 0;
     let mut npc_turns = 0;
@@ -774,7 +775,7 @@ fn repeated_player_npc_handoffs_reach_completion_exactly_once() {
     assert_eq!(acknowledgments, player_turns + npc_turns);
     assert!(matches!(response, RuntimeResponse::GameCompleted { .. }));
     let completion_count = runtime
-        .demo_history
+        .pg_rpg_history
         .as_ref()
         .unwrap()
         .log
@@ -791,18 +792,18 @@ fn repeated_player_npc_handoffs_reach_completion_exactly_once() {
 #[test]
 fn empty_simulation_completes_as_draw() {
     let mut runtime = Runtime::new();
-    runtime.demo_sim = Some(TacticalSimulation::from_scenario(
+    runtime.pg_rpg_sim = Some(TacticalSimulation::from_scenario(
         SkirmishConfig::new(42),
         npc_engine_core::MCTSConfiguration {
             seed: Some(42),
             ..Default::default()
         },
     ));
-    runtime.demo_history = Some(HistoryManager::new());
+    runtime.pg_rpg_history = Some(HistoryManager::new());
     attach_rhai_session(&mut runtime);
 
     let response = runtime
-        .process_request(RuntimeRequest::StepDemoSimulation)
+        .process_request(RuntimeRequest::StepPgRpgSimulation)
         .0;
     assert!(matches!(
         response,

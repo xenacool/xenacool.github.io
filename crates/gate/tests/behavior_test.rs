@@ -4,13 +4,13 @@ use futures::channel::mpsc;
 use pystral_core::history::HistoryManager;
 use pystral_gate::WorkerInput;
 use pystral_gate::render::utils::{EntityExt, RenderResultExt};
-use pystral_runtime::demo::generate_demo_log;
+use pystral_runtime::pg_rpg::generate_pg_rpg_log;
 
 #[test]
 fn test_history_behavior_at_boundaries() {
     let (atlas_json, spritesheet_rgba, width) = pystral_gate::load_test_assets();
     let mut history = HistoryManager::new();
-    generate_demo_log(&mut history, &atlas_json, &spritesheet_rgba, width);
+    generate_pg_rpg_log(&mut history, &atlas_json, &spritesheet_rgba, width);
     let total_len = history.log.len();
 
     // Given history at the end
@@ -37,19 +37,19 @@ fn test_history_behavior_at_boundaries() {
 fn test_print_log() {
     let (atlas_json, spritesheet_rgba, width) = pystral_gate::load_test_assets();
     let mut history = HistoryManager::new();
-    generate_demo_log(&mut history, &atlas_json, &spritesheet_rgba, width);
+    generate_pg_rpg_log(&mut history, &atlas_json, &spritesheet_rgba, width);
     for (i, event) in history.log.iter().enumerate() {
         println!("{}: {:?}", i, event);
     }
 }
 
 #[test]
-fn test_demo_log_rendering_behavior_strict() {
+fn test_pg_rpg_log_rendering_behavior_strict() {
     let (tx, mut rx) = mpsc::unbounded::<WorkerInput>();
 
     let (atlas_json, spritesheet_rgba, width) = pystral_gate::load_test_assets();
     let mut history = HistoryManager::new();
-    generate_demo_log(&mut history, &atlas_json, &spritesheet_rgba, width);
+    generate_pg_rpg_log(&mut history, &atlas_json, &spritesheet_rgba, width);
 
     // Simulate each step of the log and check for UI log issues
     for i in 0..=history.log.len() {
@@ -115,7 +115,7 @@ fn test_demo_log_rendering_behavior_strict() {
 fn test_arrow_trajectory_arc() {
     let (atlas_json, spritesheet_rgba, width) = pystral_gate::load_test_assets();
     let mut history = HistoryManager::new();
-    generate_demo_log(&mut history, &atlas_json, &spritesheet_rgba, width);
+    generate_pg_rpg_log(&mut history, &atlas_json, &spritesheet_rgba, width);
 
     // Find the arrow FSM definition
     let arrow_fsm = history
@@ -199,7 +199,7 @@ fn test_arrow_trajectory_arc() {
 fn test_material_resolution_behavior() {
     let (atlas_json, spritesheet_rgba, width) = pystral_gate::load_test_assets();
     let mut history = HistoryManager::new();
-    generate_demo_log(&mut history, &atlas_json, &spritesheet_rgba, width);
+    generate_pg_rpg_log(&mut history, &atlas_json, &spritesheet_rgba, width);
 
     // Jump to after arrow is spawned (it uses a named material)
     history.jump_to(history.log.len());

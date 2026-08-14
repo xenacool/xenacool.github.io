@@ -170,7 +170,7 @@ impl Runtime {
         if let Err(message) = self.ensure_decision_boundary(unit_id) {
             return RuntimeResponse::Error(message);
         }
-        let Some(sim) = self.demo_sim.as_ref() else {
+        let Some(sim) = self.pg_rpg_sim.as_ref() else {
             return RuntimeResponse::Error("Simulation not started".into());
         };
         let (targets, disabled_reason) = sim.ability_targets(unit_id, ability_id);
@@ -183,7 +183,7 @@ impl Runtime {
             unit_id,
             ability_id,
             target_session_id,
-            state_version: self.demo_sequence_number,
+            state_version: self.pg_rpg_sequence_number,
             snapshot_fingerprint,
             targets,
             disabled_reason,
@@ -199,10 +199,10 @@ impl Runtime {
         let Some(provenance) = provenance else {
             return Err("Missing ability target provenance".to_string());
         };
-        if provenance.state_version != self.demo_sequence_number {
+        if provenance.state_version != self.pg_rpg_sequence_number {
             return Err("Stale ability target state version".to_string());
         }
-        let Some(simulation) = self.demo_sim.as_ref() else {
+        let Some(simulation) = self.pg_rpg_sim.as_ref() else {
             return Err("Simulation not started".to_string());
         };
         if provenance.snapshot_fingerprint != simulation.snapshot_fingerprint() {

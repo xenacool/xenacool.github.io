@@ -1,5 +1,5 @@
 use pystral_core::history::HistoryManager;
-use pystral_core::log::{AvailableActions, AvailableMove};
+use pystral_core::log::{AvailableActions, AvailableMove, GameOutcome};
 use pystral_games::ActionError;
 use pystral_runtime::{AbilityTarget, RuntimeRequest, RuntimeResponse, UnitStateInfo};
 use serde::{Deserialize, Serialize};
@@ -112,6 +112,8 @@ pub struct TransientState {
     #[serde(default)]
     pub input_enabled: bool,
     pub game_completed: bool,
+    #[serde(default)]
+    pub completion_outcome: Option<GameOutcome>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]

@@ -1,15 +1,15 @@
 use super::*;
-use crate::demo::simulation::TacticalSimulation;
+use crate::pg_rpg::simulation::TacticalSimulation;
 use pystral_core::history::HistoryManager;
 use pystral_core::log::Event;
 use pystral_games::{GridCell, SkirmishConfig};
 
 fn attach_rhai_session(runtime: &mut Runtime) {
-    let history = runtime.demo_history.clone().unwrap_or_default();
-    let simulation = runtime.demo_sim.clone().expect("test simulation");
+    let history = runtime.pg_rpg_history.clone().unwrap_or_default();
+    let simulation = runtime.pg_rpg_sim.clone().expect("test simulation");
     runtime.rhai_session = Some(
         crate::rhai_session::RhaiSession::new(
-            include_str!("../../../web/scripts/actions/demo_loop.rhai"),
+            include_str!("../../../web/scripts/actions/pg_rpg_loop.rhai"),
             history,
             String::new(),
             Vec::new(),
@@ -40,7 +40,7 @@ fn production_shaped_four_unit_playout_reaches_completion_past_history_379() {
     scenario.add_secondary_job(1, "Mage").unwrap();
 
     let mut runtime = Runtime::new();
-    runtime.demo_sim = Some(TacticalSimulation::from_scenario(
+    runtime.pg_rpg_sim = Some(TacticalSimulation::from_scenario(
         scenario,
         npc_engine_core::MCTSConfiguration {
             visits: 4,
@@ -49,18 +49,18 @@ fn production_shaped_four_unit_playout_reaches_completion_past_history_379() {
             ..Default::default()
         },
     ));
-    runtime.demo_history = Some(HistoryManager::new());
+    runtime.pg_rpg_history = Some(HistoryManager::new());
     attach_rhai_session(&mut runtime);
 
     let mut response = runtime
-        .process_request(RuntimeRequest::StepDemoSimulation)
+        .process_request(RuntimeRequest::StepPgRpgSimulation)
         .0;
     let mut max_history_len = 0;
     for step in 0..512u64 {
-        max_history_len = max_history_len.max(runtime.demo_history.as_ref().unwrap().log.len());
+        max_history_len = max_history_len.max(runtime.pg_rpg_history.as_ref().unwrap().log.len());
         while matches!(response, RuntimeResponse::SimulationProgress { .. }) {
             response = runtime
-                .process_request(RuntimeRequest::StepDemoSimulation)
+                .process_request(RuntimeRequest::StepPgRpgSimulation)
                 .0;
         }
         match runtime.continuation.clone() {
@@ -125,7 +125,7 @@ fn production_shaped_four_unit_playout_reaches_completion_past_history_379() {
         "playout did not exercise history 379"
     );
     assert_eq!(runtime.continuation, RuntimeContinuation::Completed);
-    let history = runtime.demo_history.as_ref().expect("demo history");
+    let history = runtime.pg_rpg_history.as_ref().expect("pg_rpg history");
     assert_eq!(
         history
             .log

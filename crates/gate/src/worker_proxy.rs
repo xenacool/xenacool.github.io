@@ -154,10 +154,10 @@ impl UnifiedWorker {
         }
         match pending {
             PendingSimulation::Initial => {
-                if let RuntimeResponse::DemoSimulationStarted(ref history) = response {
+                if let RuntimeResponse::PgRpgSimulationStarted(ref history) = response {
                     self.apply_history_transient(history);
                 }
-                // A freshly created demo can already be at the first player
+                // A freshly created pg_rpg can already be at the first player
                 // boundary.  In that case there is no step response whose
                 // normal completion path can clear `is_simulating`; leaving
                 // it set strands the UI in Simulating with the action menu

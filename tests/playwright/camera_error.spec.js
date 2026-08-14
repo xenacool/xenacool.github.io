@@ -17,7 +17,7 @@ test.describe('Camera Navigation Errors', () => {
     
     const navUp = page.locator('#nav-up');
     
-    // Ensure it's hidden initially (demo log usually only has right/left)
+    // Ensure it's hidden initially (pg_rpg log usually only has right/left)
     // await expect(navUp).toBeHidden(); // Playwright's toBeHidden checks CSS visibility: hidden or display: none
     
     // Force click it anyway

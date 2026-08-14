@@ -1,5 +1,5 @@
 use super::*;
-use crate::demo::simulation::TacticalSimulation;
+use crate::pg_rpg::simulation::TacticalSimulation;
 use npc_engine_core::Domain;
 use proptest::prelude::*;
 use pystral_games::{
@@ -31,7 +31,7 @@ fn query_returns_authoritative_legal_targets() {
         .id
         .0 as u64;
     let mut runtime = Runtime::new();
-    runtime.demo_sim = Some(simulation);
+    runtime.pg_rpg_sim = Some(simulation);
     runtime.continuation = RuntimeContinuation::AwaitPlayerDecision { unit_id: 1 };
     let response = runtime
         .process_request(RuntimeRequest::OpenAbilityTargets {
@@ -46,7 +46,7 @@ fn query_returns_authoritative_legal_targets() {
 }
 
 #[test]
-fn demo_mage_fireball_target_revalidates() {
+fn pg_rpg_mage_fireball_target_revalidates() {
     let mut scenario = SkirmishConfig::new(42);
     scenario
         .add_unit(1, 1, "Caveman", GridCell::new(hexx::Hex::new(0, 0), 0))
@@ -132,8 +132,8 @@ fn player_ability_commit_resolves_pending_reaction_before_fireball() {
         .push((mage, reaction, target));
 
     let mut runtime = Runtime::new();
-    runtime.demo_sim = Some(simulation);
-    runtime.demo_history = Some(HistoryManager::new());
+    runtime.pg_rpg_sim = Some(simulation);
+    runtime.pg_rpg_history = Some(HistoryManager::new());
     runtime.continuation = RuntimeContinuation::AwaitPlayerDecision { unit_id: 2 };
     let provenance = match runtime
         .process_request(RuntimeRequest::OpenAbilityTargets {
@@ -182,7 +182,7 @@ fn player_ability_commit_resolves_pending_reaction_before_fireball() {
     ));
     assert!(
         !runtime
-            .demo_sim
+            .pg_rpg_sim
             .as_ref()
             .unwrap()
             .state
@@ -190,7 +190,9 @@ fn player_ability_commit_resolves_pending_reaction_before_fireball() {
             .iter()
             .any(|(agent, _, _)| *agent == mage)
     );
-    assert!(runtime.demo_sim.as_ref().unwrap().state.agents[&target].health < target_health_before);
+    assert!(
+        runtime.pg_rpg_sim.as_ref().unwrap().state.agents[&target].health < target_health_before
+    );
 }
 
 proptest! {
@@ -382,8 +384,8 @@ fn ability_commit_rejects_forged_target_session() {
         .id
         .0 as u64;
     let mut runtime = Runtime::new();
-    runtime.demo_sim = Some(simulation);
-    runtime.demo_history = Some(HistoryManager::new());
+    runtime.pg_rpg_sim = Some(simulation);
+    runtime.pg_rpg_history = Some(HistoryManager::new());
     runtime.continuation = RuntimeContinuation::AwaitPlayerDecision { unit_id: 1 };
     let targets = runtime
         .process_request(RuntimeRequest::OpenAbilityTargets {
@@ -450,7 +452,7 @@ proptest! {
         let mut frontier = vec![0usize];
         while let Some(index) = frontier.pop() {
             for direction in ["up", "down", "left", "right", "layer-up", "layer-down"] {
-                let next = crate::demo::ability_targets::next_ability_target(&targets, index, direction);
+                let next = crate::pg_rpg::ability_targets::next_ability_target(&targets, index, direction);
                 if reached.insert(next) { frontier.push(next); }
             }
         }

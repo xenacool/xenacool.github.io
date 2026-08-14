@@ -27,7 +27,7 @@ for id in agents {
     history.set(id, "material", "grass");
 }
 
-let demo_map = new_hex_map();
+let pg_rpg_map = new_hex_map();
 {
     for q in -6..7 {
         for r in -6..7 {
@@ -36,20 +36,20 @@ let demo_map = new_hex_map();
             let is_wall = q == 0;
             let is_hole = is_wall && (r >= -1 && r <= 1);
             if is_wall && !is_hole {
-                for i in 0..10 { demo_map.add_tile(new_hex_tile(h, i * 0.5, 0.5, "rock")); }
+                for i in 0..10 { pg_rpg_map.add_tile(new_hex_tile(h, i * 0.5, 0.5, "rock")); }
             } else if is_wall && is_hole {
-                for i in 0..2 { demo_map.add_tile(new_hex_tile(h, i * 0.5, 0.5, "rock")); }
-                for i in 8..10 { demo_map.add_tile(new_hex_tile(h, i * 0.5, 0.5, "rock")); }
-                demo_map.add_tile(new_hex_tile(h, 1.0, 0.1, "dirt"));
+                for i in 0..2 { pg_rpg_map.add_tile(new_hex_tile(h, i * 0.5, 0.5, "rock")); }
+                for i in 8..10 { pg_rpg_map.add_tile(new_hex_tile(h, i * 0.5, 0.5, "rock")); }
+                pg_rpg_map.add_tile(new_hex_tile(h, 1.0, 0.1, "dirt"));
             } else {
-                demo_map.add_tile(new_hex_tile(h, 0.0, 0.1 + base_height, "grass"));
+                pg_rpg_map.add_tile(new_hex_tile(h, 0.0, 0.1 + base_height, "grass"));
             }
         }
     }
 }
 
 let world_id = history.spawn_entity(0, "world", hex(0, 0), ["map", "lighting"]);
-history.set(world_id, "map", demo_map);
+history.set(world_id, "map", pg_rpg_map);
 history.set(world_id, "lighting", default_lighting());
 history.set(world_id, "z", 0.0);
 history.set(world_id, "scale", 1.0);
@@ -132,7 +132,7 @@ arrow_request.set_time_step(0.05);
 arrow_request.set_max_steps(100);
 arrow_request.set_ground_cutoff(-5.0);
 arrow_request.set_collider(ball_collider(0.05));
-let arrow_tracks = generate_arrow_tracks(ts, arrow_request, demo_map);
+let arrow_tracks = generate_arrow_tracks(ts, arrow_request, pg_rpg_map);
 for track in arrow_tracks { flight.add_track(track); }
 arrow_fsm.add_state("flight", flight);
 history.define_fsm("arrow_fsm", arrow_fsm);

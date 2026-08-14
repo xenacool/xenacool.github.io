@@ -4,4 +4,4 @@
 // @include "assets/primitives.rhai"
 // @include "scenarios/skirmish.rhai"
 // @include "presentation/world.rhai"
-// @include "actions/demo_loop.rhai"
+// @include "actions/pg_rpg_loop.rhai"

@@ -20,7 +20,7 @@ impl Runtime {
         }
     }
 
-    pub(super) fn step_demo_simulation(&mut self) -> RuntimeResponse {
+    pub(super) fn step_pg_rpg_simulation(&mut self) -> RuntimeResponse {
         if self.continuation != RuntimeContinuation::AwaitBoundary {
             return RuntimeResponse::Error(
                 "Simulation step requested outside AwaitBoundary".to_string(),
@@ -37,8 +37,8 @@ impl Runtime {
             Ok(simulation) => simulation,
             Err(error) => return RuntimeResponse::Error(error),
         };
-        self.demo_sim = Some(simulation);
-        let (Some(sim), Some(history)) = (self.demo_sim.as_mut(), self.demo_history.as_mut())
+        self.pg_rpg_sim = Some(simulation);
+        let (Some(sim), Some(history)) = (self.pg_rpg_sim.as_mut(), self.pg_rpg_history.as_mut())
         else {
             return RuntimeResponse::Error("Simulation not started".to_string());
         };
@@ -51,7 +51,7 @@ impl Runtime {
         for id in &ready_agents {
             Self::append_turn_events(history, sim, *id);
         }
-        if sim.is_complete() && !self.demo_completion_emitted {
+        if sim.is_complete() && !self.pg_rpg_completion_emitted {
             let outcome = if sim.living_team_count() == 0 || sim.turn_limit_reached() {
                 GameOutcome::Draw
             } else if sim.winning_team() == Some(1) {
@@ -66,10 +66,10 @@ impl Runtime {
                 outcome: outcome.clone(),
                 completed_rounds: sim.completed_rounds,
             });
-            self.demo_completion_emitted = true;
+            self.pg_rpg_completion_emitted = true;
             self.continuation = RuntimeContinuation::Completed;
-            self.demo_sequence_number += 1;
-            history.push_and_apply(Event::SequenceNumber(self.demo_sequence_number));
+            self.pg_rpg_sequence_number += 1;
+            history.push_and_apply(Event::SequenceNumber(self.pg_rpg_sequence_number));
             let mut update = HistoryManager::new();
             update.log = history.log[start_idx..].to_vec();
             return RuntimeResponse::GameCompleted {
@@ -88,16 +88,16 @@ impl Runtime {
                     self.continuation = RuntimeContinuation::AwaitMctsDecision {
                         unit_id: agent.0 as u64,
                         request_id,
-                        state_version: self.demo_sequence_number,
+                        state_version: self.pg_rpg_sequence_number,
                     };
                 }
             });
         }
-        self.demo_sequence_number += 1;
-        history.push_and_apply(Event::SequenceNumber(self.demo_sequence_number));
+        self.pg_rpg_sequence_number += 1;
+        history.push_and_apply(Event::SequenceNumber(self.pg_rpg_sequence_number));
         let mut update = HistoryManager::new();
         update.log = history.log[start_idx..].to_vec();
-        RuntimeResponse::DemoSimulationStepped(update)
+        RuntimeResponse::PgRpgSimulationStepped(update)
     }
 
     pub(super) fn request_mcts_decision(
@@ -119,7 +119,7 @@ impl Runtime {
         {
             return RuntimeResponse::Error("Stale MCTS request".into());
         }
-        let Some(sim) = self.demo_sim.as_ref() else {
+        let Some(sim) = self.pg_rpg_sim.as_ref() else {
             return RuntimeResponse::Error("Simulation not started".into());
         };
         let action = sim
@@ -176,7 +176,7 @@ impl Runtime {
         {
             return RuntimeResponse::Error("Stale MCTS result".into());
         }
-        let Some(sim) = self.demo_sim.as_mut() else {
+        let Some(sim) = self.pg_rpg_sim.as_mut() else {
             return RuntimeResponse::Error("Simulation not started".into());
         };
         let action = match decision.action {
@@ -262,7 +262,7 @@ impl Runtime {
             };
             if let RuntimeResponse::ActionCommitted { history, .. } = &mut response {
                 history.push_and_apply(event.clone());
-                if let Some(full_history) = self.demo_history.as_mut() {
+                if let Some(full_history) = self.pg_rpg_history.as_mut() {
                     full_history.push_and_apply(event);
                 }
             }
@@ -277,14 +277,14 @@ impl Runtime {
         reaction: pystral_games::ReactionId,
         target: npc_engine_core::AgentId,
     ) -> RuntimeResponse {
-        let Some(history) = self.demo_history.as_mut() else {
+        let Some(history) = self.pg_rpg_history.as_mut() else {
             return RuntimeResponse::Error("Simulation not started".into());
         };
         let start_idx = history.log.len();
         history.push_and_apply(Event::Log {
             msg: format!("NPC unit {unit_id} resolved reaction {}", reaction.0),
         });
-        if let Some(sim) = self.demo_sim.as_ref() {
+        if let Some(sim) = self.pg_rpg_sim.as_ref() {
             for affected_id in [unit_id, target.0 as u64] {
                 if let Some(unit) = sim
                     .state
@@ -302,7 +302,7 @@ impl Runtime {
                 }
             }
         }
-        let barrier_id = Self::append_action_barrier(history, &mut self.demo_sequence_number);
+        let barrier_id = Self::append_action_barrier(history, &mut self.pg_rpg_sequence_number);
         let mut update = HistoryManager::new();
         update.log = history.log[start_idx..].to_vec();
         RuntimeResponse::ActionCommitted {
@@ -321,10 +321,10 @@ impl Runtime {
         target: npc_engine_core::AgentId,
         ability: pystral_games::AbilityId,
     ) -> RuntimeResponse {
-        let Some(history) = self.demo_history.as_mut() else {
+        let Some(history) = self.pg_rpg_history.as_mut() else {
             return RuntimeResponse::Error("Simulation not started".into());
         };
-        let Some(sim) = self.demo_sim.as_ref() else {
+        let Some(sim) = self.pg_rpg_sim.as_ref() else {
             return RuntimeResponse::Error("Simulation not started".into());
         };
         let start_idx = history.log.len();
@@ -356,7 +356,7 @@ impl Runtime {
                 });
             }
         }
-        let barrier_id = Self::append_action_barrier(history, &mut self.demo_sequence_number);
+        let barrier_id = Self::append_action_barrier(history, &mut self.pg_rpg_sequence_number);
         let mut update = HistoryManager::new();
         update.log = history.log[start_idx..].to_vec();
         RuntimeResponse::ActionCommitted {
@@ -374,7 +374,7 @@ impl Runtime {
         unit_id: u64,
         destination: GridCell,
     ) -> RuntimeResponse {
-        let Some(history) = self.demo_history.as_mut() else {
+        let Some(history) = self.pg_rpg_history.as_mut() else {
             return RuntimeResponse::Error("Simulation not started".into());
         };
         let start_idx = history.log.len();
@@ -388,7 +388,7 @@ impl Runtime {
             property: "layer".to_string(),
             value: pystral_core::log::PropertyValue::Float(destination.layer as f32),
         });
-        let barrier_id = Self::append_action_barrier(history, &mut self.demo_sequence_number);
+        let barrier_id = Self::append_action_barrier(history, &mut self.pg_rpg_sequence_number);
         let mut update = HistoryManager::new();
         update.log = history.log[start_idx..].to_vec();
         RuntimeResponse::ActionCommitted {
@@ -401,10 +401,10 @@ impl Runtime {
     }
 
     fn commit_npc_wait(&mut self, request_id: u64, unit_id: u64) -> RuntimeResponse {
-        let Some(history) = self.demo_history.as_mut() else {
+        let Some(history) = self.pg_rpg_history.as_mut() else {
             return RuntimeResponse::Error("Simulation not started".into());
         };
-        let Some(sim) = self.demo_sim.as_ref() else {
+        let Some(sim) = self.pg_rpg_sim.as_ref() else {
             return RuntimeResponse::Error("Simulation not started".into());
         };
         let start_idx = history.log.len();
@@ -424,7 +424,7 @@ impl Runtime {
                 action_points: unit.action_points,
             });
         }
-        let barrier_id = Self::append_action_barrier(history, &mut self.demo_sequence_number);
+        let barrier_id = Self::append_action_barrier(history, &mut self.pg_rpg_sequence_number);
         let mut update = HistoryManager::new();
         update.log = history.log[start_idx..].to_vec();
         RuntimeResponse::ActionCommitted {
@@ -438,7 +438,7 @@ impl Runtime {
 
     fn append_turn_events(
         history: &mut HistoryManager,
-        sim: &demo::simulation::TacticalSimulation,
+        sim: &pg_rpg::simulation::TacticalSimulation,
         id: npc_engine_core::AgentId,
     ) {
         let unit_id = id.0 as u64;
@@ -478,13 +478,13 @@ impl Runtime {
         history.push_and_apply(Event::TurnCompleted { unit_id });
     }
 
-    /// The Rhai session owns the resumable scheduler, while `demo_sim` is the
+    /// The Rhai session owns the resumable scheduler, while `pg_rpg_sim` is the
     /// runtime's authoritative action state. Keep the two copies identical at
     /// every action boundary so resuming the script cannot resurrect stale
     /// turn state.
     pub(super) fn sync_rhai_simulation(&mut self) {
         if let (Some(session), Some(simulation)) =
-            (self.rhai_session.as_mut(), self.demo_sim.as_ref())
+            (self.rhai_session.as_mut(), self.pg_rpg_sim.as_ref())
         {
             session.set_simulation(simulation.clone());
         }

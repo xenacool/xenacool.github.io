@@ -12,7 +12,7 @@ sequenceDiagram
     participant S as SimulationWorker
     participant R as Runtime
 
-    UI->>U: GenerateDemoLog / ActionNav
+    UI->>U: GeneratePgRpgLog / ActionNav
     U->>U: assign simulation request seq
     U->>UB: SimulationRequest(seq)
     Note over UB: trace: simulation bridge send request seq N

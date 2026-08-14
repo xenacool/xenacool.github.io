@@ -170,7 +170,7 @@ test.describe('Worker heartbeat diagnostics', () => {
     expect(download.suggestedFilename()).toMatch(/^pystral-replay-.*\.json$/);
     const exportData = JSON.parse(fs.readFileSync(await download.path(), 'utf8'));
     expect(exportData.format).toBe('pystral-gate-replay-v1');
-    expect(exportData.replay.entrypoint).toBe('web/scripts/demo.rhai');
+    expect(exportData.replay.entrypoint).toBe('web/scripts/pg_rpg.rhai');
     expect(exportData.replay.actionInputs).toEqual(expect.any(Array));
     expect(Object.keys(exportData).sort()).toEqual(['format', 'replay']);
     await expect(page.locator('#diagnostics-download-status')).toHaveText('Replay download started.');

@@ -1,7 +1,7 @@
 mod assets;
 mod rules;
 mod simulation;
-use crate::demo::simulation::TacticalSimulation;
+use crate::pg_rpg::simulation::TacticalSimulation;
 use glam::{Vec2, Vec3};
 use hexx::Hex;
 use npc_engine_core::MCTSConfiguration;
@@ -33,7 +33,7 @@ impl RhaiMctsConfig {
     }
 }
 
-pub fn generate_demo_log_rhai(
+pub fn generate_pg_rpg_log_rhai(
     history: &mut HistoryManager,
     script: &str,
     atlas_json: &str,
@@ -65,7 +65,7 @@ pub fn generate_demo_log_rhai(
         )?;
         let mut simulation = scope
             .get_value::<TacticalSimulation>("sim")
-            .ok_or_else(|| "Rhai demo did not define sim".to_string())?;
+            .ok_or_else(|| "Rhai pg_rpg did not define sim".to_string())?;
         // Static history generation exercises the same NPC action and
         // revalidation path as live play, but uses a bounded search budget so
         // asset/render tests do not run the production search repeatedly.
@@ -90,7 +90,7 @@ pub fn generate_demo_log_rhai(
                 simulation
                     .request_npc_decision(agent)
                     .or_else(|| simulation.fallback_npc_action(agent))
-                    .ok_or_else(|| format!("NPC {agent:?} has no legal demo action"))?
+                    .ok_or_else(|| format!("NPC {agent:?} has no legal pg_rpg action"))?
             };
             if simulation.apply_npc_action(agent, action).is_err() {
                 let fallback = simulation
@@ -106,9 +106,9 @@ pub fn generate_demo_log_rhai(
         if completed {
             let mut generated_history = scope
                 .get_value::<HistoryManager>("history")
-                .ok_or_else(|| "Rhai demo did not define history".to_string())?;
+                .ok_or_else(|| "Rhai pg_rpg did not define history".to_string())?;
             generated_history.push_and_apply(Event::Log {
-                msg: format!("Rhai demo full playout completed at boundary {step}"),
+                msg: format!("Rhai pg_rpg full playout completed at boundary {step}"),
             });
             scope.set_value("history", generated_history);
             break;
@@ -117,9 +117,9 @@ pub fn generate_demo_log_rhai(
     if !completed {
         let mut generated_history = scope
             .get_value::<HistoryManager>("history")
-            .ok_or_else(|| "Rhai demo did not define history".to_string())?;
+            .ok_or_else(|| "Rhai pg_rpg did not define history".to_string())?;
         generated_history.push_and_apply(Event::Log {
-            msg: "Rhai demo NPC playout reached its bounded preview window".to_string(),
+            msg: "Rhai pg_rpg NPC playout reached its bounded preview window".to_string(),
         });
         scope.set_value("history", generated_history);
     }
@@ -341,7 +341,7 @@ fn register_physics(engine: &mut Engine) {
     engine.register_fn(
         "generate_arrow_tracks",
         |ts: TrajectorySystem, request: TrajectoryRequest, map: HexMap| {
-            let tracks = crate::demo::animation::generate_arrow_tracks(&ts, request, &map);
+            let tracks = crate::pg_rpg::animation::generate_arrow_tracks(&ts, request, &map);
             let mut arr = rhai::Array::new();
             for t in tracks {
                 arr.push(rhai::Dynamic::from(t));

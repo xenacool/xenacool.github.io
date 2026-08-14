@@ -1,1 +1,1 @@
-{"format":"pystral-gate-replay-v1","replay":{"entrypoint":"web/scripts/demo.rhai","actionInputs":["menu-job:primary","menu-ability:9","confirm","wait","menu-job:primary","menu-job:secondary:0","menu-ability:9","confirm","wait"]}}
+{"format":"pystral-gate-replay-v1","replay":{"entrypoint":"web/scripts/pg_rpg.rhai","actionInputs":["menu-job:primary","menu-ability:9","confirm","wait","menu-job:primary","menu-job:secondary:0","menu-ability:9","confirm","wait"]}}

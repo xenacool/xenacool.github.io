@@ -12,7 +12,7 @@ impl Runtime {
         if let Err(error) = self.validate_ability_provenance(unit_id, ability_id, provenance) {
             return RuntimeResponse::Error(error);
         }
-        let Some(sim) = self.demo_sim.as_mut() else {
+        let Some(sim) = self.pg_rpg_sim.as_mut() else {
             return RuntimeResponse::Error("Simulation not started".to_string());
         };
         let simulation_before_request = sim.clone();
@@ -43,7 +43,7 @@ impl Runtime {
             }
         }
         let history_start_idx = self
-            .demo_history
+            .pg_rpg_history
             .as_ref()
             .map(|history| history.log.len())
             .unwrap_or_default();
@@ -83,7 +83,7 @@ impl Runtime {
             },
         };
         self.sync_rhai_simulation();
-        let Some(history) = self.demo_history.as_mut() else {
+        let Some(history) = self.pg_rpg_history.as_mut() else {
             return RuntimeResponse::Error("Simulation not started".to_string());
         };
         let start_idx = history_start_idx.min(history.log.len());
@@ -103,7 +103,7 @@ impl Runtime {
                 affected.len()
             ),
         });
-        if let Some(sim) = self.demo_sim.as_ref() {
+        if let Some(sim) = self.pg_rpg_sim.as_ref() {
             for affected_id in std::iter::once(unit_id).chain(affected.iter().copied()) {
                 if let Some(unit) = sim
                     .state
@@ -121,7 +121,7 @@ impl Runtime {
                 }
             }
         }
-        let barrier_id = Self::append_action_barrier(history, &mut self.demo_sequence_number);
+        let barrier_id = Self::append_action_barrier(history, &mut self.pg_rpg_sequence_number);
         let mut update = HistoryManager::new();
         update.log = history.log[start_idx..].to_vec();
         RuntimeResponse::ActionCommitted {
@@ -147,7 +147,7 @@ impl Runtime {
                     RuntimeContinuation::AwaitMctsDecision { .. }
                 );
                 self.continuation = RuntimeContinuation::AwaitAnimationAck {
-                    barrier_id: self.demo_sequence_number,
+                    barrier_id: self.pg_rpg_sequence_number,
                     unit_id: *unit_id,
                     ends_turn: action == "wait",
                     npc: npc_boundary,
@@ -170,7 +170,7 @@ impl Runtime {
         if self.continuation != RuntimeContinuation::Completed
             || !matches!(
                 request,
-                RuntimeRequest::StepDemoSimulation
+                RuntimeRequest::StepPgRpgSimulation
                     | RuntimeRequest::RequestMctsDecision { .. }
                     | RuntimeRequest::MctsDecisionReady { .. }
                     | RuntimeRequest::OpenMovePreview { .. }
@@ -199,7 +199,7 @@ impl Runtime {
         if let Err(message) = self.ensure_decision_boundary(unit_id) {
             return RuntimeResponse::Error(message);
         }
-        let move_result = match self.demo_sim.as_mut() {
+        let move_result = match self.pg_rpg_sim.as_mut() {
             Some(sim) => sim.commit_move(unit_id, destination),
             None => {
                 return RuntimeResponse::ActionRejected {
@@ -213,7 +213,7 @@ impl Runtime {
             Err(reason) => return RuntimeResponse::ActionRejected { request_id, reason },
         };
         self.sync_rhai_simulation();
-        let Some(history) = self.demo_history.as_mut() else {
+        let Some(history) = self.pg_rpg_history.as_mut() else {
             return RuntimeResponse::Error("Simulation not started".into());
         };
         let start_idx = history.log.len();
@@ -227,7 +227,7 @@ impl Runtime {
             property: "layer".to_string(),
             value: pystral_core::log::PropertyValue::Float(validated.destination.layer as f32),
         });
-        let barrier_id = Self::append_action_barrier(history, &mut self.demo_sequence_number);
+        let barrier_id = Self::append_action_barrier(history, &mut self.pg_rpg_sequence_number);
         let mut update = HistoryManager::new();
         update.log = history.log[start_idx..].to_vec();
         RuntimeResponse::ActionCommitted {
@@ -244,7 +244,7 @@ impl Runtime {
             return RuntimeResponse::Error(message);
         }
         let unit_snapshot = {
-            let Some(sim) = self.demo_sim.as_mut() else {
+            let Some(sim) = self.pg_rpg_sim.as_mut() else {
                 return RuntimeResponse::ActionRejected {
                     request_id,
                     reason: ActionError::UnknownAgent(npc_engine_core::AgentId(unit_id as u32)),
@@ -260,7 +260,7 @@ impl Runtime {
                 .map(|unit| (position, unit.health, unit.mana, unit.action_points))
         };
         self.sync_rhai_simulation();
-        let Some(history) = self.demo_history.as_mut() else {
+        let Some(history) = self.pg_rpg_history.as_mut() else {
             return RuntimeResponse::Error("Simulation not started".into());
         };
         let start_idx = history.log.len();
@@ -275,7 +275,7 @@ impl Runtime {
                 action_points,
             });
         }
-        let barrier_id = Self::append_action_barrier(history, &mut self.demo_sequence_number);
+        let barrier_id = Self::append_action_barrier(history, &mut self.pg_rpg_sequence_number);
         let mut update = HistoryManager::new();
         update.log = history.log[start_idx..].to_vec();
         RuntimeResponse::ActionCommitted {
@@ -301,7 +301,7 @@ impl Runtime {
                 // the normal boundary step so it emits the typed outcome and
                 // history event exactly once.
                 let game_complete = self
-                    .demo_sim
+                    .pg_rpg_sim
                     .as_ref()
                     .is_some_and(|simulation| simulation.is_complete());
                 let next = if game_complete || ends_turn {
@@ -312,7 +312,7 @@ impl Runtime {
                     RuntimeContinuation::AwaitMctsDecision {
                         unit_id,
                         request_id,
-                        state_version: self.demo_sequence_number,
+                        state_version: self.pg_rpg_sequence_number,
                     }
                 } else {
                     RuntimeContinuation::AwaitPlayerDecision { unit_id }
@@ -345,7 +345,7 @@ impl Runtime {
         // copy the complete simulation into Rhai. Synchronize only when the
         // continuation crosses back into script-owned orchestration.
         self.sync_rhai_session();
-        self.step_demo_simulation()
+        self.step_pg_rpg_simulation()
     }
 
     pub(super) fn resume_rejected(&mut self, request_id: u64) -> RuntimeResponse {

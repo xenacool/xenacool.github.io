@@ -11,7 +11,7 @@ use pystral_gate::worker::UnifiedWorker;
 use pystral_gate::{
     AppCommand, Envelope, ReliableInput, ReliableOutput, WorkerInput, WorkerOutput,
 };
-use pystral_runtime::demo::{AssetManifest, NamedBinaryAsset, NamedTextAsset, ScenarioBundle};
+use pystral_runtime::pg_rpg::{AssetManifest, NamedBinaryAsset, NamedTextAsset, ScenarioBundle};
 use pystral_runtime::{RuntimeRequest, RuntimeResponse};
 use std::sync::mpsc::{Sender, channel};
 use wasm_bindgen::JsCast;
@@ -20,8 +20,8 @@ use web_sys::WebGlRenderingContext as GL;
 
 fn simulation_request_label(request: &RuntimeRequest) -> &'static str {
     match request {
-        RuntimeRequest::StartDemoSimulation { .. } => "StartDemoSimulation",
-        RuntimeRequest::StepDemoSimulation => "StepDemoSimulation",
+        RuntimeRequest::StartPgRpgSimulation { .. } => "StartPgRpgSimulation",
+        RuntimeRequest::StepPgRpgSimulation => "StepPgRpgSimulation",
         RuntimeRequest::RequestMctsDecision { .. } => "RequestMctsDecision",
         RuntimeRequest::MctsDecisionReady { .. } => "MctsDecisionReady",
         RuntimeRequest::AcknowledgeAnimation { .. } => "AcknowledgeAnimation",
@@ -34,7 +34,7 @@ fn simulation_request_label(request: &RuntimeRequest) -> &'static str {
         RuntimeRequest::TestOccupyDestination { .. } => "TestOccupyDestination",
         RuntimeRequest::ResumeBoundary => "ResumeBoundary",
         RuntimeRequest::ResumeRejected { .. } => "ResumeRejected",
-        RuntimeRequest::SolveIk(_) | RuntimeRequest::GenerateDemoLog { .. } => "Other",
+        RuntimeRequest::SolveIk(_) | RuntimeRequest::GeneratePgRpgLog { .. } => "Other",
     }
 }
 
@@ -125,13 +125,13 @@ pub fn run_app() -> Result<AppHandle, JsValue> {
     let (app_tx, app_rx) = channel();
     let (worker_tx, mut worker_rx) = futures::channel::mpsc::unbounded::<WorkerInput>();
 
-    // Request initial demo log immediately
+    // Request initial pg_rpg log immediately
     let worker_tx_clone = worker_tx.clone();
     wasm_bindgen_futures::spawn_local(async move {
         match fetch_assets().await {
             Ok((bundle, atlas_json, spritesheet_rgba, width)) => {
                 let _ = worker_tx_clone.unbounded_send(WorkerInput::RuntimeRequest(
-                    RuntimeRequest::GenerateDemoLog {
+                    RuntimeRequest::GeneratePgRpgLog {
                         bundle,
                         atlas_json,
                         spritesheet_rgba,
@@ -244,13 +244,13 @@ pub fn run_app() -> Result<AppHandle, JsValue> {
                         update_log_ui(messages, total_errors, total_info);
                     }
                     WorkerOutput::RuntimeResponse(res) => match *res {
-                        RuntimeResponse::DemoLogGenerated(history) => {
+                        RuntimeResponse::PgRpgLogGenerated(history) => {
                             let _ = app_tx_clone.send(AppCommand::UpdateHistory(Box::new(history)));
                         }
-                        RuntimeResponse::DemoSimulationStarted(history) => {
+                        RuntimeResponse::PgRpgSimulationStarted(history) => {
                             let _ = app_tx_clone.send(AppCommand::UpdateHistory(Box::new(history)));
                         }
-                        RuntimeResponse::DemoSimulationStepped(history) => {
+                        RuntimeResponse::PgRpgSimulationStepped(history) => {
                             let _ = app_tx_clone.send(AppCommand::AppendHistory(Box::new(history)));
                         }
                         RuntimeResponse::GameCompleted { history, .. } => {
@@ -409,6 +409,8 @@ async fn fetch_assets() -> Result<(ScenarioBundle, String, Vec<u8>, u32), JsValu
     let yarn_manifest = fetch_manifest("web/assets/yarnscript/manifest.json").await?;
     let mut bundle = ScenarioBundle::default();
     for path in script_manifest.files {
+        // Fetch from the browser-facing web/scripts URL while retaining the
+        // bundle's internal scripts/ namespace for Rhai include resolution.
         let web_path = format!("web/scripts/{path}");
         bundle.rhai_files.push(NamedTextAsset {
             path: format!("scripts/{path}"),

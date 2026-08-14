@@ -3,7 +3,7 @@ use super::*;
 #[test]
 fn test_invalid_script() {
     let mut history = HistoryManager::new();
-    let result = generate_demo_log_rhai(&mut history, "syntax error here", "", &[], 0);
+    let result = generate_pg_rpg_log_rhai(&mut history, "syntax error here", "", &[], 0);
     assert!(result.is_err());
 }
 
@@ -11,7 +11,7 @@ fn test_invalid_script() {
 fn test_runtime_error_script() {
     let mut history = HistoryManager::new();
     let script = "history.spawn(\"world\", hex(0, 0)); history.non_existent_function();";
-    let result = generate_demo_log_rhai(&mut history, script, "", &[], 0);
+    let result = generate_pg_rpg_log_rhai(&mut history, script, "", &[], 0);
     assert!(result.is_err());
 }
 
@@ -37,7 +37,7 @@ fn ct_threshold_setter_accepts_valid_values_and_rejects_invalid_values() {
 #[test]
 fn maximum_turn_count_setter_accepts_unlimited_and_explicit_values() {
     let mut engine = rhai::Engine::new();
-    crate::demo::scripting::register_all(&mut engine);
+    crate::pg_rpg::scripting::register_all(&mut engine);
     engine
         .eval::<()>("let config = new_skirmish_config(42); config.set_maximum_turn_count(12);")
         .unwrap();
