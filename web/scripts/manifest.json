@@ -1,1 +1,1 @@
-{"files":["pg_rpg.rhai","common.rhai","assets/primitives.rhai","scenarios/skirmish.rhai","scenarios/casualty.rhai","presentation/world.rhai","actions/pg_rpg_loop.rhai"]}
+{"files":["pg_rpg.rhai","common.rhai","assets/primitives.rhai","scenarios/skirmish.rhai","scenarios/casualty.rhai","scenarios/defeat.rhai","scenarios/draw.rhai","presentation/world.rhai","actions/pg_rpg_loop.rhai"]}
