@@ -370,24 +370,24 @@ impl Task<TacticalDomain> for ReactionTask {
                     101 => {
                         // Counter-Swing (Caveman)
                         if let Some(target_unit) = ctx.state_diff.get_agent_mut(attacker_id) {
-                            target_unit.health -= 10;
+                            target_unit.apply_damage(10);
                         }
                     }
                     201 => {
                         // Mana Shield (Mage)
-                        unit.health += 5;
+                        unit.apply_healing(5);
                         unit.mana -= 10;
                     }
                     301 => {
                         // Vengeful Spirit (Necromancer)
                         if let Some(target_unit) = ctx.state_diff.get_agent_mut(attacker_id) {
-                            target_unit.health -= 15;
+                            target_unit.apply_damage(15);
                         }
                     }
                     401 => {
                         // Bone Splinter (Skeleton)
                         if let Some(target_unit) = ctx.state_diff.get_agent_mut(attacker_id) {
-                            target_unit.health -= 5;
+                            target_unit.apply_damage(5);
                         }
                     }
                     _ => {}

@@ -173,7 +173,9 @@ impl GlobalDomain for TacticalDomain {
         }
         for (agent_id, unit_state) in &diff.agents {
             let mut unit_state = unit_state.clone();
-            unit_state.health = unit_state.health.min(unit_state.derived_stats.health_max);
+            unit_state.health = unit_state
+                .health
+                .clamp(0, unit_state.derived_stats.health_max);
             unit_state.mana = unit_state.mana.min(unit_state.derived_stats.mana_max);
             unit_state.action_points = unit_state
                 .action_points

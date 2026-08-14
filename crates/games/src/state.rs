@@ -157,10 +157,27 @@ impl UnitState {
             mana_max: self.stats.intelligence * 5,
             action_points_max: self.derived_stats.action_points_max,
         };
-        self.health = self.health.min(self.derived_stats.health_max);
+        self.health = self.health.clamp(0, self.derived_stats.health_max);
         self.mana = self.mana.min(self.derived_stats.mana_max);
         self.action_points = self.action_points.min(self.derived_stats.action_points_max);
         Ok(())
+    }
+
+    /// Apply resolved damage at the unit-state boundary. Damage effects must
+    /// never expose a negative health value to schedulers, evaluators, or
+    /// replay consumers.
+    pub fn apply_damage(&mut self, damage: i32) {
+        self.health = self.health.clamp(0, self.derived_stats.health_max);
+        self.health = self.health.saturating_sub(damage.max(0)).max(0);
+    }
+
+    /// Apply resolved healing while preserving the unit health invariant.
+    pub fn apply_healing(&mut self, amount: i32) {
+        self.health = self.health.clamp(0, self.derived_stats.health_max);
+        self.health = self
+            .health
+            .saturating_add(amount.max(0))
+            .min(self.derived_stats.health_max);
     }
 
     pub fn available_action_abilities(

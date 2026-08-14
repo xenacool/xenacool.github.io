@@ -325,6 +325,7 @@ fn test_damage_calculation() {
         range: 1,
         delivery: AbilityDelivery::Melee,
         area_radius: 0,
+        programs: RPGPrograms::new(),
     };
 
     // STR is 10. 10 * 1.5 = 15.0. Plus1 raises total attack power to 16.
@@ -384,6 +385,7 @@ fn test_unknown_stat_logging() {
         range: 1,
         delivery: AbilityDelivery::Melee,
         area_radius: 0,
+        programs: RPGPrograms::new(),
     };
 
     let damage = calculate_damage(

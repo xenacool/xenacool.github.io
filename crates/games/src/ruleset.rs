@@ -3,7 +3,8 @@ use std::collections::HashMap;
 
 use crate::{
     AbilityDef, AbilityDelivery, AbilityId, DefinitionIdAllocator, JobDef, JobId, MoveProgram,
-    MovementId, PassiveDef, PassiveId, ReactionDef, ReactionId, ScriptJobDef, TagDef, TagId,
+    MovementId, PassiveDef, PassiveId, RPGPrograms, ReactionDef, ReactionId, ScriptJobDef, TagDef,
+    TagId, validate_rpg_programs,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -45,6 +46,7 @@ pub struct ScriptAbilityDef {
     pub scaling: Vec<(String, f32)>,
     pub emit_tags: Vec<(String, u8)>,
     pub consume_tags: Vec<(String, u8, u8)>,
+    pub programs: RPGPrograms,
 }
 
 impl ScriptAbilityDef {
@@ -114,6 +116,11 @@ impl ScriptAbilityDef {
                     ))
                 })
                 .collect::<Result<_, String>>()?,
+            programs: {
+                validate_rpg_programs(&self.programs)
+                    .map_err(|error| format!("Ability {}: {error}", self.name))?;
+                self.programs.clone()
+            },
         })
     }
 }

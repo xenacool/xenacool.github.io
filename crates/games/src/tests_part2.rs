@@ -59,6 +59,30 @@
     }
 
     #[test]
+    fn health_oracle_normalizes_lethal_and_overhealing_state_changes() {
+        let mut scenario = SkirmishConfig::new(42);
+        scenario
+            .add_unit(1, 1, "Caveman", GridCell::new(hexx::Hex::ZERO, 0))
+            .unwrap();
+        let mut state = scenario.build_state().unwrap();
+        let mut unit = state.agents.remove(&AgentId(1)).unwrap();
+
+        unit.health = 1;
+        unit.apply_damage(100);
+        assert_eq!(unit.health, 0);
+
+        unit.apply_healing(1_000);
+        assert_eq!(unit.health, unit.derived_stats.health_max);
+
+        unit.health = -25;
+        let mut diff = TacticalDiff::default();
+        diff.agents.insert(AgentId(1), unit);
+        let snapshot = state.clone();
+        TacticalDomain::apply(&mut state, &snapshot, &diff);
+        assert_eq!(state.agents[&AgentId(1)].health, 0);
+    }
+
+    #[test]
     fn skirmish_config_validates_and_exposes_ct_threshold() {
         let mut config = SkirmishConfig::new(42);
         assert_eq!(config.ct_threshold, 100);
@@ -212,6 +236,21 @@
             .find(|ability| ability.name == "Arcane Shield")
             .map(|ability| ability.id)
             .unwrap();
+        let shield = &state.ability_registry[&shield_id];
+        let shield_program = shield
+            .programs
+            .get(&RPGHook::OnAbilityResolve)
+            .and_then(|programs| programs.first())
+            .expect("Arcane Shield must have an authored resolve program");
+        assert_eq!(
+            shield_program.execute_on_ability_resolve().unwrap(),
+            vec![TimedModifier {
+                stat: DerivedStat::ArmorClass,
+                amount: 4,
+                remaining_turns: 2,
+                stacking: ModifierStacking::RefreshReplace,
+            }]
+        );
         let health_before = state.agents[&AgentId(2)].health;
         let tasks = TacticalDomain::get_tasks(Context::with_state_and_diff(
             0,

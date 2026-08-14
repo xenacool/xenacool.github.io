@@ -15,6 +15,38 @@ impl Runtime {
         let Some(sim) = self.demo_sim.as_mut() else {
             return RuntimeResponse::Error("Simulation not started".to_string());
         };
+        let simulation_before_request = sim.clone();
+        // A reaction is a mandatory response in the tactical rules.  The
+        // player protocol does not expose reaction choices yet, so consume a
+        // pending reaction for this unit before revalidating the ability the
+        // player selected.  Keeping this in the commit path is important: a
+        // reaction can have been queued after the target menu was opened.
+        let forced_reaction = sim
+            .state
+            .reaction_queue
+            .iter()
+            .find(|(agent, _, _)| *agent == npc_engine_core::AgentId(unit_id as u32))
+            .map(
+                |(_, reaction, target)| pystral_games::TacticalDisplayAction::Reaction {
+                    reaction: *reaction,
+                    target: *target,
+                },
+            );
+        if let Some(reaction) = forced_reaction.as_ref() {
+            if let Err(error) =
+                sim.apply_npc_action(npc_engine_core::AgentId(unit_id as u32), reaction.clone())
+            {
+                return RuntimeResponse::ActionRejected {
+                    request_id,
+                    reason: ActionError::IllegalAbility(error),
+                };
+            }
+        }
+        let history_start_idx = self
+            .demo_history
+            .as_ref()
+            .map(|history| history.log.len())
+            .unwrap_or_default();
         let affected = match target {
             RuntimeAbilityTarget::Unit { unit_id: target_id } => {
                 let action = pystral_games::TacticalDisplayAction::Ability {
@@ -24,6 +56,10 @@ impl Runtime {
                 if let Err(error) =
                     sim.apply_npc_action(npc_engine_core::AgentId(unit_id as u32), action)
                 {
+                    // The reaction and ability form one player request.  Do
+                    // not leave a partially committed reaction behind if the
+                    // final authoritative ability check fails.
+                    *sim = simulation_before_request.clone();
                     return RuntimeResponse::ActionRejected {
                         request_id,
                         reason: ActionError::IllegalAbility(error),
@@ -38,6 +74,7 @@ impl Runtime {
             ) {
                 Ok(affected) => affected.into_iter().map(|id| id.0 as u64).collect(),
                 Err(error) => {
+                    *sim = simulation_before_request.clone();
                     return RuntimeResponse::ActionRejected {
                         request_id,
                         reason: ActionError::IllegalAbility(error),
@@ -49,7 +86,17 @@ impl Runtime {
         let Some(history) = self.demo_history.as_mut() else {
             return RuntimeResponse::Error("Simulation not started".to_string());
         };
-        let start_idx = history.log.len();
+        let start_idx = history_start_idx.min(history.log.len());
+        if let Some(pystral_games::TacticalDisplayAction::Reaction { reaction, target }) =
+            forced_reaction
+        {
+            history.push_and_apply(Event::Log {
+                msg: format!(
+                    "Unit {unit_id} resolved forced reaction {} against {}",
+                    reaction.0, target.0
+                ),
+            });
+        }
         history.push_and_apply(Event::Log {
             msg: format!(
                 "Unit {unit_id} used ability {ability_id} on {} target(s)",
