@@ -104,7 +104,7 @@ test.describe('Worker heartbeat diagnostics', () => {
     // focused run, but this still reproduces liveness in tens of seconds
     // rather than the hundreds required by the original failure.
     test.setTimeout(30000);
-    await page.goto('/');
+  await page.goto('/game.html');
     await page.waitForFunction(() => window.app !== undefined, { timeout: 8000 });
     await page.check('#debug-checkbox');
 
@@ -123,7 +123,7 @@ test.describe('Worker heartbeat diagnostics', () => {
 
   test('reports each simulation bridge startup checkpoint', async ({ page }) => {
     test.setTimeout(20000);
-    await page.goto('/');
+    await page.goto('/game.html');
     await page.waitForFunction(() => window.app !== undefined, { timeout: 8000 });
     await page.waitForFunction(
       () => window.__pystralDebugTraces.some(trace => trace.includes('simulation bridge send request seq')),
@@ -145,7 +145,7 @@ test.describe('Worker heartbeat diagnostics', () => {
 
   test('copies the UI log and downloads an export-shaped history case', async ({ page }) => {
     test.setTimeout(20000);
-    await page.goto('/');
+    await page.goto('/game.html');
     await page.waitForFunction(() => window.app !== undefined, { timeout: 8000 });
     await page.waitForFunction(() => window.__pystralHistoryExportSource !== null, {
       timeout: 8000,
@@ -178,7 +178,7 @@ test.describe('Worker heartbeat diagnostics', () => {
 
   test('does not continuously serialize history while debug is closed', async ({ page }) => {
     test.setTimeout(20000);
-    await page.goto('/');
+    await page.goto('/game.html');
     await page.waitForFunction(() => window.__pystralHistoryExportUpdateCount > 0, {
       timeout: 8000,
     });
@@ -203,7 +203,7 @@ test.describe('Worker heartbeat diagnostics', () => {
 
   test('keeps answering probes while control input is flooded', async ({ page }) => {
     test.setTimeout(30000);
-    await page.goto('/');
+    await page.goto('/game.html');
     await page.waitForFunction(() => window.app !== undefined, { timeout: 8000 });
     await page.waitForFunction(() => window.__pystralHeartbeatReceivedAt > 0, {
       timeout: 8000,
@@ -237,7 +237,7 @@ test.describe('Worker heartbeat diagnostics', () => {
   test.skip('secondary ability followed by Wait does not starve in Simulating', async ({ page }) => {
     // Reduced from pystral-history-2026-08-12T20-16-54.118Z.json.
     test.setTimeout(45000);
-    await page.goto('/');
+    await page.goto('/game.html');
     await page.waitForFunction(() => window.app !== undefined, { timeout: 8000 });
     try {
     await page.waitForFunction(() => {
@@ -279,7 +279,7 @@ test.describe('Worker heartbeat diagnostics', () => {
 
   test('replay fixture keeps heartbeat alive during secondary confirm', async ({ page }) => {
     test.setTimeout(60000);
-    await page.goto('/');
+    await page.goto('/game.html');
     await page.waitForFunction(() => window.app !== undefined, { timeout: 8000 });
     await page.waitForFunction(() => window.__pystralHeartbeatReceivedAt > 0, {
       timeout: 8000,

@@ -11,8 +11,10 @@ use pystral_gate::worker::UnifiedWorker;
 use pystral_gate::{
     AppCommand, Envelope, ReliableInput, ReliableOutput, WorkerInput, WorkerOutput,
 };
-use pystral_runtime::pg_rpg::{AssetManifest, NamedBinaryAsset, NamedTextAsset, ScenarioBundle};
-use pystral_runtime::{RuntimeRequest, RuntimeResponse};
+use pystral_runtime::pg_rpg::{
+    AssetManifest, NamedBinaryAsset, NamedTextAsset, ScenarioBundle, VirtualRhaiWorkspace,
+};
+use pystral_runtime::{Runtime, RuntimeRequest, RuntimeResponse};
 use std::sync::mpsc::{Sender, channel};
 use wasm_bindgen::JsCast;
 use wasm_bindgen::prelude::*;
@@ -35,6 +37,46 @@ fn simulation_request_label(request: &RuntimeRequest) -> &'static str {
         RuntimeRequest::ResumeBoundary => "ResumeBoundary",
         RuntimeRequest::ResumeRejected { .. } => "ResumeRejected",
         RuntimeRequest::SolveIk(_) | RuntimeRequest::GeneratePgRpgLog { .. } => "Other",
+        RuntimeRequest::RunRhaiCase { .. } => "RunRhaiCase",
+    }
+}
+
+#[wasm_bindgen]
+pub fn run_rhai_case(workspace_json: &str, case_name: &str, seed: u64) -> String {
+    let result = (|| -> Result<serde_json::Value, String> {
+        let workspace: VirtualRhaiWorkspace = serde_json::from_str(workspace_json)
+            .map_err(|error| format!("Invalid workspace JSON: {error}"))?;
+        let request = RuntimeRequest::RunRhaiCase {
+            workspace,
+            case_name: case_name.to_string(),
+            seed,
+        };
+        let (response, logs) = Runtime::new().process_request(request);
+        match response {
+            RuntimeResponse::RhaiCaseResult {
+                case_name,
+                seed,
+                replay_header,
+                details,
+            } => Ok(serde_json::json!({
+                "status": "passed",
+                "case_name": case_name,
+                "seed": seed,
+                "replay_header": replay_header,
+                "details": serde_json::from_str::<serde_json::Value>(&details)
+                    .map_err(|error| format!("Invalid case details: {error}"))?,
+            })),
+            RuntimeResponse::Error(error) => Err(error),
+            other => Err(format!(
+                "Unexpected Rhai response: {other:?}; logs={logs:?}"
+            )),
+        }
+    })();
+    match result {
+        Ok(value) => serde_json::to_string(&value).unwrap_or_else(|error| {
+            format!(r#"{{"status":"error","error":"serialization failed: {error}"}}"#)
+        }),
+        Err(error) => serde_json::json!({ "status": "error", "error": error }).to_string(),
     }
 }
 

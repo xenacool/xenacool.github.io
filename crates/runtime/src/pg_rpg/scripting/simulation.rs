@@ -241,6 +241,29 @@ fn register_simulation_runtime(engine: &mut Engine) {
             .map(|(k, v)| (k.into(), v.into()))
             .collect::<rhai::Map>()
     });
+    engine.register_fn(
+        "get_snapshot_fingerprint",
+        |sim: &mut TacticalSimulation| sim.snapshot_fingerprint() as i64,
+    );
+    engine.register_fn(
+        "get_npc_decision_trace",
+        |sim: &mut TacticalSimulation, id: i64| {
+            let action = sim
+                .request_npc_decision(npc_engine_core::AgentId(id as u32))
+                .and_then(|action| serde_json::to_string(&action).ok())
+                .unwrap_or_default();
+            [
+                (
+                    "snapshot_fingerprint".into(),
+                    (sim.snapshot_fingerprint() as i64).into(),
+                ),
+                ("agent_id".into(), id.into()),
+                ("action".into(), action.into()),
+            ]
+            .into_iter()
+            .collect::<rhai::Map>()
+        },
+    );
     engine.register_fn("list_agents", |sim: &mut TacticalSimulation| {
         sim.list_agents()
             .into_iter()

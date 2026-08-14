@@ -2,7 +2,7 @@ const { test, expect } = require('@playwright/test');
 
 test.describe('Camera Navigation Errors', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/');
+  await page.goto('/game.html');
     // Wait for the app to be initialized
     await page.waitForFunction(() => window.app !== undefined, { timeout: 10000 });
   });

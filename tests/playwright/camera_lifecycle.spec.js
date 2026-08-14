@@ -2,7 +2,7 @@ const { test, expect } = require('@playwright/test');
 
 test.describe('Camera lifecycle playback', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/');
+  await page.goto('/game.html');
     await page.waitForFunction(() => window.app !== undefined, { timeout: 15000 });
   });
 

@@ -2,7 +2,7 @@ const { test, expect } = require('@playwright/test');
 
 test('should show action buttons and log clicks', async ({ page }) => {
   page.on('console', msg => console.log('BROWSER CONSOLE:', msg.text()));
-  await page.goto('/');
+  await page.goto('/game.html');
   await page.waitForFunction(() => window.app !== undefined, { timeout: 10000 });
 
   const actionControls = page.locator('#action-controls');

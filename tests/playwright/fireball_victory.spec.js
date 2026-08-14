@@ -175,7 +175,7 @@ test('deterministic pg_rpg Fireball reaches victory after one lethal cast', asyn
       ),
     });
   });
-  await page.goto('/');
+  await page.goto('/game.html');
   await page.waitForFunction(() => window.app !== undefined, { timeout: 8000 });
   await waitForSettledPlayerBoundary(page);
   expect(await playFireball(page)).toEqual({ played: true });

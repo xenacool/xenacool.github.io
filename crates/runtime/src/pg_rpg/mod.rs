@@ -4,7 +4,9 @@ pub mod bundle;
 pub mod scripting;
 pub mod simulation;
 
-pub use bundle::{AssetManifest, NamedBinaryAsset, NamedTextAsset, ScenarioBundle};
+pub use bundle::{
+    AssetManifest, NamedBinaryAsset, NamedTextAsset, ScenarioBundle, VirtualRhaiWorkspace,
+};
 use pystral_core::history::HistoryManager;
 use pystral_core::log::Event;
 

@@ -1,4 +1,4 @@
-.PHONY: install build-wasm run-web deploy test test-fast test-browser test-browser-sequential test-static test-integration nuke-deploy playwright-install playwright-test playwright reproduce-spritestacks tla-check tla-worker-check tla-ui-check tla-animation-ack-check tla-simulation-bridge-check tla-casualty-boundary-check debug-fixture-check
+.PHONY: install build-wasm run-web deploy test test-fast test-browser test-browser-sequential test-static test-integration test-rhai nuke-deploy playwright-install playwright-test playwright reproduce-spritestacks tla-check tla-worker-check tla-ui-check tla-animation-ack-check tla-simulation-bridge-check tla-casualty-boundary-check debug-fixture-check
 
 TEST_LOG := .make-test.log
 # Keep the default feedback loop bounded. Browser and model tests should be
@@ -202,6 +202,9 @@ test-static: check-func-length check-loc debug-fixture-check
 
 test-integration:
 	cargo test
+
+test-rhai:
+	cargo test -p pystral_runtime --lib rhai_test_authoring
 
 
 run-web: build-wasm

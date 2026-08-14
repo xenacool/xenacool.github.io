@@ -15,7 +15,7 @@ async function waitForHistoryToSettle(page) {
 }
 
 test('move preview exposes accessible status and returns to the top-level menu', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/game.html');
   await page.waitForFunction(() => window.app !== undefined, { timeout: 10000 });
 
   const menu = page.getByRole('region', { name: /unit \d+ action menu/i });
@@ -36,7 +36,7 @@ test('move preview exposes accessible status and returns to the top-level menu',
 });
 
 test('ability descriptors open legal targets and restore focus through the menu path', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/game.html');
   await page.waitForFunction(() => window.app !== undefined, { timeout: 10000 });
 
   const menu = page.getByRole('region', { name: /unit \d+ action menu/i });
@@ -57,7 +57,7 @@ test('ability descriptors open legal targets and restore focus through the menu 
 });
 
 test('committed abilities report target count and restore the originating ability focus', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/game.html');
   await page.waitForFunction(() => window.app !== undefined, { timeout: 10000 });
 
   const menu = page.getByRole('region', { name: /unit \d+ action menu/i });
@@ -84,7 +84,7 @@ test('cell-area abilities expose cell centers and report affected targets', asyn
   // ability case, but must still finish in seconds rather than heartbeat
   // timeouts measured in minutes.
   test.setTimeout(45000);
-  await page.goto('/');
+  await page.goto('/game.html');
   await page.waitForFunction(() => window.app !== undefined, { timeout: 10000 });
 
   const menu = page.getByRole('region', { name: /unit \d+ action menu/i });
@@ -130,7 +130,7 @@ test('cell-area abilities expose cell centers and report affected targets', asyn
 });
 
 test('move preview exposes gameplay layer navigation separately from camera navigation', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/game.html');
   await page.waitForFunction(() => window.app !== undefined, { timeout: 10000 });
 
   await expect(page.getByRole('region', { name: /unit \d+ action menu/i })).toBeVisible({ timeout: 40000 });
@@ -143,7 +143,7 @@ test('move preview exposes gameplay layer navigation separately from camera navi
 });
 
 test('stale preview rejection refreshes to the source cell', async ({ page }) => {
-  await page.goto('/?test=1');
+  await page.goto('/game.html?test=1');
   await page.waitForFunction(() => window.app !== undefined, { timeout: 10000 });
 
   const status = page.getByRole('status');
@@ -166,7 +166,7 @@ test('stale preview rejection refreshes to the source cell', async ({ page }) =>
 });
 
 test('committed movement waits for its animation barrier', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/game.html');
   await page.waitForFunction(() => window.app !== undefined, { timeout: 10000 });
 
   const menu = page.getByRole('region', { name: /unit \d+ action menu/i });
@@ -186,7 +186,7 @@ test('committed movement waits for its animation barrier', async ({ page }) => {
 });
 
 test('Wait ends the player turn through the action protocol', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/game.html');
   await page.waitForFunction(() => window.app !== undefined, { timeout: 10000 });
 
   const menu = page.getByRole('region', { name: /unit \d+ action menu/i });
@@ -200,11 +200,12 @@ test('Wait ends the player turn through the action protocol', async ({ page }) =
 
   await expect(page.locator('#log-container')).toContainText('Action input: wait', { timeout: 10000 });
   await expect(menu).toBeVisible({ timeout: 10000 });
+  await waitForHistoryToSettle(page);
   await expect(status).toContainText(/Focus a job and press Enter to open its abilities\./);
 });
 
 test('Wait hands a human-controlled unit back through the same boundary', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/game.html');
   await page.waitForFunction(() => window.app !== undefined, { timeout: 10000 });
 
   const menu = page.getByRole('region', { name: /unit \d+ action menu/i });
@@ -222,7 +223,7 @@ test('Wait hands a human-controlled unit back through the same boundary', async 
 
 test('consecutive Wait actions continue through repeated player turns', async ({ page }) => {
   test.setTimeout(60000);
-  await page.goto('/');
+  await page.goto('/game.html');
   await page.waitForFunction(() => window.app !== undefined, { timeout: 10000 });
 
   const menu = page.getByRole('region', { name: /unit \d+ action menu/i });
@@ -245,7 +246,7 @@ test('consecutive Wait actions continue through repeated player turns', async ({
 });
 
 test('settled Wait leaves the UI log free of errors', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/game.html');
   await page.waitForFunction(() => window.app !== undefined, { timeout: 10000 });
 
   await waitForHistoryToSettle(page);

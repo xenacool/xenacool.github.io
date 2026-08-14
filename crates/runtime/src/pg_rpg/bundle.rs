@@ -38,6 +38,48 @@ pub struct NamedBinaryAsset {
     pub contents: Vec<u8>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct VirtualRhaiWorkspace {
+    pub entrypoint: String,
+    pub files: Vec<NamedTextAsset>,
+}
+
+impl VirtualRhaiWorkspace {
+    pub fn new(entrypoint: impl Into<String>, files: Vec<NamedTextAsset>) -> Result<Self, String> {
+        let workspace = Self {
+            entrypoint: normalize_path(&entrypoint.into())?,
+            files,
+        };
+        let bundle = ScenarioBundle {
+            rhai_files: workspace.files.clone(),
+            ..Default::default()
+        };
+        bundle.root_rhai_at(&workspace.entrypoint)?;
+        Ok(workspace)
+    }
+
+    pub fn compile(&self) -> Result<String, String> {
+        ScenarioBundle {
+            rhai_files: self.files.clone(),
+            ..Default::default()
+        }
+        .root_rhai_at(&self.entrypoint)
+    }
+
+    pub fn source_fingerprint(&self) -> u64 {
+        use std::hash::{Hash, Hasher};
+        let mut files = self.files.clone();
+        files.sort_by(|left, right| left.path.cmp(&right.path));
+        let mut hasher = std::collections::hash_map::DefaultHasher::new();
+        self.entrypoint.hash(&mut hasher);
+        for file in files {
+            file.path.hash(&mut hasher);
+            file.contents.hash(&mut hasher);
+        }
+        hasher.finish()
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq, Eq)]
 pub struct ScenarioBundle {
     pub rhai_files: Vec<NamedTextAsset>,
@@ -48,19 +90,18 @@ pub struct ScenarioBundle {
 
 impl ScenarioBundle {
     pub fn root_rhai(&self) -> Result<String, String> {
+        self.root_rhai_at("scripts/pg_rpg.rhai")
+    }
+
+    pub fn root_rhai_at(&self, entrypoint: &str) -> Result<String, String> {
         let files = self.rhai_index()?;
+        let entrypoint = normalize_path(entrypoint)?;
         let mut output = String::new();
         let mut visiting = BTreeSet::new();
         let mut loaded = BTreeSet::new();
         // `web/scripts/pg_rpg.rhai` is the browser URL; inside a fetched
         // ScenarioBundle the web prefix is intentionally stripped.
-        self.append_rhai(
-            "scripts/pg_rpg.rhai",
-            &files,
-            &mut visiting,
-            &mut loaded,
-            &mut output,
-        )?;
+        self.append_rhai(&entrypoint, &files, &mut visiting, &mut loaded, &mut output)?;
         Ok(output)
     }
 
@@ -254,6 +295,42 @@ mod tests {
         assert_eq!(
             bundle.root_rhai().unwrap(),
             "let common = 2;\nlet root = 1;\n"
+        );
+    }
+
+    #[test]
+    fn compiles_a_virtual_workspace_from_an_arbitrary_entrypoint() {
+        let workspace = VirtualRhaiWorkspace::new(
+            "mod/main.rhai",
+            vec![
+                text(
+                    "mod/main.rhai",
+                    "// @include \"lib/rules.rhai\"\nlet main = 1;",
+                ),
+                text("mod/lib/rules.rhai", "let rules = 2;"),
+            ],
+        )
+        .unwrap();
+        assert_eq!(
+            workspace.compile().unwrap(),
+            "let rules = 2;\nlet main = 1;\n"
+        );
+    }
+
+    #[test]
+    fn rejects_virtual_workspace_traversal_and_missing_entrypoints() {
+        assert!(
+            VirtualRhaiWorkspace::new("../main.rhai", vec![text("main.rhai", "let main = 1;")],)
+                .unwrap_err()
+                .contains("Invalid asset path")
+        );
+        assert!(
+            VirtualRhaiWorkspace::new(
+                "mod/missing.rhai",
+                vec![text("mod/main.rhai", "let main = 1;")],
+            )
+            .unwrap_err()
+            .contains("Missing Rhai file")
         );
     }
 
