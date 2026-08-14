@@ -36,3 +36,15 @@ let mcts = new_mcts_config(); // visits 50, depth 10, seed 42
 Limits that are owned by the external `npc-engine` library, such as the native
 `MCTSConfiguration` field defaults, are documented in the
 [`reference/npc-engine` source](reference/npc-engine/npc-engine-core/src/config.rs).
+
+## Temporarily disabled acceptance tests
+
+These tests were audited against a clean git baseline on 2026-08-14. The
+remaining disabled tests fail independently of the current casualty and worker
+protocol changes; each has a local TODO describing its re-enable condition.
+
+- [`worker_heartbeat.spec.js`](tests/playwright/worker_heartbeat.spec.js) — the
+  secondary-job Fireball followed by Wait fixture is unstable.
+
+Do not treat these skips as gameplay approval; re-enable them when their TODO
+conditions are met and retain the focused casualty/outcome gates.

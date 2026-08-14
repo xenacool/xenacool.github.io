@@ -5,6 +5,10 @@ const path = require('path');
 
 const OUTPUT_DIR = path.join(process.cwd(), 'assets/spritestacks');
 const GLB_DIR = path.join(process.cwd(), 'assets/gltf/jobs');
+const LAYER_COUNTS = JSON.parse(fs.readFileSync(
+  path.join(process.cwd(), 'tests/playwright/spritestack_layers.json'),
+  'utf8',
+));
 
 test.describe('Sprite Stack Validation', () => {
   const glbFiles = fs.readdirSync(GLB_DIR).filter(f => f.endsWith('.glb'));
@@ -12,7 +16,9 @@ test.describe('Sprite Stack Validation', () => {
   glbFiles.forEach(file => {
     const modelName = path.basename(file, '.glb');
 
-    test(`Model "${modelName}" should have 300 layers`, async () => {
+    const layerSpec = LAYER_COUNTS[modelName] || LAYER_COUNTS.default;
+    const expectedLayers = layerSpec.count;
+    test(`Model "${modelName}" should have ${expectedLayers} layers`, async () => {
       const modelOutputDir = path.join(OUTPUT_DIR, modelName);
       
       // Check directory existence
@@ -21,10 +27,10 @@ test.describe('Sprite Stack Validation', () => {
       const layers = fs.readdirSync(modelOutputDir).filter(f => f.startsWith('layer-') && f.endsWith('.png'));
       
       // Verify count
-      expect(layers.length).toBe(300);
+      expect(layers.length).toBe(expectedLayers);
 
       // Verify naming and file content
-      for (let i = 1; i <= 300; i++) {
+      for (let i = layerSpec.first; i < layerSpec.first + expectedLayers; i++) {
         const layerPath = path.join(modelOutputDir, `layer-${i}.png`);
         expect(fs.existsSync(layerPath), `Layer ${i} should exist`).toBe(true);
         

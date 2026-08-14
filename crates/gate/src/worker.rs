@@ -116,6 +116,17 @@ fn status_for(
     }
 }
 
+pub(crate) fn animation_ack_resumes_boundary(
+    wait: bool,
+    continuation: &RuntimeContinuation,
+) -> bool {
+    wait || matches!(continuation, RuntimeContinuation::AwaitBoundary)
+}
+
+pub(crate) fn simulation_response_matches(expected: u64, received: u64) -> bool {
+    expected == received
+}
+
 impl Reactor for UnifiedWorker {
     type Scope = ReactorScope<ReliableInput, ReliableOutput>;
 
@@ -600,6 +611,35 @@ mod tests {
             WorkerStatus::WaitingForAnimationAck
         );
         assert_eq!(status_for(true, true, true, true), WorkerStatus::Completed);
+    }
+
+    #[test]
+    fn terminal_animation_ack_resumes_boundary_even_without_wait() {
+        assert!(animation_ack_resumes_boundary(
+            false,
+            &RuntimeContinuation::AwaitBoundary
+        ));
+        assert!(animation_ack_resumes_boundary(
+            true,
+            &RuntimeContinuation::AwaitPlayerDecision { unit_id: 1 }
+        ));
+        assert!(!animation_ack_resumes_boundary(
+            false,
+            &RuntimeContinuation::AwaitPlayerDecision { unit_id: 1 }
+        ));
+    }
+
+    proptest::proptest! {
+        #[test]
+        fn stale_simulation_response_never_matches(
+            expected in 0u64..1000,
+            received in 0u64..1000,
+        ) {
+            prop_assert_eq!(
+                simulation_response_matches(expected, received),
+                expected == received,
+            );
+        }
     }
 
     proptest::proptest! {

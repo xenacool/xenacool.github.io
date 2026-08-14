@@ -254,6 +254,7 @@ pub fn run_app() -> Result<AppHandle, JsValue> {
                             let _ = app_tx_clone.send(AppCommand::AppendHistory(Box::new(history)));
                         }
                         RuntimeResponse::GameCompleted { history, .. } => {
+                            record_game_completed_response();
                             let _ = app_tx_clone.send(AppCommand::AppendHistory(Box::new(history)));
                         }
                         RuntimeResponse::ActionCommitted {
@@ -344,6 +345,9 @@ extern "C" {
 
     #[wasm_bindgen(js_namespace = window)]
     fn record_debug_trace(message: String);
+
+    #[wasm_bindgen(js_namespace = window)]
+    fn record_game_completed_response();
 
     #[wasm_bindgen(js_namespace = window)]
     fn update_worker_heartbeat(latest_seq: u64, latest_input_seq: u64, status: String);

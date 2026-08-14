@@ -274,6 +274,10 @@
     };
 
     window.__pystralHistoryExportSource = null;
+    window.__pystralGameCompletedResponseCount = 0;
+    window.record_game_completed_response = () => {
+        window.__pystralGameCompletedResponseCount += 1;
+    };
     window.__pystralHistoryExportUpdateCount = 0;
     window.__pystralReplayInputs = [];
     window.refreshReplayExport = () => {
@@ -345,9 +349,20 @@
         window.previewActive = Boolean(state.preview);
         menu.dataset.gameCompleted = state.game_completed ? 'true' : 'false';
         const outcome = state.completion_outcome;
-        const outcomeName = outcome
-            ? (Object.keys(outcome)[0] || '')
-            : '';
+        // serde_wasm_bindgen represents unit-like Rust enum variants as their
+        // numeric discriminant, while data-bearing variants are keyed
+        // objects. Normalize both forms at the DOM boundary so the semantic
+        // completion contract is stable for Draw as well as Victory/Defeat.
+        const serializedOutcomeName = outcome ? (Object.keys(outcome)[0] || '') : '';
+        const outcomeName = outcome === false
+            ? 'Draw'
+            : typeof outcome === 'string'
+            ? (['Victory', 'Defeat', 'Draw'].includes(outcome)
+                ? outcome
+                : (Number(outcome) === 0 ? 'Draw' : ''))
+            : typeof outcome === 'number'
+            ? (outcome === 0 ? 'Draw' : '')
+            : (serializedOutcomeName === '0' ? 'Draw' : serializedOutcomeName);
         completion.hidden = !state.game_completed;
         completion.dataset.outcome = outcomeName;
         completion.textContent = state.game_completed ? `${outcomeName} — Game completed.` : '';

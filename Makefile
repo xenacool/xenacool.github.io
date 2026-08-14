@@ -1,4 +1,4 @@
-.PHONY: install build-wasm run-web deploy test nuke-deploy playwright-install playwright-test playwright reproduce-spritestacks tla-check tla-worker-check tla-ui-check tla-animation-ack-check tla-simulation-bridge-check tla-casualty-boundary-check debug-fixture-check
+.PHONY: install build-wasm run-web deploy test test-fast test-browser test-browser-sequential test-static test-integration nuke-deploy playwright-install playwright-test playwright reproduce-spritestacks tla-check tla-worker-check tla-ui-check tla-animation-ack-check tla-simulation-bridge-check tla-casualty-boundary-check debug-fixture-check
 
 TEST_LOG := .make-test.log
 # Keep the default feedback loop bounded. Browser and model tests should be
@@ -135,6 +135,7 @@ check-func-length:
 				in_fn=0; \
 			} \
 		}' "$$file" > /tmp/func_check_$$$$.txt || failures="$$failures $$file"; \
+		cat /tmp/func_check_$$$$.txt; \
 		all_funcs="$$all_funcs$$(cat /tmp/func_check_$$$$.txt)\n"; \
 		rm -f /tmp/func_check_$$$$.txt; \
 	done; \
@@ -169,7 +170,7 @@ test:
 			"$$@" || { echo "FAILED: $$label"; status=1; }; \
 		}; \
 		run_step tla-check $(MAKE) --no-print-directory tla-check; \
-		run_step playwright-test $(MAKE) --no-print-directory playwright-test; \
+		run_step playwright-test $(MAKE) --no-print-directory test-browser; \
 		run_step check-func-length $(MAKE) --no-print-directory check-func-length; \
 		run_step check-loc $(MAKE) --no-print-directory check-loc; \
 		run_step debug-fixture-check $(MAKE) --no-print-directory debug-fixture-check; \
@@ -179,6 +180,28 @@ test:
 	echo "Test output written to $(TEST_LOG)"; \
 	if [ $$status -eq 124 ]; then echo "ERROR: make test exceeded $(TEST_BUDGET_SECONDS)s"; fi; \
 	exit $$status
+
+# Independently invocable layers keep the aggregate timeout from hiding which
+# verification class is slow or failing.
+test-fast: tla-check check-func-length check-loc debug-fixture-check
+
+test-browser: test-browser-sequential
+
+# Keep ordinary browser coverage parallel, but run the three GPU/WASM-heavy
+# readiness tests after it in fresh, single-worker contexts. They are stable
+# alone and contend with the rest of the suite when scheduled concurrently.
+PLAYWRIGHT_WORKERS ?= 4
+test-browser-sequential:
+	$(MAKE) --no-print-directory build-wasm
+	npx playwright test --workers=$(PLAYWRIGHT_WORKERS) \
+		--grep-invert "should show action buttons|move preview exposes accessible status and returns to the top-level menu|Wait ends the player turn through the action protocol"
+	npx playwright test --workers=1 \
+		--grep "should show action buttons|move preview exposes accessible status and returns to the top-level menu|Wait ends the player turn through the action protocol"
+
+test-static: check-func-length check-loc debug-fixture-check
+
+test-integration:
+	cargo test
 
 
 run-web: build-wasm
