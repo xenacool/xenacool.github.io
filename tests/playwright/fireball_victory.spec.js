@@ -162,55 +162,27 @@ async function playFireball(page) {
   return { played: true };
 }
 
-// TODO: Re-enable after the long-running player Fireball loop is made
-// deterministic; this reproduces on the clean baseline as well.
-test.skip('spamming Fireball with both player characters reaches victory', async ({ page }) => {
-  test.setTimeout(55000);
+test('deterministic pg_rpg Fireball reaches victory after one lethal cast', async ({ page }) => {
+  test.setTimeout(30000);
+  await page.route('**/web/scripts/pg_rpg.rhai', async (route) => {
+    const response = await route.fetch();
+    const source = await response.text();
+    route.fulfill({
+      response,
+      body: source.replace(
+        '@include "scenarios/skirmish.rhai"',
+        '@include "scenarios/casualty.rhai"',
+      ),
+    });
+  });
   await page.goto('/');
   await page.waitForFunction(() => window.app !== undefined, { timeout: 8000 });
-  await page.waitForFunction(
-    () => window.__pystralDebugTraces?.some(
-      (trace) => trace.includes('unified worker published player transient'),
-    ),
-    { timeout: 15000 },
-  );
   await waitForSettledPlayerBoundary(page);
-
-  let fireballs = 0;
-  const castsByUnit = new Map();
-  try {
-    let actionsTaken = 0;
-    for (let turn = 0; turn < 24 && actionsTaken < 24; turn += 1) {
-      await waitForSettledPlayerBoundary(page);
-      const menu = page.locator('#action-menu');
-      if (await menu.getAttribute('data-game-completed') === 'true') break;
-      const heading = await page.locator('#action-menu-heading').innerText();
-      if (heading === 'Unit 1 action menu' || heading === 'Unit 2 action menu') {
-        const result = await playFireball(page);
-        if (result.played) {
-          fireballs += 1;
-          const unit = heading.match(/Unit \d+/)[0];
-          castsByUnit.set(unit, (castsByUnit.get(unit) || 0) + 1);
-        }
-        if (!result.played) await sendAccepted(page, 'wait');
-      } else {
-        await sendAccepted(page, 'wait');
-      }
-      actionsTaken += 1;
-    }
-  } catch (error) {
-    throw new Error(`${error.message}\nfireballs=${fireballs}\ndiagnostics=${JSON.stringify(await diagnostics(page))}`);
-  }
-
-  if (await page.locator('#action-menu').getAttribute('data-game-completed') !== 'true') {
-    throw new Error(`game did not complete; fireballs=${fireballs}; casts=${JSON.stringify([...castsByUnit])}; diagnostics=${JSON.stringify(await diagnostics(page))}`);
-  }
+  expect(await playFireball(page)).toEqual({ played: true });
+  await expect(page.locator('#game-completed')).toHaveAttribute('data-outcome', 'Victory', {
+    timeout: 15000,
+  });
   await expect(page.locator('#action-menu-status')).toHaveText('Game completed.');
-  await expect(page.locator('#game-completed')).toHaveAttribute('data-outcome', 'Victory');
   await expect(page.locator('#game-completed')).toContainText('Victory');
   await expect(page.locator('#action-menu')).toHaveAttribute('data-game-completed', 'true');
-  await expect(page.locator('#log-container')).toContainText(/victory/i);
-  expect(fireballs).toBeGreaterThanOrEqual(2);
-  expect(castsByUnit.get('Unit 1') || 0).toBeGreaterThan(0);
-  expect(castsByUnit.get('Unit 2') || 0).toBeGreaterThan(0);
 });

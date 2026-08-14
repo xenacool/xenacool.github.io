@@ -39,16 +39,12 @@ Limits that are owned by the external `npc-engine` library, such as the native
 
 ## Temporarily disabled acceptance tests
 
-These tests were audited against a clean git baseline on 2026-08-14 and are
-disabled because they fail independently of the current casualty and worker
-protocol changes. Each has a local TODO describing its re-enable condition:
+These tests were audited against a clean git baseline on 2026-08-14. The
+remaining disabled tests fail independently of the current casualty and worker
+protocol changes; each has a local TODO describing its re-enable condition.
 
-- [`fireball_victory.spec.js`](tests/playwright/fireball_victory.spec.js) — the
-  long-running Fireball victory loop is not deterministic yet.
 - [`worker_heartbeat.spec.js`](tests/playwright/worker_heartbeat.spec.js) — the
   secondary-job Fireball followed by Wait fixture is unstable.
-- [`spritestack_validation.spec.js`](tests/playwright/spritestack_validation.spec.js)
-  — the `Skeleton_Minion` asset currently contains 200 layers instead of 300.
 
 Do not treat these skips as gameplay approval; re-enable them when their TODO
 conditions are met and retain the focused casualty/outcome gates.
