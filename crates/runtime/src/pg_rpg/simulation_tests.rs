@@ -523,6 +523,63 @@ fn completion_is_detected_and_stops_future_steps() {
 }
 
 #[test]
+fn zero_health_eliminates_a_team_only_after_its_last_unit_dies() {
+    let mut scenario = SkirmishConfig::new(42);
+    scenario
+        .add_unit(1, 1, "Caveman", GridCell::new(hexx::Hex::ZERO, 0))
+        .unwrap();
+    scenario
+        .add_unit(2, 2, "Mage", GridCell::new(hexx::Hex::new(1, 0), 0))
+        .unwrap();
+    scenario
+        .add_unit(3, 2, "Necromancer", GridCell::new(hexx::Hex::new(2, 0), 0))
+        .unwrap();
+    let mut simulation = TacticalSimulation::from_scenario(
+        scenario,
+        MCTSConfiguration {
+            seed: Some(42),
+            ..Default::default()
+        },
+    );
+
+    simulation.state.agents.get_mut(&AgentId(2)).unwrap().health = 0;
+    assert!(!simulation.is_complete());
+    assert_eq!(simulation.living_team_count(), 2);
+    assert_eq!(simulation.winning_team(), None);
+    assert_eq!(simulation.state.agents[&AgentId(2)].health, 0);
+
+    simulation.state.agents.get_mut(&AgentId(3)).unwrap().health = 0;
+    assert!(simulation.is_complete());
+    assert_eq!(simulation.living_team_count(), 1);
+    assert_eq!(simulation.winning_team(), Some(1));
+}
+
+#[test]
+fn zero_health_for_every_unit_is_a_draw_without_a_winning_team() {
+    let mut scenario = SkirmishConfig::new(42);
+    scenario
+        .add_unit(1, 1, "Caveman", GridCell::new(hexx::Hex::ZERO, 0))
+        .unwrap();
+    scenario
+        .add_unit(2, 2, "Mage", GridCell::new(hexx::Hex::new(1, 0), 0))
+        .unwrap();
+    let mut simulation = TacticalSimulation::from_scenario(
+        scenario,
+        MCTSConfiguration {
+            seed: Some(42),
+            ..Default::default()
+        },
+    );
+    for unit in simulation.state.agents.values_mut() {
+        unit.health = 0;
+    }
+
+    assert!(simulation.is_complete());
+    assert_eq!(simulation.living_team_count(), 0);
+    assert_eq!(simulation.winning_team(), None);
+}
+
+#[test]
 fn npc_wait_remains_legal_when_another_unit_has_a_pending_reaction() {
     let mut scenario = SkirmishConfig::new(42);
     scenario

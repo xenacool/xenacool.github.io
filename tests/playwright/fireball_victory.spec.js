@@ -29,8 +29,10 @@ async function waitForSettledPlayerBoundary(page) {
       window.removeEventListener('pystral-heartbeat', check);
       window.removeEventListener('pystral-debug-trace', check);
       window.removeEventListener('pystral-menu-state', check);
+      clearInterval(poll);
       clearTimeout(timer);
     };
+    const poll = setInterval(check, 50);
     const timer = setTimeout(() => {
       cleanup();
       reject(new Error(`settled player boundary timeout: ${window.__pystralWorkerStatus}`));
@@ -46,6 +48,28 @@ async function diagnostics(page) {
   return page.evaluate(() => ({
     status: window.__pystralWorkerStatus,
     reason: document.getElementById('heartbeat-reason').textContent,
+    historySlider: {
+      value: document.getElementById('history-slider').value,
+      max: document.getElementById('history-slider').max,
+    },
+    settledConditions: (() => {
+      const slider = document.getElementById('history-slider');
+      const menu = document.getElementById('action-menu');
+      const status = window.__pystralWorkerStatus || '';
+      return {
+        atTail: Number(slider.value) === Number(slider.max),
+        menuVisible: menu?.style.display === 'block',
+        completed: menu?.dataset.gameCompleted,
+        actionPending: menu?.dataset.actionPending,
+        animationPending: menu?.dataset.animationPending,
+        waitPending: menu?.dataset.waitPending,
+        awaitingPlayer: status.includes('AwaitingPlayerDecision'),
+        simulationIdle: status.includes('simulation request None'),
+        hasTransientTrace: window.__pystralDebugTraces?.some(
+          (trace) => trace.includes('unified worker published player transient'),
+        ),
+      };
+    })(),
     menu: document.getElementById('action-menu').outerHTML.slice(0, 1200),
     traces: window.__pystralDebugTraces,
   }));
@@ -53,29 +77,30 @@ async function diagnostics(page) {
 
 async function sendAccepted(page, input) {
   await page.evaluate((actionInput) => {
-    const acceptedBefore = window.__pystralDebugTraces.filter(
-      (trace) => trace === `unified worker accepted action input ${actionInput}`,
-    ).length;
+    const acceptedBefore = window.__pystralAcceptedActionCounts[actionInput] || 0;
     return new Promise((resolve, reject) => {
-      const onTrace = (event) => {
-        if (event.detail === `unified worker accepted action input ${actionInput}`
-          && window.__pystralDebugTraces.filter(
-            (trace) => trace === event.detail,
-          ).length > acceptedBefore) {
+      const check = () => {
+        if ((window.__pystralAcceptedActionCounts[actionInput] || 0) > acceptedBefore) {
           cleanup();
           resolve();
         }
       };
+      const onTrace = (event) => {
+        if (event.detail === `unified worker accepted action input ${actionInput}`) check();
+      };
       const cleanup = () => {
         window.removeEventListener('pystral-debug-trace', onTrace);
+        clearInterval(poll);
         clearTimeout(timer);
       };
+      const poll = setInterval(check, 50);
       const timer = setTimeout(() => {
         cleanup();
         reject(new Error(`action input not accepted: ${actionInput}; status=${window.__pystralWorkerStatus}`));
       }, 5000);
       window.addEventListener('pystral-debug-trace', onTrace);
       window.app.action_nav(actionInput);
+      check();
     });
   }, input);
 }
