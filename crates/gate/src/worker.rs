@@ -462,6 +462,24 @@ impl UnifiedWorker {
                         self.transient_state.clone(),
                     )));
                 }
+            } else {
+                // A casualty or terminal-adjacent boundary may contain state
+                // updates without publishing AvailableActions. The previous
+                // menu must not remain actionable while the runtime owns a
+                // non-player boundary or is reclassifying the match.
+                self.current_actions = None;
+                self.transient_state.active_unit_id = None;
+                self.transient_state.available_actions = None;
+                self.transient_state.menu_path.clear();
+                self.transient_state.preview = None;
+                self.transient_state.ability_targets = None;
+                self.transient_state.action_pending = false;
+                self.transient_state.wait_pending = false;
+                self.transient_state.input_enabled = false;
+                self.push_debug_trace("unified worker cleared stale player transient at boundary");
+                self.push_output(WorkerOutput::TransientState(Box::new(
+                    self.transient_state.clone(),
+                )));
             }
         }
         if let RuntimeResponse::GameCompleted { outcome, .. } = &res {

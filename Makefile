@@ -1,4 +1,4 @@
-.PHONY: install build-wasm run-web deploy test nuke-deploy playwright-install playwright-test playwright reproduce-spritestacks tla-check tla-worker-check tla-ui-check tla-animation-ack-check tla-simulation-bridge-check debug-fixture-check
+.PHONY: install build-wasm run-web deploy test nuke-deploy playwright-install playwright-test playwright reproduce-spritestacks tla-check tla-worker-check tla-ui-check tla-animation-ack-check tla-simulation-bridge-check tla-casualty-boundary-check debug-fixture-check
 
 TEST_LOG := .make-test.log
 # Keep the default feedback loop bounded. Browser and model tests should be
@@ -43,7 +43,14 @@ tla-check: tla-tools
 		-config spec/GameLoop.cfg \
 		-metadir "$(TLA_BUILD_DIR)/GameLoop" \
 		spec/GameLoop.tla
-	@$(MAKE) --no-print-directory tla-worker-check tla-animation-ack-check tla-simulation-bridge-check
+	@$(MAKE) --no-print-directory tla-worker-check tla-animation-ack-check tla-simulation-bridge-check tla-casualty-boundary-check
+
+tla-casualty-boundary-check: tla-tools
+	@mkdir -p "$(TLA_BUILD_DIR)"
+	java -cp "$(TLA_TOOLS_JAR)" tlc2.TLC \
+		-config spec/CasualtyBoundary.cfg \
+		-metadir "$(TLA_BUILD_DIR)/CasualtyBoundary" \
+		spec/CasualtyBoundary.tla
 
 tla-worker-check: tla-tools
 	@mkdir -p "$(TLA_BUILD_DIR)"
@@ -154,7 +161,20 @@ test:
 		echo "ERROR: make test needs timeout or gtimeout for its $(TEST_BUDGET_SECONDS)s budget"; \
 		exit 1; \
 	fi; \
-	$(TEST_TIMEOUT) --signal=TERM $(TEST_BUDGET_SECONDS) sh -c '$(MAKE) --no-print-directory tla-check playwright-test check-func-length check-loc debug-fixture-check > $(TEST_LOG) 2>&1 && cargo test >> $(TEST_LOG) 2>&1'; \
+	$(TEST_TIMEOUT) --signal=TERM $(TEST_BUDGET_SECONDS) sh -c '\
+		status=0; \
+		run_step() { \
+			label="$$1"; shift; \
+			echo "=== $$label ==="; \
+			"$$@" || { echo "FAILED: $$label"; status=1; }; \
+		}; \
+		run_step tla-check $(MAKE) --no-print-directory tla-check; \
+		run_step playwright-test $(MAKE) --no-print-directory playwright-test; \
+		run_step check-func-length $(MAKE) --no-print-directory check-func-length; \
+		run_step check-loc $(MAKE) --no-print-directory check-loc; \
+		run_step debug-fixture-check $(MAKE) --no-print-directory debug-fixture-check; \
+		run_step cargo-test cargo test; \
+		exit $$status' > $(TEST_LOG) 2>&1; \
 	status=$$?; \
 	echo "Test output written to $(TEST_LOG)"; \
 	if [ $$status -eq 124 ]; then echo "ERROR: make test exceeded $(TEST_BUDGET_SECONDS)s"; fi; \

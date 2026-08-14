@@ -509,9 +509,15 @@
     };
 
     window.__pystralDebugTraces = [];
+    window.__pystralAcceptedActionCounts = Object.create(null);
     window.record_debug_trace = (message) => {
         window.__pystralDebugTraces.push(message);
         if (window.__pystralDebugTraces.length > 200) window.__pystralDebugTraces.shift();
+        const acceptedPrefix = 'unified worker accepted action input ';
+        if (message.startsWith(acceptedPrefix)) {
+            window.__pystralAcceptedActionCounts[message.slice(acceptedPrefix.length)] =
+                (window.__pystralAcceptedActionCounts[message.slice(acceptedPrefix.length)] || 0) + 1;
+        }
         window.dispatchEvent(new CustomEvent('pystral-debug-trace', { detail: message }));
         console.debug(message);
     };

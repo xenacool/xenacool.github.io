@@ -29,7 +29,7 @@ impl CTScheduler {
         loop {
             let mut ready = Vec::new();
             for (&id, agent) in state.agents.iter() {
-                if agent.ct >= self.ct_threshold {
+                if agent.health > 0 && agent.ct >= self.ct_threshold {
                     ready.push(id);
                 }
             }
