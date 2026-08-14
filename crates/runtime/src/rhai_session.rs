@@ -66,6 +66,20 @@ impl RhaiSession {
         self.resume_game_fn("resume_game_budgeted", (budget as i64,))
     }
 
+    #[cfg(test)]
+    pub fn run_authored_case(&mut self, case_name: &str) -> Result<(), String> {
+        self.engine
+            .call_fn_with_options(
+                CallFnOptions::new().rewind_scope(true),
+                &mut self.scope,
+                &self.ast,
+                case_name,
+                (),
+            )
+            .map(|_: rhai::Dynamic| ())
+            .map_err(|error| error.to_string())
+    }
+
     fn resume_game_fn<T: rhai::FuncArgs>(
         &mut self,
         function: &str,

@@ -8,7 +8,7 @@ const CORE_PROPERTIES: &str = include_str!("../test-fixtures/pg_rpg_core_propert
 
 #[test]
 fn authored_core_properties_use_the_runtime_rhai_harness() {
-    RhaiSession::new(
+    let mut session = RhaiSession::new(
         CORE_PROPERTIES,
         HistoryManager::new(),
         String::new(),
@@ -16,4 +16,13 @@ fn authored_core_properties_use_the_runtime_rhai_harness() {
         0,
     )
     .unwrap_or_else(|error| panic!("authored pg_rpg core properties failed: {error}"));
+    for case_name in [
+        "unit_health_property",
+        "deterministic_boundary_property",
+        "npc_decision_provenance_property",
+    ] {
+        session
+            .run_authored_case(case_name)
+            .unwrap_or_else(|error| panic!("authored case {case_name} failed: {error}"));
+    }
 }
