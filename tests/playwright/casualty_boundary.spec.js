@@ -104,6 +104,32 @@ async function expectCompletion(page, outcome) {
     throw new Error(`${error.message}\noutcome diagnostic: ${JSON.stringify(diagnostic)}`);
   }
   await expect(page.locator('#game-completed')).toContainText(outcome);
+  await expect.poll(
+    () => page.evaluate(() => window.__pystralGameCompletedResponseCount),
+  ).toBe(1);
+
+  const before = await page.evaluate(() => ({
+    transient: JSON.stringify(window.__pystralLastTransientState),
+    requests: window.__pystralDebugTraces.filter(
+      (trace) => trace.startsWith('simulation bridge send request'),
+    ).length,
+  }));
+  await page.evaluate(() => window.app.action_nav('confirm'));
+  await expect.poll(
+    () => page.evaluate(() => window.__pystralDebugTraces.some(
+      (trace) => trace === 'ignored action input after completion confirm',
+    )),
+  ).toBe(true);
+  const after = await page.evaluate(() => ({
+    transient: JSON.stringify(window.__pystralLastTransientState),
+    requests: window.__pystralDebugTraces.filter(
+      (trace) => trace.startsWith('simulation bridge send request'),
+    ).length,
+    completions: window.__pystralGameCompletedResponseCount,
+  }));
+  expect(after.transient).toBe(before.transient);
+  expect(after.requests).toBe(before.requests);
+  expect(after.completions).toBe(1);
 }
 
 test('pg_rpg casualty boundary skips dead units and reaches victory', async ({ page }) => {

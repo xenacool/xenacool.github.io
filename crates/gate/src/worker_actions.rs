@@ -116,6 +116,10 @@ impl UnifiedWorker {
     }
 
     pub(crate) fn route_action_input(&mut self, direction: String) -> Option<WorkerOutput> {
+        if self.transient_state.game_completed {
+            self.push_debug_trace(format!("ignored action input after completion {direction}"));
+            return None;
+        }
         if !self.transient_state.input_enabled
             || self.pending_simulation.is_some()
             || self.pending_barrier.is_some()

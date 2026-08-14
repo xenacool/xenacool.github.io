@@ -274,6 +274,10 @@
     };
 
     window.__pystralHistoryExportSource = null;
+    window.__pystralGameCompletedResponseCount = 0;
+    window.record_game_completed_response = () => {
+        window.__pystralGameCompletedResponseCount += 1;
+    };
     window.__pystralHistoryExportUpdateCount = 0;
     window.__pystralReplayInputs = [];
     window.refreshReplayExport = () => {

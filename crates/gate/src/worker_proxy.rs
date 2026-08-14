@@ -95,7 +95,7 @@ impl UnifiedWorker {
         let Some((request_seq, pending)) = self.pending_simulation.take() else {
             return;
         };
-        if request_seq != envelope.msg.request_seq {
+        if !simulation_response_matches(request_seq, envelope.msg.request_seq) {
             self.pending_simulation = Some((request_seq, pending));
             return;
         }
@@ -182,7 +182,7 @@ impl UnifiedWorker {
                 if wait {
                     self.transient_state.wait_pending = false;
                     self.boundary_resume_pending = true;
-                } else if matches!(self.continuation, RuntimeContinuation::AwaitBoundary) {
+                } else if animation_ack_resumes_boundary(wait, &self.continuation) {
                     // A non-wait action can still end the match when its
                     // mutation kills the last living unit. Runtime routes
                     // that actor through AwaitBoundary so terminal
