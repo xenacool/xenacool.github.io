@@ -139,6 +139,88 @@ fn npc_action_is_planned_and_revalidated_before_application() {
 }
 
 #[test]
+fn npc_planning_never_selects_an_ordinary_action_over_a_pending_reaction() {
+    let mut scenario = SkirmishConfig::new(42);
+    scenario
+        .add_unit(1, 1, "Caveman", GridCell::new(hexx::Hex::ZERO, 0))
+        .unwrap();
+    scenario
+        .add_unit(2, 2, "Mage", GridCell::new(hexx::Hex::new(1, 0), 0))
+        .unwrap();
+    let mut simulation = TacticalSimulation::from_scenario(
+        scenario,
+        MCTSConfiguration {
+            visits: 24,
+            depth: 6,
+            seed: Some(42),
+            ..Default::default()
+        },
+    );
+    simulation
+        .state
+        .reaction_queue
+        .push((AgentId(2), ReactionId(101), AgentId(1)));
+
+    assert_eq!(
+        simulation.request_npc_decision(AgentId(2)),
+        Some(TacticalDisplayAction::Reaction {
+            reaction: ReactionId(101),
+            target: AgentId(1),
+        })
+    );
+}
+
+#[test]
+fn authoritative_action_boundary_resolves_reaction_before_ordinary_candidate() {
+    let mut scenario = SkirmishConfig::new(42);
+    scenario
+        .add_unit(1, 1, "Caveman", GridCell::new(hexx::Hex::ZERO, 0))
+        .unwrap();
+    scenario
+        .add_unit(2, 2, "Mage", GridCell::new(hexx::Hex::new(1, -1), 0))
+        .unwrap();
+    let mut simulation = TacticalSimulation::from_scenario(
+        scenario,
+        MCTSConfiguration {
+            seed: Some(42),
+            visits: 1,
+            depth: 1,
+            ..Default::default()
+        },
+    );
+    let agent = AgentId(2);
+    let target = AgentId(1);
+    let fireball = simulation
+        .state
+        .ability_registry
+        .values()
+        .find(|ability| ability.name == "Fireball")
+        .unwrap()
+        .id;
+    let reaction = simulation.state.agents[&agent].reaction_abilities[0];
+    simulation
+        .state
+        .reaction_queue
+        .push((agent, reaction, target));
+
+    let action = TacticalDisplayAction::Ability {
+        target,
+        ability: fireball,
+    };
+    assert_eq!(
+        simulation.apply_npc_action(agent, action.clone()),
+        Ok(action)
+    );
+    assert!(
+        !simulation
+            .state
+            .reaction_queue
+            .iter()
+            .any(|(reaction_agent, _, _)| *reaction_agent == agent)
+    );
+}
+
+#[test]
 fn adjacent_npc_attack_is_legal_revalidated_and_damages_player() {
     let mut scenario = SkirmishConfig::new(42);
     scenario

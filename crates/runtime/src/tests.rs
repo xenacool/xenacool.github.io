@@ -59,9 +59,14 @@ fn deterministic_startup_step_produces_continuation() {
     attach_rhai_session(&mut runtime);
     assert_eq!(runtime.continuation(), RuntimeContinuation::AwaitBoundary);
 
-    let response = runtime
-        .process_request(RuntimeRequest::StepDemoSimulation)
-        .0;
+    let response = (0..16)
+        .map(|_| {
+            runtime
+                .process_request(RuntimeRequest::StepDemoSimulation)
+                .0
+        })
+        .find(|response| !matches!(response, RuntimeResponse::SimulationProgress { .. }))
+        .expect("budgeted startup should reach a boundary within 16 slices");
 
     assert!(matches!(
         response,
@@ -121,7 +126,7 @@ fn commit_move_returns_history_delta_but_rejection_does_not() {
         runtime
             .process_request(RuntimeRequest::AcknowledgeAnimation { barrier_id })
             .0,
-        RuntimeResponse::Continuation(RuntimeContinuation::AwaitPlayerDecision { unit_id: 1 })
+        RuntimeResponse::Continuation(RuntimeContinuation::AwaitBoundary)
     ));
 
     let rejected = runtime
@@ -419,6 +424,11 @@ fn terminal_ability_proves_victory_through_commit_ack_and_boundary() {
     let history = match completed {
         RuntimeResponse::GameCompleted { outcome, history } => {
             assert_eq!(outcome, GameOutcome::Victory { winning_team: 1 });
+            assert_eq!(
+                runtime.demo_sim.as_ref().unwrap().state.agents[&npc_engine_core::AgentId(2)]
+                    .health,
+                0
+            );
             history
         }
         other => panic!("expected victory, got {other:?}"),
@@ -433,6 +443,10 @@ fn terminal_ability_proves_victory_through_commit_ack_and_boundary() {
     );
     assert!(matches!(
         runtime.process_request(RuntimeRequest::StepDemoSimulation).0,
+        RuntimeResponse::Error(message) if message.contains("after game completion")
+    ));
+    assert!(matches!(
+        runtime.process_request(RuntimeRequest::ResumeBoundary).0,
         RuntimeResponse::Error(message) if message.contains("after game completion")
     ));
 }
@@ -467,6 +481,11 @@ fn terminal_ability_proves_defeat_through_commit_ack_and_boundary() {
     match completed {
         RuntimeResponse::GameCompleted { outcome, .. } => {
             assert_eq!(outcome, GameOutcome::Defeat { winning_team: 2 });
+            assert_eq!(
+                runtime.demo_sim.as_ref().unwrap().state.agents[&npc_engine_core::AgentId(1)]
+                    .health,
+                0
+            );
         }
         other => panic!("expected defeat, got {other:?}"),
     }

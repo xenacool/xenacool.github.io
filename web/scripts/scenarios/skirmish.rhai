@@ -69,6 +69,13 @@ fn add_ability(scenario, name, ap_cost, range, delivery, stat1, factor1, stat2, 
     ability.add_scaling(stat1, factor1);
     if stat2 != "" { ability.add_scaling(stat2, factor2); }
     if tag != "" { ability.add_emit_tag(tag, stacks); }
+    if name == "Arcane Shield" {
+        let shield = new_rpg_program();
+        shield.add_timed_modifier("ArmorClass", 4, 2, "RefreshReplace");
+        let programs = new_rpg_programs();
+        programs.add_program("OnAbilityResolve", shield);
+        ability.set_programs(programs);
+    }
     scenario.add_script_ability(ability);
     scenario
 }

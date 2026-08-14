@@ -205,19 +205,32 @@ impl Runtime {
                 }
             }
         };
-        let candidate_result =
-            sim.apply_npc_action(npc_engine_core::AgentId(unit_id as u32), action);
         let mut fallback_reason = None;
+        let agent = npc_engine_core::AgentId(unit_id as u32);
+        let forced_reaction = sim.fallback_npc_action(agent).filter(|candidate| {
+            matches!(
+                candidate,
+                pystral_games::TacticalDisplayAction::Reaction { .. }
+            )
+        });
+        let candidate_result = if let Some(reaction) = forced_reaction {
+            if action != reaction {
+                fallback_reason = Some(format!(
+                    "forced reaction {reaction:?} superseded NPC candidate {action:?}"
+                ));
+            }
+            sim.apply_npc_action(agent, reaction)
+        } else {
+            sim.apply_npc_action(agent, action)
+        };
         let action = match candidate_result {
             Ok(action) => action,
             Err(reason) => {
                 fallback_reason = Some(reason.clone());
                 let fallback = sim
-                    .fallback_npc_action(npc_engine_core::AgentId(unit_id as u32))
+                    .fallback_npc_action(agent)
                     .ok_or_else(|| "no legal NPC fallback action".to_string());
-                match fallback.and_then(|action| {
-                    sim.apply_npc_action(npc_engine_core::AgentId(unit_id as u32), action)
-                }) {
+                match fallback.and_then(|action| sim.apply_npc_action(agent, action)) {
                     Ok(action) => action,
                     Err(wait_error) => {
                         return RuntimeResponse::Error(format!(

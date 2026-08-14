@@ -99,6 +99,100 @@ fn demo_mage_fireball_target_revalidates() {
         .expect("fireball target should revalidate");
 }
 
+#[test]
+fn player_ability_commit_resolves_pending_reaction_before_fireball() {
+    let mut scenario = SkirmishConfig::new(42);
+    scenario
+        .add_unit(1, 1, "Caveman", GridCell::new(hexx::Hex::ZERO, 0))
+        .unwrap();
+    scenario
+        .add_unit(2, 2, "Mage", GridCell::new(hexx::Hex::new(1, -1), 0))
+        .unwrap();
+    let mut simulation = TacticalSimulation::from_scenario(
+        scenario,
+        npc_engine_core::MCTSConfiguration {
+            seed: Some(42),
+            ..Default::default()
+        },
+    );
+    let mage = npc_engine_core::AgentId(2);
+    let target = npc_engine_core::AgentId(1);
+    let fireball = simulation
+        .state
+        .ability_registry
+        .values()
+        .find(|ability| ability.name == "Fireball")
+        .unwrap()
+        .id;
+    let reaction = simulation.state.agents[&mage].reaction_abilities[0];
+    let target_health_before = simulation.state.agents[&target].health;
+    simulation
+        .state
+        .reaction_queue
+        .push((mage, reaction, target));
+
+    let mut runtime = Runtime::new();
+    runtime.demo_sim = Some(simulation);
+    runtime.demo_history = Some(HistoryManager::new());
+    runtime.continuation = RuntimeContinuation::AwaitPlayerDecision { unit_id: 2 };
+    let provenance = match runtime
+        .process_request(RuntimeRequest::OpenAbilityTargets {
+            request_id: 1,
+            unit_id: 2,
+            ability_id: fireball.0 as u64,
+        })
+        .0
+    {
+        RuntimeResponse::AbilityTargets {
+            state_version,
+            target_session_id,
+            snapshot_fingerprint,
+            ..
+        } => DecisionProvenance {
+            state_version,
+            target_session_id,
+            snapshot_fingerprint,
+        },
+        other => panic!("expected ability targets, got {other:?}"),
+    };
+
+    let response = runtime
+        .process_request(RuntimeRequest::CommitDecision {
+            request_id: 2,
+            decision: RuntimeDecision {
+                unit_id: 2,
+                action: RuntimeDecisionAction::Ability {
+                    ability_id: fireball.0 as u64,
+                    target: RuntimeAbilityTarget::Unit { unit_id: 1 },
+                },
+            },
+            provenance: Some(provenance),
+        })
+        .0;
+
+    assert!(matches!(
+        response,
+        RuntimeResponse::ActionCommitted { action, history, .. }
+            if action.starts_with("ability (")
+                && history.log.iter().any(|event| matches!(
+                    event,
+                    pystral_core::log::Event::Log { msg }
+                        if msg.contains("resolved forced reaction")
+                ))
+    ));
+    assert!(
+        !runtime
+            .demo_sim
+            .as_ref()
+            .unwrap()
+            .state
+            .reaction_queue
+            .iter()
+            .any(|(agent, _, _)| *agent == mage)
+    );
+    assert!(runtime.demo_sim.as_ref().unwrap().state.agents[&target].health < target_health_before);
+}
+
 proptest! {
     #[test]
     fn menu_targets_equal_revalidated_mage_targets(

@@ -1,8 +1,7 @@
 use crate::tasks::merged_state;
 use crate::{
-    AbilityDelivery, AbilityId, CollisionWorld, DerivedStat, Logger, ModifierCard,
-    ModifierStacking, TacticalAccess, TacticalAccessMut, TacticalDisplayAction, TacticalDomain,
-    TagRegistry, TimedModifier, calculate_damage,
+    AbilityDelivery, AbilityId, CollisionWorld, Logger, ModifierCard, RPGHook, TacticalAccess,
+    TacticalAccessMut, TacticalDisplayAction, TacticalDomain, TagRegistry, calculate_damage,
 };
 pub use npc_engine_core::{
     AgentId, Context, ContextMut, Task, TaskDuration, impl_task_boxed_methods,
@@ -100,14 +99,20 @@ impl Task<TacticalDomain> for AbilityTask {
             }
             ctx.state_diff.diff.rng_update = Some(rng);
             if matches!(ability_def.delivery, AbilityDelivery::SelfTarget) {
-                if ability_def.name == "Arcane Shield" {
+                if let Some(program) = ability_def
+                    .programs
+                    .get(&RPGHook::OnAbilityResolve)
+                    .and_then(|programs| programs.first())
+                {
+                    let modifiers = program
+                        .execute_on_ability_resolve()
+                        .expect("validated ability effect program");
                     if let Some(attacker) = ctx.state_diff.get_agent_mut(self.agent) {
-                        let _ = attacker.add_timed_modifier(TimedModifier {
-                            stat: DerivedStat::ArmorClass,
-                            amount: 4,
-                            remaining_turns: 2,
-                            stacking: ModifierStacking::RefreshReplace,
-                        });
+                        for modifier in modifiers {
+                            attacker
+                                .add_timed_modifier(modifier)
+                                .expect("validated timed modifier effect");
+                        }
                     }
                 }
             } else {
@@ -130,14 +135,17 @@ impl Task<TacticalDomain> for AbilityTask {
 
                 let mut reaction = None;
                 if let Some(defender) = ctx.state_diff.get_agent_mut(self.target) {
-                    defender.health += health_change;
+                    if health_change < 0 {
+                        defender.apply_damage(-health_change);
+                    } else {
+                        defender.apply_healing(health_change);
+                    }
                     if health_change < 0 && !defender.reaction_abilities.is_empty() {
                         reaction = Some((self.target, defender.reaction_abilities[0], self.agent));
                     }
                     if defender.health <= 0 && death_embrace {
                         if let Some(attacker) = ctx.state_diff.get_agent_mut(self.agent) {
-                            attacker.health =
-                                (attacker.health + 20).min(attacker.derived_stats.health_max);
+                            attacker.apply_healing(20);
                         }
                     }
                 }

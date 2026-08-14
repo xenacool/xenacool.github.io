@@ -136,10 +136,15 @@ impl TacticalSimulation {
         let tasks = TacticalDomain::get_tasks(context);
         let mut planning_tasks = tasks
             .iter()
-            .filter(|task| self.action_is_plannable(agent, &task.display_action()))
+            .filter(|task| {
+                task.is_valid(context) && self.action_is_plannable(agent, &task.display_action())
+            })
             .collect::<Vec<_>>();
         if planning_tasks.is_empty() {
-            planning_tasks = tasks.iter().collect();
+            // The runtime fallback still owns the final decision, but an
+            // empty legal root set is a state/protocol error rather than a
+            // reason to reintroduce invalid tasks into MCTS.
+            return None;
         }
         // Multiple engine tasks can represent the same gameplay action (for
         // example, equivalent composite movement/action variants). MCTS only
@@ -155,7 +160,7 @@ impl TacticalSimulation {
         let mut search_config = self.config.clone();
         let snapshot_seed = self.snapshot_fingerprint() ^ (agent.0 as u64).rotate_left(17);
         search_config.seed = Some(search_config.seed.unwrap_or(0) ^ snapshot_seed);
-        if self.completed_turns.len() > 2 {
+        if !self.completed_turns.is_empty() {
             search_config.visits = search_config.visits.min(1);
             search_config.depth = search_config.depth.min(1);
         }
@@ -257,6 +262,9 @@ impl TacticalSimulation {
         }
         self.state.grid.tiles.len().hash(&mut hasher);
         self.state.ability_registry.len().hash(&mut hasher);
+        let mut reactions = self.state.reaction_queue.clone();
+        reactions.sort_by_key(|(agent, reaction, target)| (agent.0, reaction.0, target.0));
+        reactions.hash(&mut hasher);
         hasher.finish()
     }
 
@@ -268,6 +276,30 @@ impl TacticalSimulation {
         agent: AgentId,
         action: TacticalDisplayAction,
     ) -> Result<TacticalDisplayAction, String> {
+        // Reactions are mandatory and this is the final authoritative action
+        // boundary.  Keep the invariant here as well as in controller
+        // adapters: an ordinary candidate must never be rejected merely
+        // because a reaction was queued between planning and commit.
+        if !matches!(action, TacticalDisplayAction::Reaction { .. }) {
+            let forced_reaction = self
+                .state
+                .reaction_queue
+                .iter()
+                .find(|(reaction_agent, _, _)| *reaction_agent == agent)
+                .map(|(_, reaction, target)| TacticalDisplayAction::Reaction {
+                    reaction: *reaction,
+                    target: *target,
+                });
+            if let Some(reaction) = forced_reaction {
+                let before_reaction = self.clone();
+                self.apply_npc_action(agent, reaction)?;
+                if let Err(error) = self.apply_npc_action(agent, action.clone()) {
+                    *self = before_reaction;
+                    return Err(error);
+                }
+                return Ok(action);
+            }
+        }
         let mut diff = TacticalDiff::default();
         let tasks =
             TacticalDomain::get_tasks(Context::with_state_and_diff(0, &self.state, &diff, agent));
@@ -395,7 +427,7 @@ impl TacticalSimulation {
                 &mut logger,
             );
             if let Some(unit) = self.state.agents.get_mut(target) {
-                unit.health -= damage;
+                unit.apply_damage(damage);
             }
         }
         Ok(affected)

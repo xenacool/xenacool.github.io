@@ -1,4 +1,7 @@
 use super::*;
+use crate::{
+    DerivedStat, ModifierStacking, RPGBytecode, RPGHook, RPGProgram, RPGPrograms, add_rpg_program,
+};
 
 pub(super) fn builtin_script_abilities() -> Vec<ScriptAbilityDef> {
     vec![
@@ -96,6 +99,20 @@ fn script_ability(
     scaling: Vec<(&str, f32)>,
     emit_tags: Vec<(&str, u8)>,
 ) -> ScriptAbilityDef {
+    let mut programs = RPGPrograms::new();
+    if name == "Arcane Shield" {
+        let mut shield = RPGProgram::new();
+        shield
+            .add_timed_modifier(RPGBytecode::AddTimedModifier {
+                stat: DerivedStat::ArmorClass,
+                amount: 4,
+                duration_turns: 2,
+                stacking: ModifierStacking::RefreshReplace,
+            })
+            .expect("builtin effect is valid");
+        add_rpg_program(&mut programs, RPGHook::OnAbilityResolve, shield)
+            .expect("builtin effect hook is unique");
+    }
     ScriptAbilityDef {
         name: name.into(),
         ap_cost: Some(ap_cost),
@@ -111,6 +128,7 @@ fn script_ability(
             .map(|(name, stacks)| (name.into(), stacks))
             .collect(),
         consume_tags: vec![],
+        programs,
     }
 }
 

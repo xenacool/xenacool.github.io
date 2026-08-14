@@ -71,6 +71,7 @@
             scaling: Vec::new(),
             emit_tags: Vec::new(),
             consume_tags: Vec::new(),
+            programs: RPGPrograms::new(),
         })
         .register_fn(
             "set_ap_cost",
@@ -108,6 +109,10 @@
                     .push((tag.to_string(), stacks as u8, discount as u8))
             },
         );
+    engine.register_fn(
+        "set_programs",
+        |ability: &mut ScriptAbilityDef, programs: RPGPrograms| ability.programs = programs,
+    );
     engine
         .register_type_with_name::<UnitStats>("UnitStats")
         .register_fn(

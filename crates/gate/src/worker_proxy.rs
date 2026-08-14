@@ -206,6 +206,11 @@ impl UnifiedWorker {
                     // continuation.
                     self.is_simulating = false;
                     self.transient_state.input_enabled = true;
+                    self.push_debug_trace(format!(
+                        "unified worker published player transient after animation ack active_unit={:?} actions={}",
+                        self.transient_state.active_unit_id,
+                        self.transient_state.available_actions.is_some()
+                    ));
                 }
                 self.push_output(WorkerOutput::TransientState(Box::new(
                     self.transient_state.clone(),

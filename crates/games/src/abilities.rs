@@ -1,3 +1,4 @@
+use crate::effects::RPGPrograms;
 use crate::tags::{TagBag, TagId};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -97,6 +98,7 @@ pub struct AbilityDef {
     pub range: u8,
     pub delivery: AbilityDelivery,
     pub area_radius: u8,
+    pub programs: RPGPrograms,
 }
 
 impl AbilityDef {

@@ -144,6 +144,19 @@ impl LoopHandler {
                 }
                 AppCommand::AppendHistory(history) => {
                     self.history_manager.append_events(history.log);
+                    // Live gameplay is a tail-following mode. If the render
+                    // loop was still replaying an older batch when the next
+                    // runtime response arrived, append_events intentionally
+                    // preserves that playback position. That is appropriate
+                    // for history inspection, but it can strand the newest
+                    // sequence barrier: the worker waits for an ACK that the
+                    // renderer will not reach until it replays every stale
+                    // event. Follow the tail while live playback is enabled;
+                    // pausing playback remains the explicit opt-out for
+                    // inspecting history.
+                    if self.playback_state.playing_log {
+                        self.history_manager.jump_to(self.history_manager.log.len());
+                    }
                     crate::render::set_ui_slider_max(self.history_manager.log.len() as u32);
                     crate::render::update_ui_slider(self.history_manager.current_index as u32);
                     // A batch can arrive while the render loop is between
