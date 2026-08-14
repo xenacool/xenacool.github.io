@@ -26,6 +26,7 @@ fn unit_health_property() {
     require(unit_state.get_agent_health(1) > 0, "fixture unit must start alive");
     unit_state.set_agent_health(1, 0);
     require(unit_state.get_agent_health(1) == 0, "health-zero state must be observable");
+    #{ "case": "unit_health_property", "seed": 42, "health": unit_state.get_agent_health(1) }
 }
 
 fn deterministic_boundary_property() {
@@ -37,6 +38,7 @@ fn deterministic_boundary_property() {
     let right_boundary = right.advance_to_boundary_budgeted(128);
     require(left_boundary == right_boundary, "identical seeds must reach the same boundary");
     require(left_boundary.len() > 0, "fixture must reach a control boundary");
+    #{ "case": "deterministic_boundary_property", "seed": 42, "boundary": left_boundary }
 }
 
 fn npc_decision_provenance_property() {
@@ -53,4 +55,5 @@ fn npc_decision_provenance_property() {
         "identical snapshots and seeds must produce identical NPC traces",
     );
     require(left_trace["action"] != "", "NPC trace must expose a candidate action");
+    left_trace
 }

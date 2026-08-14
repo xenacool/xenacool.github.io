@@ -200,6 +200,7 @@ test('Wait ends the player turn through the action protocol', async ({ page }) =
 
   await expect(page.locator('#log-container')).toContainText('Action input: wait', { timeout: 10000 });
   await expect(menu).toBeVisible({ timeout: 10000 });
+  await waitForHistoryToSettle(page);
   await expect(status).toContainText(/Focus a job and press Enter to open its abilities\./);
 });
 

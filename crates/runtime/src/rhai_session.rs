@@ -1,13 +1,27 @@
+use crate::pg_rpg::VirtualRhaiWorkspace;
 use crate::pg_rpg::scripting;
 use crate::pg_rpg::simulation::TacticalSimulation;
 use npc_engine_core::AgentId;
 use pystral_core::history::HistoryManager;
 use rhai::{AST, CallFnOptions, Engine, Scope};
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct RhaiReplayHeader {
+    pub format: String,
+    pub entrypoint: String,
+    pub source_fingerprint: u64,
+    pub seed: u64,
+}
 
 pub struct RhaiSession {
     engine: Engine,
     ast: AST,
     scope: Scope<'static>,
+    // X0.4 worker transport consumes this metadata; keep the core session
+    // independent of the browser UI until that protocol is added.
+    #[allow(dead_code)]
+    replay_header: Option<RhaiReplayHeader>,
 }
 
 impl RhaiSession {
@@ -54,7 +68,43 @@ impl RhaiSession {
         let _: rhai::Dynamic = engine
             .eval_ast_with_scope(&mut scope, &ast)
             .map_err(|error| error.to_string())?;
-        Ok(Self { engine, ast, scope })
+        Ok(Self {
+            engine,
+            ast,
+            scope,
+            replay_header: None,
+        })
+    }
+
+    #[allow(dead_code)]
+    pub fn from_virtual_workspace(
+        workspace: &VirtualRhaiWorkspace,
+        history: HistoryManager,
+        atlas_json: String,
+        spritesheet_rgba: Vec<u8>,
+        spritesheet_width: u32,
+        seed: u64,
+    ) -> Result<Self, String> {
+        let script = workspace.compile()?;
+        let mut session = Self::new(
+            &script,
+            history,
+            atlas_json,
+            spritesheet_rgba,
+            spritesheet_width,
+        )?;
+        session.replay_header = Some(RhaiReplayHeader {
+            format: "pystral-rhai-replay-v1".to_string(),
+            entrypoint: workspace.entrypoint.clone(),
+            source_fingerprint: workspace.source_fingerprint(),
+            seed,
+        });
+        Ok(session)
+    }
+
+    #[allow(dead_code)]
+    pub fn replay_header(&self) -> Option<RhaiReplayHeader> {
+        self.replay_header.clone()
     }
 
     #[allow(dead_code)]
@@ -66,9 +116,10 @@ impl RhaiSession {
         self.resume_game_fn("resume_game_budgeted", (budget as i64,))
     }
 
-    #[cfg(test)]
-    pub fn run_authored_case(&mut self, case_name: &str) -> Result<(), String> {
-        self.engine
+    #[allow(dead_code)]
+    pub fn run_named_case_json(&mut self, case_name: &str) -> Result<String, String> {
+        let value = self
+            .engine
             .call_fn_with_options(
                 CallFnOptions::new().rewind_scope(true),
                 &mut self.scope,
@@ -76,8 +127,10 @@ impl RhaiSession {
                 case_name,
                 (),
             )
-            .map(|_: rhai::Dynamic| ())
-            .map_err(|error| error.to_string())
+            .map_err(|error| error.to_string())?;
+        let json = rhai::serde::from_dynamic::<serde_json::Value>(&value)
+            .map_err(|error| error.to_string())?;
+        serde_json::to_string(&json).map_err(|error| error.to_string())
     }
 
     fn resume_game_fn<T: rhai::FuncArgs>(
