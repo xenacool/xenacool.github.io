@@ -478,4 +478,6 @@ mod full_playout_tests;
 #[cfg(test)]
 mod npc_protocol_tests;
 #[cfg(test)]
+mod rhai_test_authoring;
+#[cfg(test)]
 mod tests;
