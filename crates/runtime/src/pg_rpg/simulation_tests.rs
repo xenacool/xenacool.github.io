@@ -580,6 +580,35 @@ fn zero_health_for_every_unit_is_a_draw_without_a_winning_team() {
 }
 
 #[test]
+fn dead_units_cannot_commit_a_turn_or_npc_action() {
+    let mut scenario = SkirmishConfig::new(42);
+    scenario
+        .add_unit(1, 1, "Caveman", GridCell::new(hexx::Hex::ZERO, 0))
+        .unwrap();
+    scenario
+        .add_unit(2, 2, "Mage", GridCell::new(hexx::Hex::new(1, 0), 0))
+        .unwrap();
+    let mut simulation = TacticalSimulation::from_scenario(
+        scenario,
+        MCTSConfiguration {
+            seed: Some(42),
+            ..Default::default()
+        },
+    );
+    simulation.state.agents.get_mut(&AgentId(1)).unwrap().health = 0;
+
+    assert_eq!(
+        simulation.commit_wait(1),
+        Err(ActionError::DeadAgent(AgentId(1)))
+    );
+    assert!(
+        simulation
+            .apply_npc_action(AgentId(1), TacticalDisplayAction::Wait)
+            .is_err()
+    );
+}
+
+#[test]
 fn npc_wait_remains_legal_when_another_unit_has_a_pending_reaction() {
     let mut scenario = SkirmishConfig::new(42);
     scenario

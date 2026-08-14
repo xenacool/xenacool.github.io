@@ -1,4 +1,4 @@
-.PHONY: install build-wasm run-web deploy test nuke-deploy playwright-install playwright-test playwright reproduce-spritestacks tla-check tla-worker-check tla-ui-check tla-animation-ack-check tla-simulation-bridge-check debug-fixture-check
+.PHONY: install build-wasm run-web deploy test nuke-deploy playwright-install playwright-test playwright reproduce-spritestacks tla-check tla-worker-check tla-ui-check tla-animation-ack-check tla-simulation-bridge-check tla-casualty-boundary-check debug-fixture-check
 
 TEST_LOG := .make-test.log
 # Keep the default feedback loop bounded. Browser and model tests should be
@@ -43,7 +43,14 @@ tla-check: tla-tools
 		-config spec/GameLoop.cfg \
 		-metadir "$(TLA_BUILD_DIR)/GameLoop" \
 		spec/GameLoop.tla
-	@$(MAKE) --no-print-directory tla-worker-check tla-animation-ack-check tla-simulation-bridge-check
+	@$(MAKE) --no-print-directory tla-worker-check tla-animation-ack-check tla-simulation-bridge-check tla-casualty-boundary-check
+
+tla-casualty-boundary-check: tla-tools
+	@mkdir -p "$(TLA_BUILD_DIR)"
+	java -cp "$(TLA_TOOLS_JAR)" tlc2.TLC \
+		-config spec/CasualtyBoundary.cfg \
+		-metadir "$(TLA_BUILD_DIR)/CasualtyBoundary" \
+		spec/CasualtyBoundary.tla
 
 tla-worker-check: tla-tools
 	@mkdir -p "$(TLA_BUILD_DIR)"

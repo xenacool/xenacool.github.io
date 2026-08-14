@@ -2,6 +2,27 @@ use super::*;
 
 pub(super) const BOUNDARY_WORK_BUDGET: usize = 8;
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(super) enum BoundaryResolution {
+    Progress,
+    Ready(npc_engine_core::AgentId),
+    Completed(GameOutcome),
+}
+
+pub(super) fn resolve_pg_rpg_boundary(
+    simulation: &pg_rpg::simulation::TacticalSimulation,
+    ready_agents: &[npc_engine_core::AgentId],
+) -> BoundaryResolution {
+    if let Some(outcome) = simulation.outcome() {
+        return BoundaryResolution::Completed(outcome);
+    }
+    ready_agents
+        .iter()
+        .copied()
+        .find(|agent| simulation.is_alive(*agent))
+        .map_or(BoundaryResolution::Progress, BoundaryResolution::Ready)
+}
+
 impl Runtime {
     pub(super) fn append_action_barrier(
         history: &mut HistoryManager,
@@ -42,25 +63,20 @@ impl Runtime {
         else {
             return RuntimeResponse::Error("Simulation not started".to_string());
         };
-        if ready_agents.is_empty() && !sim.is_complete() {
+        let boundary = resolve_pg_rpg_boundary(sim, &ready_agents);
+        if matches!(boundary, BoundaryResolution::Progress) {
             return RuntimeResponse::SimulationProgress {
                 work_units: BOUNDARY_WORK_BUDGET as u32,
             };
         }
         let start_idx = history.log.len();
-        for id in &ready_agents {
-            Self::append_turn_events(history, sim, *id);
+        if let BoundaryResolution::Ready(id) = boundary {
+            Self::append_turn_events(history, sim, id);
         }
-        if sim.is_complete() && !self.pg_rpg_completion_emitted {
-            let outcome = if sim.living_team_count() == 0 || sim.turn_limit_reached() {
-                GameOutcome::Draw
-            } else if sim.winning_team() == Some(1) {
-                GameOutcome::Victory { winning_team: 1 }
-            } else {
-                GameOutcome::Defeat {
-                    winning_team: sim.winning_team().expect("one living team remains"),
-                }
-            };
+        if let BoundaryResolution::Completed(outcome) = boundary {
+            if self.pg_rpg_completion_emitted {
+                return RuntimeResponse::Error("Duplicate pg_rpg completion boundary".to_string());
+            }
             history.push_and_apply(Event::GameCompleted {
                 winning_team: sim.winning_team(),
                 outcome: outcome.clone(),
@@ -76,8 +92,8 @@ impl Runtime {
                 outcome,
                 history: update,
             };
-        } else if let Some(agent) = ready_agents.first() {
-            sim.state.agents.get(agent).map(|unit| {
+        } else if let BoundaryResolution::Ready(agent) = boundary {
+            sim.state.agents.get(&agent).map(|unit| {
                 if unit.team_id == 1 {
                     self.continuation = RuntimeContinuation::AwaitPlayerDecision {
                         unit_id: agent.0 as u64,
@@ -488,5 +504,56 @@ impl Runtime {
         {
             session.set_simulation(simulation.clone());
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use npc_engine_core::AgentId;
+    use npc_engine_core::MCTSConfiguration;
+    use pystral_games::{GridCell, SkirmishConfig};
+
+    fn simulation_with_two_player_units() -> pg_rpg::simulation::TacticalSimulation {
+        let mut scenario = SkirmishConfig::new(42);
+        scenario
+            .add_unit(1, 1, "Caveman", GridCell::new(hexx::Hex::ZERO, 0))
+            .unwrap();
+        scenario
+            .add_unit(2, 1, "Mage", GridCell::new(hexx::Hex::new(1, -1), 0))
+            .unwrap();
+        scenario
+            .add_unit(3, 2, "Mage", GridCell::new(hexx::Hex::new(4, 0), 0))
+            .unwrap();
+        pg_rpg::simulation::TacticalSimulation::from_scenario(
+            scenario,
+            MCTSConfiguration {
+                seed: Some(42),
+                ..Default::default()
+            },
+        )
+    }
+
+    #[test]
+    fn boundary_resolution_skips_dead_ready_units() {
+        let mut simulation = simulation_with_two_player_units();
+        simulation.state.agents.get_mut(&AgentId(1)).unwrap().health = 0;
+
+        assert_eq!(
+            resolve_pg_rpg_boundary(&simulation, &[AgentId(1), AgentId(2)]),
+            BoundaryResolution::Ready(AgentId(2))
+        );
+    }
+
+    #[test]
+    fn boundary_resolution_completes_before_ready_selection() {
+        let mut simulation = simulation_with_two_player_units();
+        simulation.state.agents.get_mut(&AgentId(2)).unwrap().health = 0;
+        simulation.state.agents.get_mut(&AgentId(3)).unwrap().health = 0;
+
+        assert_eq!(
+            resolve_pg_rpg_boundary(&simulation, &[AgentId(1)]),
+            BoundaryResolution::Completed(GameOutcome::Victory { winning_team: 1 })
+        );
     }
 }

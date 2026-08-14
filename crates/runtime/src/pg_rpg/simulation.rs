@@ -1,5 +1,6 @@
 use npc_engine_core::{AgentId, Context, ContextMut, MCTS, MCTSConfiguration, StateDiffRefMut};
 use npc_engine_utils::GlobalDomain;
+use pystral_core::log::GameOutcome;
 use pystral_core::log::{AvailableAbility, AvailableActions, AvailableJobActions, AvailableMove};
 use pystral_games::*;
 use std::collections::{HashMap, HashSet, VecDeque};
@@ -36,6 +37,13 @@ pub struct TacticalSimulation {
 #[path = "simulation_tests.rs"]
 mod tests;
 impl TacticalSimulation {
+    pub fn is_alive(&self, agent: AgentId) -> bool {
+        self.state
+            .agents
+            .get(&agent)
+            .is_some_and(|unit| unit.health > 0)
+    }
+
     fn action_is_plannable(&self, agent: AgentId, action: &TacticalDisplayAction) -> bool {
         match action {
             TacticalDisplayAction::Ability { target, ability } => {
@@ -99,12 +107,7 @@ impl TacticalSimulation {
             return Ok(Some(Vec::new()));
         }
         while let Some(agent) = self.ready_queue.pop_front() {
-            if self
-                .state
-                .agents
-                .get(&agent)
-                .is_some_and(|unit| unit.health > 0)
-            {
+            if self.is_alive(agent) {
                 return Ok(Some(vec![agent]));
             }
         }
@@ -116,12 +119,7 @@ impl TacticalSimulation {
         };
         self.ready_queue.extend(ready_agents);
         while let Some(agent) = self.ready_queue.pop_front() {
-            if self
-                .state
-                .agents
-                .get(&agent)
-                .is_some_and(|unit| unit.health > 0)
-            {
+            if self.is_alive(agent) {
                 return Ok(Some(vec![agent]));
             }
         }
@@ -276,6 +274,9 @@ impl TacticalSimulation {
         agent: AgentId,
         action: TacticalDisplayAction,
     ) -> Result<TacticalDisplayAction, String> {
+        if !self.is_alive(agent) {
+            return Err(format!("agent {} is dead", agent.0));
+        }
         // Reactions are mandatory and this is the final authoritative action
         // boundary.  Keep the invariant here as well as in controller
         // adapters: an ordinary candidate must never be rejected merely
@@ -435,6 +436,23 @@ impl TacticalSimulation {
 
     pub fn is_complete(&self) -> bool {
         self.living_team_count() <= 1 || self.turn_limit_reached()
+    }
+
+    pub fn outcome(&self) -> Option<GameOutcome> {
+        if !self.is_complete() {
+            return None;
+        }
+        Some(
+            if self.living_team_count() == 0 || self.turn_limit_reached() {
+                GameOutcome::Draw
+            } else if self.winning_team() == Some(1) {
+                GameOutcome::Victory { winning_team: 1 }
+            } else {
+                GameOutcome::Defeat {
+                    winning_team: self.winning_team().expect("one living team remains"),
+                }
+            },
+        )
     }
 
     pub fn turn_limit_reached(&self) -> bool {
@@ -617,6 +635,9 @@ impl TacticalSimulation {
             .agents
             .get_mut(&agent)
             .ok_or(ActionError::UnknownAgent(agent))?;
+        if unit.health <= 0 {
+            return Err(ActionError::DeadAgent(agent));
+        }
         unit.action_points = unit.derived_stats.action_points_max;
         unit.turn_tags.counts.clear();
         unit.ct = 0;

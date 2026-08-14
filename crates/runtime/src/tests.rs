@@ -227,6 +227,52 @@ fn animation_acknowledgment_advances_the_continuation_exactly_once() {
 }
 
 #[test]
+fn animation_ack_does_not_restore_a_dead_player_continuation() {
+    let mut scenario = SkirmishConfig::new(42);
+    scenario
+        .add_unit(1, 1, "Caveman", GridCell::new(hexx::Hex::ZERO, 0))
+        .unwrap();
+    scenario
+        .add_unit(2, 1, "Mage", GridCell::new(hexx::Hex::new(1, -1), 0))
+        .unwrap();
+    scenario
+        .add_unit(3, 2, "Mage", GridCell::new(hexx::Hex::new(4, 0), 0))
+        .unwrap();
+    let mut runtime = Runtime::new();
+    runtime.pg_rpg_sim = Some(TacticalSimulation::from_scenario(
+        scenario,
+        npc_engine_core::MCTSConfiguration {
+            seed: Some(42),
+            ..Default::default()
+        },
+    ));
+    runtime.pg_rpg_history = Some(HistoryManager::new());
+    runtime.continuation = RuntimeContinuation::AwaitAnimationAck {
+        barrier_id: 91,
+        unit_id: 1,
+        ends_turn: false,
+        npc: false,
+    };
+    runtime
+        .pg_rpg_sim
+        .as_mut()
+        .unwrap()
+        .state
+        .agents
+        .get_mut(&npc_engine_core::AgentId(1))
+        .unwrap()
+        .health = 0;
+
+    let response = runtime
+        .process_request(RuntimeRequest::AcknowledgeAnimation { barrier_id: 91 })
+        .0;
+    assert!(matches!(
+        response,
+        RuntimeResponse::Continuation(RuntimeContinuation::AwaitBoundary)
+    ));
+}
+
+#[test]
 fn stale_animation_acknowledgment_does_not_advance_or_mutate_state() {
     let mut runtime = runtime_with_unit();
     let response = runtime

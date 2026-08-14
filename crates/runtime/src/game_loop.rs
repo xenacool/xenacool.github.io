@@ -304,7 +304,10 @@ impl Runtime {
                     .pg_rpg_sim
                     .as_ref()
                     .is_some_and(|simulation| simulation.is_complete());
-                let next = if game_complete || ends_turn {
+                let actor_alive = self.pg_rpg_sim.as_ref().is_some_and(|simulation| {
+                    simulation.is_alive(npc_engine_core::AgentId(unit_id as u32))
+                });
+                let next = if game_complete || ends_turn || !actor_alive {
                     RuntimeContinuation::AwaitBoundary
                 } else if npc {
                     let request_id = self.next_npc_request_id;

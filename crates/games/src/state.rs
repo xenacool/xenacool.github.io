@@ -256,6 +256,7 @@ pub type TacticalGrid = GridMap;
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum ActionError {
     UnknownAgent(AgentId),
+    DeadAgent(AgentId),
     UnknownMovement(MovementId),
     IllegalDestination(GridCell),
     InsufficientActionPoints,
@@ -278,6 +279,9 @@ pub fn validate_move(
         .agents
         .get(&agent)
         .ok_or(ActionError::UnknownAgent(agent))?;
+    if unit.health <= 0 {
+        return Err(ActionError::DeadAgent(agent));
+    }
     let destinations = reachable_cells(state, agent)
         .map_err(|_| ActionError::UnknownMovement(unit.movement_ability))?;
     let ap_cost = destinations
