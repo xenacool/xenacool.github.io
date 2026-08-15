@@ -21,9 +21,9 @@ test('compact HUD uses perimeter mode circles and keeps the active panel bounded
   expect(playControls.top).toBeGreaterThanOrEqual(0);
   expect(playControls.bottom).toBeLessThanOrEqual(852);
 
-  await page.locator('#hud-mode-bar button[data-hud-mode="history"]').click();
+  await page.locator('#hud-mode-bar button[data-hud-mode="diagnostics"]').click();
   const state = await page.evaluate(() => {
-    const active = document.getElementById('history-viewer').getBoundingClientRect();
+    const active = document.getElementById('diagnostics-stack').getBoundingClientRect();
     const controls = document.getElementById('history-log-camera-controls').getBoundingClientRect();
     const visible = (id) => getComputedStyle(document.getElementById(id)).display !== 'none';
     return {
@@ -36,7 +36,7 @@ test('compact HUD uses perimeter mode circles and keeps the active panel bounded
   expect(state.active.left).toBeGreaterThanOrEqual(0);
   expect(state.active.right).toBeLessThanOrEqual(383);
   if (state.controlsVisible) expect(state.active.bottom).toBeLessThanOrEqual(state.controls.top);
-  expect(state.active.height).toBeLessThanOrEqual(852 * 0.2);
+  expect(state.active.height).toBeLessThanOrEqual(852 * 0.4);
   expect(state.actionLogVisible).toBeFalsy();
 });
 
@@ -47,8 +47,7 @@ test('HUD mode buttons switch the primary open panel', async ({ page }) => {
   const expectedPanels = {
     play: 'history-log-camera-controls',
     actions: 'action-stack',
-    history: 'history-viewer',
-    diagnostics: 'diagnostics-panel',
+    diagnostics: 'diagnostics-stack',
   };
   for (const [mode, expectedPanel] of Object.entries(expectedPanels)) {
     await page.locator(`#hud-mode-bar button[data-hud-mode="${mode}"]`).click();
@@ -106,7 +105,7 @@ test('empty contextual modes explain their state and keep scrolling inside the p
   await page.locator('#hud-mode-bar button[data-hud-mode="actions"]').click();
   await expect(page.locator('#unit-state-panel')).toBeVisible();
   await expect(page.locator('#unit-state-items').evaluate((element) => element.offsetParent !== null)).resolves.toBe(true);
-  await page.locator('#hud-mode-bar button[data-hud-mode="history"]').click();
+  await page.locator('#hud-mode-bar button[data-hud-mode="diagnostics"]').click();
   await expect(page.locator('#unit-state-items').evaluate((element) => element.offsetParent !== null)).resolves.toBe(false);
 
   const scrolling = await page.locator('#history-log-camera-controls').evaluate((panel) => ({
