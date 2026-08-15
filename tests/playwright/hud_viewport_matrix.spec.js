@@ -12,7 +12,7 @@ const viewports = [
   { name: 'phone-large', width: 430, height: 932 },
 ];
 
-const modes = ['play', 'actions', 'history', 'diagnostics'];
+const modes = ['play', 'actions', 'diagnostics'];
 
 test.describe('HUD viewport matrix', () => {
   for (const viewport of viewports) {
@@ -31,9 +31,9 @@ test.describe('HUD viewport matrix', () => {
             'action-stack',
             'action-log-panel',
             'history-viewer',
-            'diagnostics-panel',
-            'heartbeat-panel',
             'entity-viewer',
+            'heartbeat-panel',
+            'diagnostics-panel',
           ];
           const viewportWidth = window.innerWidth;
           const viewportHeight = window.innerHeight;

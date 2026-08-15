@@ -12,28 +12,40 @@ test.describe('Debug Panels BDD', () => {
       await expect(page.locator('#history-viewer')).not.toBeVisible();
     });
 
-    await test.step('When the Debug checkbox is checked', async () => {
+    await page.locator('#hud-mode-bar button[data-hud-mode="diagnostics"]').click();
+
+    await test.step('Then Diagnostics shows the diagnostic surfaces', async () => {
+      await expect(page.locator('#entity-viewer')).toBeVisible();
+      await expect(page.locator('#history-viewer')).toBeVisible();
+      await expect(page.locator('#heartbeat-panel')).toBeVisible();
+    });
+
+    await test.step('When the collision Debug checkbox is checked', async () => {
       await page.check('#debug-checkbox');
     });
 
-    await test.step('Then the entity viewer and history viewer panels should be visible', async () => {
+    await test.step('Then Diagnostics remains visible', async () => {
       await expect(page.locator('#entity-viewer')).toBeVisible();
       await expect(page.locator('#history-viewer')).toBeVisible();
+      await expect(page.locator('#heartbeat-panel')).toBeVisible();
     });
 
-    await test.step('When the Debug checkbox is unchecked', async () => {
+    await test.step('When the collision Debug checkbox is unchecked', async () => {
       await page.uncheck('#debug-checkbox');
     });
 
-    await test.step('Then the panels should be hidden again', async () => {
-      await expect(page.locator('#entity-viewer')).not.toBeVisible();
-      await expect(page.locator('#history-viewer')).not.toBeVisible();
+    await test.step('Then Diagnostics remains visible', async () => {
+      await expect(page.locator('#entity-viewer')).toBeVisible();
+      await expect(page.locator('#history-viewer')).toBeVisible();
+      await expect(page.locator('#heartbeat-panel')).toBeVisible();
     });
   });
 
   test('Sync debug panels when scrubbing history', async ({ page }) => {
     await test.step('Given debug mode is active and log scrubbing is paused', async () => {
+      await page.locator('#hud-mode-bar button[data-hud-mode="diagnostics"]').click();
       await page.check('#debug-checkbox');
+      await page.locator('#hud-mode-bar button[data-hud-mode="play"]').click();
       
       // Ensure log scrubbing and simulation are paused for stable testing
       const playLogBtn = page.locator('#play-log');
@@ -62,6 +74,8 @@ test.describe('Debug Panels BDD', () => {
       // Wait for UI to update
       await page.waitForTimeout(500);
     });
+
+    await page.locator('#hud-mode-bar button[data-hud-mode="diagnostics"]').click();
 
     await test.step('Then the entity viewer should display entity details', async () => {
       const entityViewer = page.locator('#entity-viewer');
