@@ -74,7 +74,7 @@ pub fn process_slice(
     }
 
     let mut stats = SpritestackProcessStats::default();
-    for pixel in rgba.chunks_exact_mut(4) {
+    for pixel in rgba.as_chunks_mut::<4>().0 {
         let normalized = if pixel[3] >= config.alpha_cutoff {
             255
         } else {
@@ -207,7 +207,8 @@ mod tests {
                 [20, 0, 0, 255],
             ],
         );
-        let stats = process_slice(3, 3, &mut rgba, Default::default()).unwrap();
+        let stats = process_slice(3, 3, &mut rgba, SpritestackProcessConfig::default())
+            .expect("valid cavity image");
         assert_eq!(stats.holes_filled, 1);
         assert_eq!(&rgba[16..20], &[10, 0, 0, 255]);
     }
@@ -229,7 +230,8 @@ mod tests {
                 [0, 0, 0, 0],
             ],
         );
-        let stats = process_slice(3, 3, &mut rgba, Default::default()).unwrap();
+        let stats = process_slice(3, 3, &mut rgba, SpritestackProcessConfig::default())
+            .expect("valid border image");
         assert_eq!(stats.holes_filled, 0);
         assert_eq!(rgba[7], 255);
         assert_eq!(rgba[0], 0);
@@ -239,9 +241,9 @@ mod tests {
     fn normalizes_alpha_at_cutoff_and_is_idempotent() {
         let mut rgba = image(2, 1, &[[1, 2, 3, 127], [4, 5, 6, 128]]);
         let config = SpritestackProcessConfig::default();
-        let first = process_slice(2, 1, &mut rgba, config).unwrap();
+        let first = process_slice(2, 1, &mut rgba, config).expect("valid alpha image");
         let expected = rgba.clone();
-        let second = process_slice(2, 1, &mut rgba, config).unwrap();
+        let second = process_slice(2, 1, &mut rgba, config).expect("idempotent alpha image");
         assert_eq!(first.alpha_pixels_changed, 2);
         assert_eq!(second.alpha_pixels_changed, 0);
         assert_eq!(rgba, expected);
@@ -251,11 +253,11 @@ mod tests {
     fn rejects_invalid_dimensions_and_buffers() {
         let mut rgba = vec![];
         assert_eq!(
-            process_slice(0, 1, &mut rgba, Default::default()),
+            process_slice(0, 1, &mut rgba, SpritestackProcessConfig::default()),
             Err(SpritestackProcessError::ZeroSizedImage)
         );
         assert_eq!(
-            process_slice(1, 1, &mut rgba, Default::default()),
+            process_slice(1, 1, &mut rgba, SpritestackProcessConfig::default()),
             Err(SpritestackProcessError::InvalidBufferLength {
                 expected: 4,
                 actual: 0
@@ -284,7 +286,7 @@ mod tests {
             fill_holes: false,
             ..Default::default()
         };
-        let stats = process_slice(3, 3, &mut rgba, config).unwrap();
+        let stats = process_slice(3, 3, &mut rgba, config).expect("hole filling can process image");
         assert_eq!(stats.holes_filled, 0);
         assert_eq!(rgba[19], 0);
     }

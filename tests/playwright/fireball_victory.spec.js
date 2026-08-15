@@ -185,4 +185,5 @@ test('deterministic pg_rpg Fireball reaches victory after one lethal cast', asyn
   await expect(page.locator('#action-menu-status')).toHaveText('Game completed.');
   await expect(page.locator('#game-completed')).toContainText('Victory');
   await expect(page.locator('#action-menu')).toHaveAttribute('data-game-completed', 'true');
+  await expect(page.locator('#action-log')).toContainText('Victory');
 });

@@ -141,6 +141,9 @@ impl LoopHandler {
                     self.history_manager.jump_to(0);
                     crate::render::set_ui_slider_max(self.history_manager.log.len() as u32);
                     crate::render::update_ui_slider(0);
+                    if let Ok(json) = serde_json::to_string(&self.history_manager.log) {
+                        crate::render::update_action_log(&json);
+                    }
                 }
                 AppCommand::AppendHistory(history) => {
                     self.history_manager.append_events(history.log);
@@ -157,6 +160,9 @@ impl LoopHandler {
                     // ticks.  Acknowledge its visible barrier immediately so
                     // the worker is not dependent on a later animation frame.
                     self.handle_sequence_number_acks(self.playback_state.last_tick_ms);
+                    if let Ok(json) = serde_json::to_string(&self.history_manager.log) {
+                        crate::render::update_action_log(&json);
+                    }
                 }
                 AppCommand::CameraNav(direction) => {
                     let mut target_cam_id = None;

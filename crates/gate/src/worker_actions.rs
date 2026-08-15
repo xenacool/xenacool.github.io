@@ -128,23 +128,7 @@ impl UnifiedWorker {
         }
         self.push_debug_trace(format!("unified worker accepted action input {direction}"));
         let is_confirm = direction == "confirm";
-        self.logger
-            .apply_command(pystral_core::ui_log::LogCommand::Info(format!(
-                "Action input: {}",
-                direction
-            )));
-        let log_msg = WorkerOutput::LogUpdate {
-            messages: self.logger.get_messages(),
-            total_errors: self.logger.total_errors as u32,
-            total_info: self.logger.total_info as u32,
-        };
-        let out_envelope = Envelope {
-            seq: self.next_output_seq,
-            msg: log_msg,
-        };
-        self.next_output_seq += 1;
-        self.outbox
-            .push_back(ReliableOutput::Msg(Box::new(out_envelope)));
+        self.emit_action_input_log(&direction);
         let res = if direction == "test-occupy" {
             let Some(preview) = self.transient_state.preview.clone() else {
                 return Some(WorkerOutput::RuntimeResponse(Box::new(
@@ -318,6 +302,24 @@ impl UnifiedWorker {
             return None;
         };
         Some(self.finish_action_input(res, is_confirm))
+    }
+
+    fn emit_action_input_log(&mut self, direction: &str) {
+        self.logger
+            .apply_command(pystral_core::ui_log::LogCommand::Info(format!(
+                "Action input: {direction}"
+            )));
+        let envelope = Envelope {
+            seq: self.next_output_seq,
+            msg: WorkerOutput::LogUpdate {
+                messages: self.logger.get_messages(),
+                total_errors: self.logger.total_errors as u32,
+                total_info: self.logger.total_info as u32,
+            },
+        };
+        self.next_output_seq += 1;
+        self.outbox
+            .push_back(ReliableOutput::Msg(Box::new(envelope)));
     }
 
     pub(crate) fn track_committed_action(&mut self, response: &RuntimeResponse) {

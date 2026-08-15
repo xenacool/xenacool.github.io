@@ -192,10 +192,9 @@ fn default_property_value(kind: &str, property: &str) -> Option<PropertyValue> {
     }
     if kind == "camera" {
         return match property {
-            "angle" => Some(PropertyValue::Float(0.0)),
+            "angle" | "target_x" | "target_y" | "target_z" => Some(PropertyValue::Float(0.0)),
             "distance" => Some(PropertyValue::Float(20.0)),
             "height" => Some(PropertyValue::Float(12.0)),
-            "target_x" | "target_y" | "target_z" => Some(PropertyValue::Float(0.0)),
             _ => None,
         };
     }

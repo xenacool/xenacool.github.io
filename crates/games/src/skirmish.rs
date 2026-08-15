@@ -6,6 +6,7 @@ use crate::{
 };
 use hexx::Hex;
 use pystral_physics::ProjectileCollider;
+use skirmish_defs::{builtin_script_abilities, builtin_script_jobs};
 use std::collections::HashMap;
 
 #[path = "skirmish_defs.rs"]
@@ -464,23 +465,4 @@ impl SkirmishConfig {
         }
         Ok(state)
     }
-}
-
-use skirmish_defs::{builtin_script_abilities, builtin_script_jobs};
-
-pub fn setup_2v2_skirmish() -> TacticalState {
-    let mut config = SkirmishConfig::new(42);
-    config
-        .add_unit(1, 1, "Caveman", GridCell::new(Hex::new(0, 0), 0))
-        .expect("default unit config");
-    config
-        .add_unit(2, 1, "Mage", GridCell::new(Hex::new(1, -1), 0))
-        .expect("default unit config");
-    config
-        .add_unit(3, 2, "Necromancer", GridCell::new(Hex::new(5, -5), 0))
-        .expect("default unit config");
-    config
-        .add_unit(4, 2, "Skeleton_Minion", GridCell::new(Hex::new(4, -4), 0))
-        .expect("default unit config");
-    config.build_state().expect("default skirmish config")
 }
