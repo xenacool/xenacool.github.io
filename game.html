@@ -9,7 +9,7 @@
     <style>
         body { margin: 0; overflow: hidden; background-color: black; color: white; font-family: sans-serif; }
         canvas { width: 100vw; height: 100vh; display: block; }
-        #ui {
+        #history-log-camera-controls {
             position: absolute;
             bottom: 20px;
             left: 50%;
@@ -120,19 +120,39 @@
         }
         #hud-dock > * { pointer-events: auto; }
         #hud-dock > * { min-width: 0; }
-        #hud-dock #ui { grid-area: controls; position: static; transform: none; max-height: 38vh; overflow-y: auto; }
+        #hud-dock #history-log-camera-controls {
+            grid-area: controls;
+            position: static;
+            transform: none;
+            max-height: 38vh;
+            overflow-y: auto;
+            display: none !important;
+        }
+        #hud-dock[data-hud-mode="play"] #history-log-camera-controls { display: block !important; }
+        #hud-dock #history-log-camera-controls {
+            position: fixed !important;
+            left: 8px !important;
+            bottom: 100px !important;
+            transform: none !important;
+            width: min(420px, calc(33vw - 16px));
+            max-width: 420px;
+            max-height: 30vh;
+            overflow-y: auto;
+            z-index: 160;
+        }
         #hud-dock #action-stack {
             position: fixed !important;
-            left: 50% !important;
-            bottom: 52px !important;
+            left: 8px !important;
+            bottom: 100px !important;
             top: auto !important;
             right: auto !important;
-            transform: translateX(-50%) !important;
+            transform: none !important;
             width: min(420px, calc(33vw - 16px));
             max-width: 420px;
             max-height: 38vh;
             overflow-y: auto;
             z-index: 160;
+            display: none !important;
         }
         #hud-dock #action-log-panel { grid-area: context; position: static !important; width: auto !important; max-width: none !important; max-height: 38vh; }
         #hud-dock #diagnostics-panel,
@@ -161,13 +181,50 @@
         #hud-dock #entity-viewer { display: none !important; }
         #hud-dock #action-stack {
             position: fixed !important;
-            left: 50% !important;
+            left: 8px !important;
             right: auto !important;
             top: auto !important;
-            bottom: 52px !important;
-            transform: translateX(-50%) !important;
+            bottom: 100px !important;
+            transform: none !important;
         }
-        #hud-dock[data-hud-mode="play"] #action-log-panel,
+        #hud-dock #action-log-panel {
+            position: fixed !important;
+            left: auto !important;
+            right: 8px !important;
+            top: 48px !important;
+            bottom: auto !important;
+            transform: none !important;
+            width: min(420px, calc(33vw - 16px)) !important;
+            max-width: 420px !important;
+            max-height: 24vh;
+            z-index: 160;
+        }
+        #hud-dock #history-viewer {
+            position: fixed !important;
+            left: auto !important;
+            right: 8px !important;
+            top: auto !important;
+            bottom: 100px !important;
+            transform: none !important;
+            width: min(420px, calc(33vw - 16px));
+            max-width: 420px;
+            max-height: 30vh;
+            overflow-y: auto;
+            z-index: 160;
+        }
+        #hud-dock #diagnostics-panel {
+            position: fixed !important;
+            left: auto !important;
+            right: 8px !important;
+            top: 48px !important;
+            bottom: auto !important;
+            transform: none !important;
+            width: min(420px, calc(33vw - 16px)) !important;
+            max-width: 420px !important;
+            max-height: 30vh !important;
+            z-index: 160;
+        }
+        #hud-dock[data-hud-mode="actions"] #action-log-panel,
         #hud-dock[data-hud-mode="actions"] #action-stack,
         #hud-dock[data-hud-mode="unit-state"] #action-stack,
         #hud-dock[data-hud-mode="history"] #history-viewer,
@@ -180,6 +237,27 @@
         #hud-dock[data-hud-mode="unit-state"] #unit-state-panel { display: block !important; }
         #hud-mode-bar { grid-column: 1 / -1; display: flex; gap: 4px; justify-content: center; flex-wrap: wrap; }
         #hud-mode-bar button[aria-current="true"] { background: #1d6fa5; outline: 2px solid #8ecae6; }
+        #action-controls {
+            position: fixed !important;
+            left: 50% !important;
+            bottom: 52px !important;
+            transform: translateX(-50%) !important;
+            z-index: 170;
+            max-width: calc(100vw - 16px);
+            max-height: 15vh;
+            overflow: auto;
+            justify-content: center;
+            flex-wrap: wrap;
+            box-sizing: border-box;
+            pointer-events: auto;
+        }
+        #hud-mode-bar {
+            position: fixed;
+            left: 8px;
+            right: 8px;
+            bottom: 8px;
+            z-index: 170;
+        }
         .hud-context-panel { min-height: 0; }
         @media (max-width: 1024px) and (orientation: portrait), (max-width: 760px) {
             nav[aria-label="Pystral Gate sections"] { top: 48px !important; z-index: 140 !important; }
@@ -192,9 +270,9 @@
             #hud-dock[data-hud-mode="history"] #history-viewer,
             #hud-dock[data-hud-mode="diagnostics"] #diagnostics-panel,
             #hud-dock[data-hud-mode="diagnostics"] #heartbeat-panel,
-            #hud-dock[data-hud-mode="play"] #action-log-panel { display: block !important; }
+            #hud-dock[data-hud-mode="actions"] #action-log-panel { display: block !important; }
             #hud-dock[data-hud-mode="actions"] #action-stack { display: flex !important; }
-            #hud-dock #ui { order: 3; max-height: 22vh; }
+            #hud-dock #history-log-camera-controls { order: 3; max-height: 22vh; }
             #hud-dock #action-stack { order: 2; max-height: 30vh; }
             #hud-dock #action-log-panel { order: 2; }
             #hud-dock #entity-viewer { display: none !important; }
@@ -213,7 +291,8 @@
             }
             #hud-mode-bar {
                 position: absolute;
-                top: max(8px, env(safe-area-inset-top));
+                top: auto;
+                bottom: max(8px, env(safe-area-inset-bottom));
                 left: 8px;
                 right: 8px;
                 display: flex;
@@ -246,10 +325,18 @@
                 min-height: 30px;
             }
             #hud-mode-bar #history-download-context::before { content: '⇩'; font-size: 15px; }
-            #hud-dock #ui {
+            #action-controls {
+                bottom: calc(48px + env(safe-area-inset-bottom));
+                width: 92vw;
+                max-width: 92vw;
+                max-height: 14vh;
+                padding: 4px;
+                gap: 3px;
+            }
+            #hud-dock #history-log-camera-controls {
                 position: absolute !important;
                 left: 50%;
-                bottom: max(4px, env(safe-area-inset-bottom));
+                bottom: calc(100px + env(safe-area-inset-bottom));
                 transform: translateX(-50%);
                 width: min(78vw, 300px);
                 max-height: 16vh;
@@ -259,9 +346,9 @@
                 border-radius: 8px;
                 opacity: 0.94;
             }
-            #hud-dock #ui .controls-row { gap: 4px; margin-bottom: 2px; flex-wrap: wrap; justify-content: center; }
-            #hud-dock #ui input[type=range] { width: min(42vw, 150px); }
-            #hud-dock #ui button { min-height: 26px; padding: 3px 6px; }
+            #hud-dock #history-log-camera-controls .controls-row { gap: 4px; margin-bottom: 2px; flex-wrap: wrap; justify-content: center; }
+            #hud-dock #history-log-camera-controls input[type=range] { width: min(42vw, 150px); }
+            #hud-dock #history-log-camera-controls button { min-height: 26px; padding: 3px 6px; }
             #hud-dock[data-hud-mode="play"] #playback-controls,
             #hud-dock[data-hud-mode="actions"] #playback-controls,
             #hud-dock[data-hud-mode="unit-state"] #playback-controls { display: none; }
@@ -274,7 +361,7 @@
             #hud-dock #heartbeat-panel,
             #hud-dock #unit-state-panel,
             #hud-dock #action-menu { display: none !important; }
-            #hud-dock[data-hud-mode="play"] #action-log-panel,
+            #hud-dock[data-hud-mode="actions"] #action-log-panel,
             #hud-dock[data-hud-mode="history"] #history-viewer,
             #hud-dock[data-hud-mode="diagnostics"] #diagnostics-panel { display: block !important; }
             /* Heartbeat is represented in diagnostics on compact screens so
@@ -312,6 +399,15 @@
             #hud-dock #diagnostics-panel,
             #hud-dock #heartbeat-panel,
             #hud-dock #action-stack { transform: translateX(-50%) !important; }
+            #hud-dock #action-log-panel {
+                left: auto !important;
+                right: 4px !important;
+                top: 48px !important;
+                bottom: auto !important;
+                transform: none !important;
+                width: min(78vw, 300px) !important;
+                max-width: 78vw !important;
+            }
             #hud-dock #action-stack { gap: 4px; }
             #hud-dock #diagnostics-panel,
             #hud-dock #heartbeat-panel { bottom: 15vh; max-height: 10vh; }
@@ -323,7 +419,7 @@
             #hud-mode-bar { left: 4px; right: 4px; gap: 3px; }
             #hud-mode-bar button { width: 32px; height: 32px; min-height: 32px; }
             #hud-mode-bar button::before { font-size: 14px; }
-            #hud-dock #ui { width: 82vw; max-height: 16vh; }
+            #hud-dock #history-log-camera-controls { width: 82vw; max-height: 16vh; }
             #hud-dock .hud-context-panel,
             #hud-dock #action-stack { width: 82vw; max-width: 82vw; max-height: 17vh; }
         }
@@ -350,7 +446,19 @@
     <button type="button" data-hud-mode="diagnostics" aria-current="false">Diagnostics</button>
     <button type="button" id="history-download-context" title="Download replay history">Download History</button>
 </div>
-<div id="ui">
+<div id="action-controls" class="controls-row" style="display: flex; background: rgba(0, 100, 200, 0.3); padding: 5px; border-radius: 5px;">
+    <button id="action-up">▲</button>
+    <button id="action-down">▼</button>
+    <button id="action-left">◀</button>
+    <button id="action-right">▶</button>
+    <button id="action-layer-up" title="Game layer up">Layer ▲</button>
+    <button id="action-layer-down" title="Game layer down">Layer ▼</button>
+    <button id="action-confirm" style="background: #228b22;">Action</button>
+    <button id="action-wait" style="background: #6a5acd;">Wait</button>
+    <button id="action-return" style="background: #b22222;">Return</button>
+    <button id="test-occupy-destination" style="display: none;">Occupy selected destination</button>
+</div>
+<div id="history-log-camera-controls">
     <div class="controls-row" id="playback-controls">
         <label for="history-slider">History Log:</label>
         <input type="range" id="history-slider" min="0" max="320" value="0">
@@ -394,18 +502,6 @@
         <button id="nav-down" title="Camera Down">Down</button>
         <button id="nav-left" title="Camera Left">Left</button>
         <button id="nav-right" title="Camera Right">Right</button>
-    </div>
-    <div class="controls-row" id="action-controls" style="display: none; background: rgba(0, 100, 200, 0.3); padding: 5px; border-radius: 5px;">
-        <button id="action-up">▲</button>
-        <button id="action-down">▼</button>
-        <button id="action-left">◀</button>
-        <button id="action-right">▶</button>
-        <button id="action-layer-up" title="Game layer up">Layer ▲</button>
-        <button id="action-layer-down" title="Game layer down">Layer ▼</button>
-        <button id="action-confirm" style="background: #228b22;">Action</button>
-        <button id="action-wait" style="background: #6a5acd;">Wait</button>
-        <button id="action-return" style="background: #b22222;">Return</button>
-        <button id="test-occupy-destination" style="display: none;">Occupy selected destination</button>
     </div>
 </div>
 <div id="action-stack" style="display: none; position: absolute; left: 16px; bottom: 92px; max-width: min(420px, calc(100vw - 32px)); max-height: calc(100vh - 110px); flex-direction: column; align-items: stretch; gap: 8px;">
@@ -684,7 +780,9 @@
     window.update_action_buttons = (visible, up, down, left, right, layerUp, layerDown, confirm, ret, wait) => {
         const container = document.getElementById('action-controls');
         const previewActive = window.previewActive === true;
-        container.style.display = (visible || previewActive) ? 'flex' : 'none';
+        // This strip is independent of the history/camera panel and remains
+        // anchored above the HUD mode bar.
+        container.style.display = 'flex';
         document.getElementById('action-up').style.display = (up || previewActive) ? 'block' : 'none';
         document.getElementById('action-down').style.display = (down || previewActive) ? 'block' : 'none';
         document.getElementById('action-left').style.display = (left || previewActive) ? 'block' : 'none';
@@ -703,6 +801,13 @@
         const unitStateItems = document.getElementById('unit-state-items');
         const menu = document.getElementById('action-menu');
         const actions = state.available_actions;
+        stack.dataset.playerDecision = actions ? 'true' : 'false';
+        hudDock.dataset.playerDecision = actions ? 'true' : 'false';
+        if (actions) {
+            window.setHudMode('actions');
+        } else if (hudDock.dataset.hudMode === 'actions' && !state.game_completed) {
+            window.setHudMode('play');
+        }
         const status = document.getElementById('action-menu-status');
         const completion = document.getElementById('game-completed');
         const items = document.getElementById('action-menu-items');

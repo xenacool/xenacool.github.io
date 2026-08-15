@@ -26,7 +26,8 @@ test.describe('HUD viewport matrix', () => {
         const result = await page.evaluate(() => {
           const ids = [
             'hud-mode-bar',
-            'ui',
+            'action-controls',
+            'history-log-camera-controls',
             'action-stack',
             'action-log-panel',
             'history-viewer',
