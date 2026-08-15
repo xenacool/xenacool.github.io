@@ -235,7 +235,10 @@ deploy:
 	grep -v "web/spritesheet.png" .gitignore > .gitignore.tmp && mv .gitignore.tmp .gitignore
 	grep -v "web/atlas.json" .gitignore > .gitignore.tmp && mv .gitignore.tmp .gitignore
 	wasm-bindgen --target web --out-dir web --no-typescript target/wasm32-unknown-unknown/debug/pystral_gate.wasm
-	git add index.html web/pystral_gate.js web/pystral_gate_bg.wasm web/spritesheet.png web/atlas.json .gitignore
+	# Keep every static entry point and its worker in the Pages artifact. All
+	# asset URLs are document-relative, so this works at / locally and at a
+	# repository subpath on github.io.
+	git add index.html game.html editor.html rhai_worker.js web/enable-threads.js web/pystral_gate.js web/pystral_gate_bg.wasm web/spritesheet.png web/atlas.json .gitignore
 	git commit -m "Update web release artifacts"
 	git checkout main
 
