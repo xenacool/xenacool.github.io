@@ -4,7 +4,9 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt;
 
-use crate::spritestack_processing::{SpritestackProcessError, process_slice};
+use crate::spritestack_processing::{
+    SpritestackProcessConfig, SpritestackProcessError, process_slice,
+};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct SpriteRegion {
@@ -144,7 +146,7 @@ impl AssetCollection {
         let expected_buffer = (atlas.width as usize)
             .checked_mul(atlas.height as usize)
             .and_then(|pixels| pixels.checked_mul(4))
-            .ok_or_else(|| AssetError::InvalidSpritesheetBuffer {
+            .ok_or(AssetError::InvalidSpritesheetBuffer {
                 expected: usize::MAX,
                 actual: spritesheet_rgba.len(),
             })?;
@@ -155,97 +157,9 @@ impl AssetCollection {
             });
         }
 
-        let expected_dimensions = regions.first().map(|region| (region.w, region.h));
-        for (index, region) in regions.iter().enumerate() {
-            if region.w == 0 || region.h == 0 {
-                return Err(AssetError::InvalidRegion {
-                    name: name.to_string(),
-                    index,
-                    reason: "region dimensions must be positive".to_string(),
-                });
-            }
-            if let Some(expected) = expected_dimensions {
-                if (region.w, region.h) != expected {
-                    return Err(AssetError::InconsistentSliceDimensions {
-                        name: name.to_string(),
-                        index,
-                        expected,
-                        actual: (region.w, region.h),
-                    });
-                }
-            }
-            let x_end = region.x.checked_add(region.w);
-            let y_end = region.y.checked_add(region.h);
-            if x_end.is_none_or(|end| end > atlas.width)
-                || y_end.is_none_or(|end| end > atlas.height)
-            {
-                return Err(AssetError::InvalidRegion {
-                    name: name.to_string(),
-                    index,
-                    reason: "region exceeds atlas dimensions".to_string(),
-                });
-            }
-        }
-        let mut slices = Vec::new();
-        let mut width = 0;
-        let mut height = 0;
-
-        for region in regions {
-            if width == 0 {
-                width = region.w;
-                height = region.h;
-            }
-
-            let mut color_data = Vec::with_capacity((region.w * region.h * 4) as usize);
-            for y in 0..region.h {
-                let row_start = ((region.y + y) as usize)
-                    .checked_mul(spritesheet_width as usize)
-                    .and_then(|offset| offset.checked_add(region.x as usize))
-                    .and_then(|offset| offset.checked_mul(4))
-                    .ok_or_else(|| AssetError::InvalidRegion {
-                        name: name.to_string(),
-                        index: slices.len(),
-                        reason: "row offset overflow".to_string(),
-                    })?;
-                let row_end = row_start
-                    .checked_add(region.w as usize * 4)
-                    .ok_or_else(|| AssetError::InvalidRegion {
-                        name: name.to_string(),
-                        index: slices.len(),
-                        reason: "row length overflow".to_string(),
-                    })?;
-                let row = spritesheet_rgba.get(row_start..row_end).ok_or_else(|| {
-                    AssetError::InvalidRegion {
-                        name: name.to_string(),
-                        index: slices.len(),
-                        reason: "region is outside the spritesheet buffer".to_string(),
-                    }
-                })?;
-                color_data.extend_from_slice(row);
-            }
-
-            process_slice(
-                region.w as usize,
-                region.h as usize,
-                &mut color_data,
-                Default::default(),
-            )
-            .map_err(AssetError::from)?;
-
-            let pixel_count = (region.w * region.h) as usize;
-            let mut normal_data = vec![0u8; pixel_count * 4];
-            for i in 0..pixel_count {
-                normal_data[i * 4] = 127;
-                normal_data[i * 4 + 1] = 255;
-                normal_data[i * 4 + 2] = 127;
-                normal_data[i * 4 + 3] = 255;
-            }
-
-            slices.push(SpritestackSlice {
-                color_data,
-                normal_data,
-            });
-        }
+        validate_regions(name, regions, atlas.width, atlas.height)?;
+        let (slices, width, height) =
+            extract_slices(name, regions, spritesheet_rgba, spritesheet_width)?;
 
         let aabb = Vec3::new(
             (width as f32 - 0.5) * spacing,
@@ -271,6 +185,111 @@ impl AssetCollection {
     }
 }
 
+fn validate_regions(
+    name: &str,
+    regions: &[SpriteRegion],
+    atlas_width: u32,
+    atlas_height: u32,
+) -> Result<(), AssetError> {
+    let expected_dimensions = regions.first().map(|region| (region.w, region.h));
+    for (index, region) in regions.iter().enumerate() {
+        if region.w == 0 || region.h == 0 {
+            return Err(AssetError::InvalidRegion {
+                name: name.to_string(),
+                index,
+                reason: "region dimensions must be positive".to_string(),
+            });
+        }
+        if let Some(expected) = expected_dimensions
+            && (region.w, region.h) != expected
+        {
+            return Err(AssetError::InconsistentSliceDimensions {
+                name: name.to_string(),
+                index,
+                expected,
+                actual: (region.w, region.h),
+            });
+        }
+        if region
+            .x
+            .checked_add(region.w)
+            .is_none_or(|end| end > atlas_width)
+            || region
+                .y
+                .checked_add(region.h)
+                .is_none_or(|end| end > atlas_height)
+        {
+            return Err(AssetError::InvalidRegion {
+                name: name.to_string(),
+                index,
+                reason: "region exceeds atlas dimensions".to_string(),
+            });
+        }
+    }
+    Ok(())
+}
+
+fn extract_slices(
+    name: &str,
+    regions: &[SpriteRegion],
+    spritesheet_rgba: &[u8],
+    spritesheet_width: u32,
+) -> Result<(Vec<SpritestackSlice>, u32, u32), AssetError> {
+    let mut slices = Vec::new();
+    let mut width = 0;
+    let mut height = 0;
+    for region in regions {
+        if width == 0 {
+            width = region.w;
+            height = region.h;
+        }
+        let mut color_data = Vec::with_capacity((region.w * region.h * 4) as usize);
+        for y in 0..region.h {
+            let row_start = ((region.y + y) as usize)
+                .checked_mul(spritesheet_width as usize)
+                .and_then(|offset| offset.checked_add(region.x as usize))
+                .and_then(|offset| offset.checked_mul(4))
+                .ok_or_else(|| AssetError::InvalidRegion {
+                    name: name.to_string(),
+                    index: slices.len(),
+                    reason: "row offset overflow".to_string(),
+                })?;
+            let row_end = row_start
+                .checked_add(region.w as usize * 4)
+                .ok_or_else(|| AssetError::InvalidRegion {
+                    name: name.to_string(),
+                    index: slices.len(),
+                    reason: "row length overflow".to_string(),
+                })?;
+            let row = spritesheet_rgba.get(row_start..row_end).ok_or_else(|| {
+                AssetError::InvalidRegion {
+                    name: name.to_string(),
+                    index: slices.len(),
+                    reason: "region is outside the spritesheet buffer".to_string(),
+                }
+            })?;
+            color_data.extend_from_slice(row);
+        }
+        process_slice(
+            region.w as usize,
+            region.h as usize,
+            &mut color_data,
+            SpritestackProcessConfig::default(),
+        )
+        .map_err(AssetError::from)?;
+        let pixel_count = (region.w * region.h) as usize;
+        let mut normal_data = vec![0u8; pixel_count * 4];
+        for i in 0..pixel_count {
+            normal_data[i * 4..i * 4 + 4].copy_from_slice(&[127, 255, 127, 255]);
+        }
+        slices.push(SpritestackSlice {
+            color_data,
+            normal_data,
+        });
+    }
+    Ok((slices, width, height))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -289,7 +308,7 @@ mod tests {
         let atlas = SpriteAtlas::default();
         let error = collection
             .add_atlas_spritestack("Missing", 1.0, &atlas, &[], 0)
-            .unwrap_err();
+            .expect_err("missing spritestack must be rejected");
 
         assert!(matches!(error, AssetError::MissingSpritestack { .. }));
         assert!(collection.spritestacks.is_empty());
@@ -309,7 +328,7 @@ mod tests {
         );
         let error = collection
             .add_atlas_spritestack("Caveman", 1.0, &atlas, &[1; 8], 2)
-            .unwrap_err();
+            .expect_err("out-of-bounds region must be rejected");
 
         assert!(matches!(error, AssetError::InvalidRegion { .. }));
         assert!(collection.spritestacks.is_empty());
@@ -329,9 +348,12 @@ mod tests {
         );
         collection
             .add_atlas_spritestack("Caveman", 1.0, &atlas, &[10, 20, 30, 128, 0, 0, 0, 0], 2)
-            .unwrap();
+            .expect("valid atlas region should be inserted");
 
-        let stack = collection.spritestacks.get("Caveman").unwrap();
+        let stack = collection
+            .spritestacks
+            .get("Caveman")
+            .expect("inserted spritestack should be present");
         assert_eq!(stack.slices.len(), 1);
         assert_eq!(stack.slices[0].color_data, vec![10, 20, 30, 255]);
         assert_eq!(stack.slices[0].normal_data.len(), 4);

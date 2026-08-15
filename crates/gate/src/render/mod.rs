@@ -52,6 +52,9 @@ extern "C" {
     #[wasm_bindgen(js_namespace = window)]
     pub fn update_history_log(json: &str);
 
+    #[wasm_bindgen(js_namespace = window)]
+    pub fn update_action_log(json: &str);
+
 }
 
 pub fn compile_shader(gl: &GL, shader_type: u32, source: &str) -> Result<WebGlShader, String> {
