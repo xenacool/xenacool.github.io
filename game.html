@@ -120,6 +120,11 @@
         }
         #hud-dock > * { pointer-events: auto; }
         #hud-dock > * { min-width: 0; }
+        #hud-dock .hud-scroll-region {
+            overflow-y: auto;
+            overscroll-behavior: contain;
+            scrollbar-gutter: stable;
+        }
         #hud-dock #history-log-camera-controls {
             grid-area: controls;
             position: static;
@@ -226,15 +231,14 @@
         }
         #hud-dock[data-hud-mode="actions"] #action-log-panel,
         #hud-dock[data-hud-mode="actions"] #action-stack,
-        #hud-dock[data-hud-mode="unit-state"] #action-stack,
         #hud-dock[data-hud-mode="history"] #history-viewer,
         #hud-dock[data-hud-mode="diagnostics"] #diagnostics-panel { display: block !important; }
         #hud-dock[data-hud-mode="diagnostics"] #heartbeat-panel { display: none !important; }
         #hud-dock #diagnostics-panel { max-height: 18vh !important; min-width: 0; }
-        #hud-dock[data-hud-mode="actions"] #action-stack,
-        #hud-dock[data-hud-mode="unit-state"] #action-stack { display: flex !important; }
-        #hud-dock[data-hud-mode="actions"] #action-menu,
-        #hud-dock[data-hud-mode="unit-state"] #unit-state-panel { display: block !important; }
+        #hud-dock[data-hud-mode="actions"] #action-stack { display: flex !important; }
+        #hud-dock #unit-state-panel { display: none !important; }
+        #hud-dock[data-hud-mode="actions"] #unit-state-panel,
+        #hud-dock[data-hud-mode="actions"] #action-menu { display: block !important; }
         #hud-mode-bar { grid-column: 1 / -1; display: flex; gap: 4px; justify-content: center; flex-wrap: wrap; }
         #hud-mode-bar button[aria-current="true"] { background: #1d6fa5; outline: 2px solid #8ecae6; }
         #action-controls {
@@ -259,14 +263,19 @@
             z-index: 170;
         }
         .hud-context-panel { min-height: 0; }
+        #hud-empty-state {
+            display: none;
+            padding: 8px;
+            color: #b8c7da;
+            font: 12px monospace;
+            text-align: center;
+        }
         @media (max-width: 1024px) and (orientation: portrait), (max-width: 760px) {
             nav[aria-label="Pystral Gate sections"] { top: 48px !important; z-index: 140 !important; }
             body { overflow: hidden; }
             #hud-dock { left: 4px; right: 4px; bottom: 4px; display: flex; flex-direction: column; align-items: stretch; max-height: 46vh; }
             #hud-dock .hud-context-panel { display: none !important; }
             #hud-dock[data-hud-mode="actions"] #action-stack,
-            #hud-dock[data-hud-mode="unit-state"] #action-stack,
-            #hud-dock[data-hud-mode="unit-state"] #unit-state-panel,
             #hud-dock[data-hud-mode="history"] #history-viewer,
             #hud-dock[data-hud-mode="diagnostics"] #diagnostics-panel,
             #hud-dock[data-hud-mode="diagnostics"] #heartbeat-panel,
@@ -313,7 +322,6 @@
             #hud-mode-bar button::before { font-size: 16px; }
             #hud-mode-bar button[data-hud-mode="play"]::before { content: '▶'; }
             #hud-mode-bar button[data-hud-mode="actions"]::before { content: '✦'; }
-            #hud-mode-bar button[data-hud-mode="unit-state"]::before { content: '♙'; }
             #hud-mode-bar button[data-hud-mode="history"]::before { content: '↶'; }
             #hud-mode-bar button[data-hud-mode="diagnostics"]::before { content: '!'; }
             #hud-mode-bar #history-download-context {
@@ -340,7 +348,8 @@
                 transform: translateX(-50%);
                 width: min(78vw, 300px);
                 max-height: 16vh;
-                overflow: visible;
+                overflow-y: auto;
+                overflow-x: hidden;
                 padding: 4px 6px;
                 gap: 2px;
                 border-radius: 8px;
@@ -351,7 +360,6 @@
             #hud-dock #history-log-camera-controls button { min-height: 26px; padding: 3px 6px; }
             #hud-dock[data-hud-mode="play"] #playback-controls,
             #hud-dock[data-hud-mode="actions"] #playback-controls,
-            #hud-dock[data-hud-mode="unit-state"] #playback-controls { display: none; }
             #hud-dock[data-hud-mode="history"] #playback-controls,
             #hud-dock[data-hud-mode="diagnostics"] #playback-controls { display: flex; }
             #hud-dock #action-stack,
@@ -367,11 +375,9 @@
             /* Heartbeat is represented in diagnostics on compact screens so
                two independently sized panels cannot consume the same slot. */
             #hud-dock[data-hud-mode="diagnostics"] #heartbeat-panel { display: none !important; }
-            #hud-dock[data-hud-mode="actions"] #action-stack,
-            #hud-dock[data-hud-mode="unit-state"] #action-stack { display: flex !important; }
+            #hud-dock[data-hud-mode="actions"] #action-stack { display: flex !important; }
             #hud-dock[data-hud-mode="actions"] #action-menu,
-            #hud-dock[data-hud-mode="unit-state"] #unit-state-panel { display: block !important; }
-            #hud-dock[data-hud-mode="unit-state"] #action-menu { display: none !important; }
+            #hud-dock[data-hud-mode="actions"] #unit-state-panel { display: block !important; }
             #hud-dock .hud-context-panel,
             #hud-dock #action-stack,
             #hud-dock #history-viewer,
@@ -441,7 +447,6 @@
 <div id="hud-mode-bar" role="toolbar" aria-label="Game Boy HUD modes">
     <button type="button" data-hud-mode="play" aria-current="true">Play</button>
     <button type="button" data-hud-mode="actions" aria-current="false">Actions</button>
-    <button type="button" data-hud-mode="unit-state" aria-current="false">Unit State</button>
     <button type="button" data-hud-mode="history" aria-current="false">History</button>
     <button type="button" data-hud-mode="diagnostics" aria-current="false">Diagnostics</button>
     <button type="button" id="history-download-context" title="Download replay history">Download History</button>
@@ -485,10 +490,6 @@
             </svg>
             Sim
         </button>
-        <div style="margin-left: 10px; display: flex; align-items: center; gap: 5px;">
-            <input type="checkbox" id="debug-checkbox">
-            <label for="debug-checkbox" style="font-size: 12px; cursor: pointer;">Debug</label>
-        </div>
         <div id="history-step-control" style="margin-left: 10px; display: none; align-items: center; gap: 5px;">
             <label for="history-step-ms" style="font-size: 12px;">Step ms</label>
             <input id="history-step-ms" type="number" min="1" max="10000" step="1" value="100" style="width: 65px;">
@@ -505,23 +506,28 @@
     </div>
 </div>
 <div id="action-stack" style="display: none; position: absolute; left: 16px; bottom: 92px; max-width: min(420px, calc(100vw - 32px)); max-height: calc(100vh - 110px); flex-direction: column; align-items: stretch; gap: 8px;">
-<section id="unit-state-panel" class="hud-context-panel" aria-label="UnitState information" style="display: none; overflow-y: auto; max-height: 42vh; padding: 10px; border: 1px solid rgba(255,255,255,0.45); border-radius: 6px; background: rgba(8, 14, 28, 0.94); color: white; font: 12px monospace;">
+<div id="hud-empty-state" role="status" aria-live="polite"></div>
+<section id="unit-state-panel" class="hud-context-panel hud-scroll-region" aria-label="UnitState information" style="display: none; max-height: 42vh; padding: 10px; border: 1px solid rgba(255,255,255,0.45); border-radius: 6px; background: rgba(8, 14, 28, 0.94); color: white; font: 12px monospace;">
     <strong>UnitState</strong>
     <div id="unit-state-items"></div>
 </section>
-<section id="action-menu" class="hud-context-panel" role="region" aria-labelledby="action-menu-heading" aria-describedby="action-menu-status" style="display: none; min-width: 240px; max-width: 340px; max-height: 42vh; overflow-y: auto; padding: 10px; border: 1px solid rgba(255,255,255,0.45); border-radius: 6px; background: rgba(8, 14, 28, 0.9); color: white; font: 14px monospace;">
+<section id="action-menu" class="hud-context-panel hud-scroll-region" role="region" aria-labelledby="action-menu-heading" aria-describedby="action-menu-status" style="display: none; min-width: 240px; max-width: 340px; max-height: 42vh; padding: 10px; border: 1px solid rgba(255,255,255,0.45); border-radius: 6px; background: rgba(8, 14, 28, 0.9); color: white; font: 14px monospace;">
     <h2 id="action-menu-heading" tabindex="-1" style="font-size: 14px; margin: 0 0 6px;">Action menu</h2>
     <div id="action-menu-status" role="status" aria-live="polite"></div>
     <div id="action-menu-items"></div>
 </section>
 <div id="game-completed" role="status" aria-live="assertive" data-outcome="" hidden></div>
 </div>
-<section id="action-log-panel" class="hud-context-panel" aria-label="Action log" style="position: absolute; left: 16px; bottom: 16px; width: min(420px, calc(100vw - 32px)); max-height: 24vh; overflow-y: auto; padding: 8px; box-sizing: border-box; border: 1px solid rgba(255,255,255,0.35); border-radius: 6px; background: rgba(8, 14, 28, 0.86); color: white; font: 12px monospace;">
+<section id="action-log-panel" class="hud-context-panel hud-scroll-region" aria-label="Action log" style="position: absolute; left: 16px; bottom: 16px; width: min(420px, calc(100vw - 32px)); max-height: 24vh; padding: 8px; box-sizing: border-box; border: 1px solid rgba(255,255,255,0.35); border-radius: 6px; background: rgba(8, 14, 28, 0.86); color: white; font: 12px monospace;">
     <strong>Action log</strong>
     <ol id="action-log" style="margin: 5px 0 0; padding-left: 22px;"></ol>
 </section>
 <section id="diagnostics-panel" aria-label="Diagnostics" style="position: absolute; top: 10px; right: 10px; width: 340px; max-height: 70vh; overflow-y: auto; background: rgba(0,0,0,0.78); font-size: 11px; padding: 8px; color: #ffcc00; font-family: monospace; z-index: 110;">
     <strong>UI log</strong>
+    <label style="display: flex; align-items: center; gap: 5px; margin: 5px 0; cursor: pointer;">
+        <input type="checkbox" id="debug-checkbox">
+        Debug
+    </label>
     <pre id="log-container" aria-label="UI log" style="max-height: 260px; overflow-y: auto; white-space: pre-wrap; margin: 5px 0;"></pre>
     <textarea id="log-copy" aria-label="Copyable UI log" readonly style="width: 100%; height: 110px; box-sizing: border-box; color: white; background: #111; font: 11px monospace;">No UI log messages.</textarea>
     <div style="display: flex; gap: 5px; margin-top: 5px;">
@@ -544,7 +550,19 @@
         });
     // Keep all transient panels inside one layout owner.
 
-    const hudModes = ['play', 'actions', 'unit-state', 'history', 'diagnostics'];
+    const hudModes = ['play', 'actions', 'history', 'diagnostics'];
+    const refreshHudEmptyState = () => {
+        const empty = document.getElementById('hud-empty-state');
+        const mode = hudDock.dataset.hudMode;
+        const messages = {
+            actions: 'No actions are available for the active unit.',
+        };
+        const hasContent = mode === 'actions'
+            ? hudDock.dataset.actionContent === 'true' || hudDock.dataset.unitStateContent === 'true'
+            : false;
+        empty.textContent = messages[mode] || '';
+        empty.style.display = messages[mode] && !hasContent ? 'block' : 'none';
+    };
     window.setHudMode = (mode) => {
         const next = hudModes.includes(mode) ? mode : 'play';
         hudDock.dataset.hudMode = next;
@@ -555,6 +573,7 @@
         });
         const active = document.querySelector(`[data-hud-mode="${next}"]`);
         if (active?.tagName === 'BUTTON') active.focus({ preventScroll: true });
+        refreshHudEmptyState();
     };
     document.querySelectorAll('#hud-mode-bar [data-hud-mode]').forEach((button) => {
         button.addEventListener('click', () => window.setHudMode(button.dataset.hudMode));
@@ -567,7 +586,7 @@
         const panelIds = {
             play: 'action-log-panel',
             actions: 'action-menu',
-            'unit-state': 'unit-state-panel',
+            actions: 'action-stack',
             history: 'history-viewer',
             diagnostics: 'diagnostics-panel',
         };
@@ -586,15 +605,14 @@
     };
     document.addEventListener('keydown', (event) => {
         if (event.target.matches('input, textarea, select')) return;
-        if (event.key === 'ArrowDown' && ['unit-state', 'history', 'diagnostics'].includes(hudDock.dataset.hudMode)) {
+        if (event.key === 'ArrowDown' && ['actions', 'history', 'diagnostics'].includes(hudDock.dataset.hudMode)) {
             if (movePanelFocus(1)) event.preventDefault();
         }
-        if (event.key === 'ArrowUp' && ['unit-state', 'history', 'diagnostics'].includes(hudDock.dataset.hudMode)) {
+        if (event.key === 'ArrowUp' && ['actions', 'history', 'diagnostics'].includes(hudDock.dataset.hudMode)) {
             if (movePanelFocus(-1)) event.preventDefault();
         }
         if (event.key === 'F1') { event.preventDefault(); window.setHudMode('play'); }
         if (event.key === 'F2') { event.preventDefault(); window.setHudMode('actions'); }
-        if (event.key === 'F3') { event.preventDefault(); window.setHudMode('unit-state'); }
         if (event.key === 'F4') { event.preventDefault(); window.setHudMode('history'); }
         if (event.key === 'F5') { event.preventDefault(); window.setHudMode('diagnostics'); }
         if (event.key === 'Escape') window.setHudMode('play');
@@ -801,6 +819,8 @@
         const unitStateItems = document.getElementById('unit-state-items');
         const menu = document.getElementById('action-menu');
         const actions = state.available_actions;
+        hudDock.dataset.actionContent = actions ? 'true' : 'false';
+        hudDock.dataset.unitStateContent = (state.unit_states || []).length ? 'true' : 'false';
         stack.dataset.playerDecision = actions ? 'true' : 'false';
         hudDock.dataset.playerDecision = actions ? 'true' : 'false';
         if (actions) {
@@ -864,7 +884,7 @@
             details.appendChild(pre);
             unitStateItems.appendChild(details);
         });
-        unitStatePanel.style.display = (state.unit_states || []).length ? 'block' : 'none';
+        unitStatePanel.style.display = 'block';
         stack.style.display = (state.unit_states || []).length || state.available_actions ? 'flex' : 'none';
         menu.dataset.actionPending = state.action_pending ? 'true' : 'false';
         menu.dataset.animationPending = state.action_pending ? 'true' : 'false';
@@ -877,10 +897,12 @@
             menu.style.display = state.game_completed ? 'block' : 'none';
             status.textContent = state.game_completed ? 'Game completed.' : '';
             items.replaceChildren();
+            refreshHudEmptyState();
             return;
         }
 
         menu.style.display = 'block';
+        refreshHudEmptyState();
         document.getElementById('action-menu-heading').textContent = `Unit ${actions.unit_id} action menu`;
         items.replaceChildren();
 
@@ -1122,6 +1144,12 @@
         const replay = JSON.parse(window.__pystralHistoryExportSource).replay;
         const exportText = JSON.stringify({
             format: 'pystral-gate-replay-v1',
+            metadata: {
+                entrypoint: replay.entrypoint,
+                sourceFingerprint: window.__pystralSourceFingerprint || 'pg_rpg',
+                seed: window.__pystralMatchSeed ?? null,
+                outcome: document.getElementById('game-completed').dataset.outcome || null,
+            },
             replay,
         });
         downloadText(
