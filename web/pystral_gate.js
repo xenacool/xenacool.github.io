@@ -693,6 +693,9 @@ function __wbg_get_imports() {
         __wbg_update_action_feedback_dcb4fcb9910e29cf: function(arg0, arg1) {
             window.update_action_feedback(getStringFromWasm0(arg0, arg1));
         },
+        __wbg_update_action_log_56f58aa155d01d11: function(arg0, arg1) {
+            window.update_action_log(getStringFromWasm0(arg0, arg1));
+        },
         __wbg_update_action_menu_a8c588c975a0bd07: function(arg0, arg1) {
             let deferred0_0;
             let deferred0_1;
