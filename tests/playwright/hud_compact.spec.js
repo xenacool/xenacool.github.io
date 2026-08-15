@@ -47,7 +47,6 @@ test('HUD mode buttons switch the primary open panel', async ({ page }) => {
   const expectedPanels = {
     play: 'history-log-camera-controls',
     actions: 'action-stack',
-    'unit-state': 'action-stack',
     history: 'history-viewer',
     diagnostics: 'diagnostics-panel',
   };
@@ -98,4 +97,36 @@ test('player-turn unit state stays bounded without pushing the HUD dock', async 
     expect(box.bottom).toBeLessThanOrEqual(state.viewport.height + 1);
   }
   expect(state.boxes['action-stack'].position).toBe('fixed');
+});
+
+test('empty contextual modes explain their state and keep scrolling inside the panel', async ({ page }) => {
+  await page.setViewportSize({ width: 383, height: 852 });
+  await page.goto('/game.html');
+
+  await page.locator('#hud-mode-bar button[data-hud-mode="actions"]').click();
+  await expect(page.locator('#unit-state-panel')).toBeVisible();
+  await expect(page.locator('#unit-state-items').evaluate((element) => element.offsetParent !== null)).resolves.toBe(true);
+  await page.locator('#hud-mode-bar button[data-hud-mode="history"]').click();
+  await expect(page.locator('#unit-state-items').evaluate((element) => element.offsetParent !== null)).resolves.toBe(false);
+
+  const scrolling = await page.locator('#history-log-camera-controls').evaluate((panel) => ({
+    overflowY: getComputedStyle(panel).overflowY,
+    bodyOverflow: getComputedStyle(document.body).overflow,
+  }));
+  expect(scrolling.overflowY).toBe('auto');
+  expect(scrolling.bodyOverflow).toBe('hidden');
+});
+
+test('Game Boy keyboard controls change modes and activate the contextual history download', async ({ page }) => {
+  await page.setViewportSize({ width: 800, height: 600 });
+  await page.goto('/game.html');
+  const modeBar = page.locator('#hud-mode-bar');
+  await modeBar.focus();
+
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#hud-dock')).toHaveAttribute('data-hud-mode', 'play');
+  await page.keyboard.press('Escape');
+  await page.keyboard.press('F2');
+  await expect(page.locator('#hud-dock')).toHaveAttribute('data-hud-mode', 'actions');
+  await expect(page.locator('#unit-state-panel')).toBeVisible();
 });

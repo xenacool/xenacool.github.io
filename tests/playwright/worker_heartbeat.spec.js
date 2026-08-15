@@ -161,6 +161,8 @@ test.describe('Worker heartbeat diagnostics', () => {
     }, { timeout: 8000 });
 
     await expect(page.locator('#log-copy')).toHaveValue(/UI log messages|Action input|Runtime/);
+    await page.locator('#hud-mode-bar button[data-hud-mode="diagnostics"]').click();
+    await expect(page.locator('#diagnostics-panel')).toBeVisible();
     await page.locator('#copy-ui-log').click();
     await expect(page.locator('#diagnostics-download-status')).toContainText(/copied|selected/);
 
@@ -170,9 +172,13 @@ test.describe('Worker heartbeat diagnostics', () => {
     expect(download.suggestedFilename()).toMatch(/^pystral-replay-.*\.json$/);
     const exportData = JSON.parse(fs.readFileSync(await download.path(), 'utf8'));
     expect(exportData.format).toBe('pystral-gate-replay-v1');
+    expect(exportData.metadata).toEqual(expect.objectContaining({
+      entrypoint: 'web/scripts/pg_rpg.rhai',
+      sourceFingerprint: expect.any(String),
+    }));
     expect(exportData.replay.entrypoint).toBe('web/scripts/pg_rpg.rhai');
     expect(exportData.replay.actionInputs).toEqual(expect.any(Array));
-    expect(Object.keys(exportData).sort()).toEqual(['format', 'replay']);
+    expect(Object.keys(exportData).sort()).toEqual(['format', 'metadata', 'replay']);
     await expect(page.locator('#diagnostics-download-status')).toHaveText('Replay download started.');
   });
 
