@@ -2,7 +2,7 @@ mod game_loop;
 mod game_loop_helpers;
 pub mod pg_rpg;
 mod rhai_session;
-use pg_rpg::ScenarioBundle;
+use pg_rpg::{ScenarioBundle, VirtualRhaiWorkspace};
 
 use hexx::Hex;
 use pystral_compiler::ik::{IkRequest, IkResponse, IkSystem};
@@ -306,68 +306,18 @@ impl Runtime {
                 atlas_json,
                 spritesheet_rgba,
                 spritesheet_width,
-            } => {
-                let script = match bundle.root_rhai() {
-                    Ok(script) => script,
-                    Err(error) => return (RuntimeResponse::Error(error), logs),
-                };
-                let session = match RhaiSession::new(
-                    &script,
-                    HistoryManager::new(),
-                    atlas_json,
-                    spritesheet_rgba,
-                    spritesheet_width,
-                ) {
-                    Ok(session) => session,
-                    Err(error) => {
-                        return (RuntimeResponse::Error(format!("Rhai Error: {error}")), logs);
-                    }
-                };
-                let mut session = session;
-                let history = match session.history() {
-                    Ok(history) => history,
-                    Err(error) => return (RuntimeResponse::Error(error), logs),
-                };
-                self.pg_rpg_sim = session.simulation().ok();
-                self.pg_rpg_history = Some(history.clone());
-                self.rhai_session = Some(session);
-                self.pg_rpg_sequence_number = 0;
-                self.pg_rpg_completion_emitted = false;
-                self.next_npc_request_id = 1;
-                self.next_target_session_id = 1;
-                self.active_target_session = None;
-
-                RuntimeResponse::PgRpgSimulationStarted(history)
-            }
+            } => self.start_pg_rpg_simulation(
+                bundle,
+                atlas_json,
+                spritesheet_rgba,
+                spritesheet_width,
+            ),
             RuntimeRequest::StepPgRpgSimulation => self.step_pg_rpg_simulation(),
             RuntimeRequest::RunRhaiCase {
                 workspace,
                 case_name,
                 seed,
-            } => {
-                let mut session = match RhaiSession::from_virtual_workspace(
-                    &workspace,
-                    HistoryManager::new(),
-                    String::new(),
-                    Vec::new(),
-                    0,
-                    seed,
-                ) {
-                    Ok(session) => session,
-                    Err(error) => {
-                        return (RuntimeResponse::Error(format!("Rhai Error: {error}")), logs);
-                    }
-                };
-                match session.run_named_case_json(&case_name) {
-                    Ok(details) => RuntimeResponse::RhaiCaseResult {
-                        case_name,
-                        seed,
-                        replay_header: session.replay_header(),
-                        details,
-                    },
-                    Err(error) => RuntimeResponse::Error(format!("Rhai case error: {error}")),
-                }
-            }
+            } => self.run_rhai_case(workspace, case_name, seed),
             RuntimeRequest::RequestMctsDecision {
                 request_id,
                 unit_id,

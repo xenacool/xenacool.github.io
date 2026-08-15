@@ -5,10 +5,6 @@ use std::sync::Arc;
 impl WorldState {
     pub fn apply_event(&mut self, event: &Event) {
         match event {
-            Event::TurnStarted { .. }
-            | Event::TurnCompleted { .. }
-            | Event::UnitStateChanged { .. }
-            | Event::GameCompleted { .. } => {}
             Event::SpawnEntity {
                 id,
                 kind,
@@ -70,9 +66,13 @@ impl WorldState {
                 self.asset_collections
                     .insert(name.clone(), Arc::new(data.clone()));
             }
-            Event::AvailableActions(_) => {}
-            Event::Log { .. } => {}
-            Event::SequenceNumber(_) => {}
+            Event::TurnStarted { .. }
+            | Event::TurnCompleted { .. }
+            | Event::UnitStateChanged { .. }
+            | Event::GameCompleted { .. }
+            | Event::AvailableActions(_)
+            | Event::Log { .. }
+            | Event::SequenceNumber(_) => {}
         }
     }
 
@@ -84,10 +84,6 @@ impl WorldState {
         previous_fsm: Option<crate::animation::InactiveFSMDefinition>,
     ) {
         match event {
-            Event::TurnStarted { .. }
-            | Event::TurnCompleted { .. }
-            | Event::UnitStateChanged { .. }
-            | Event::GameCompleted { .. } => {}
             Event::SpawnEntity { id, .. } => {
                 self.entities.retain(|e| e.id != *id);
             }
@@ -159,9 +155,13 @@ impl WorldState {
             Event::DefineAssetCollection { name, .. } => {
                 self.asset_collections.remove(name);
             }
-            Event::AvailableActions(_) => {}
-            Event::Log { .. } => {}
-            Event::SequenceNumber(_) => {}
+            Event::TurnStarted { .. }
+            | Event::TurnCompleted { .. }
+            | Event::UnitStateChanged { .. }
+            | Event::GameCompleted { .. }
+            | Event::AvailableActions(_)
+            | Event::Log { .. }
+            | Event::SequenceNumber(_) => {}
         }
     }
 }
@@ -210,7 +210,7 @@ impl HistoryManager {
         self.log.push(event);
         self.current_index += 1;
 
-        if self.current_index % self.checkpoint_interval == 0 {
+        if self.current_index.is_multiple_of(self.checkpoint_interval) {
             self.checkpoints.push(Checkpoint {
                 event_index: self.current_index,
                 state: self.current_state.clone(),
@@ -299,8 +299,8 @@ mod tests {
 
         assert_eq!(history.log.len(), 1);
         assert_eq!(history.current_state, WorldState::default());
-        let encoded = serde_json::to_string(&history.log).unwrap();
-        let decoded: Vec<Event> = serde_json::from_str(&encoded).unwrap();
+        let encoded = serde_json::to_string(&history.log).expect("history log serializes");
+        let decoded: Vec<Event> = serde_json::from_str(&encoded).expect("history log parses");
         assert!(
             matches!(decoded.first(), Some(Event::AvailableActions(value)) if value == &actions)
         );

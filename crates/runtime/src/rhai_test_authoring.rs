@@ -92,11 +92,12 @@ fn authored_case_protocol_runs_through_typed_runtime_request() {
         }],
     )
     .unwrap();
-    let (response, logs) = crate::Runtime::new().process_request(crate::RuntimeRequest::RunRhaiCase {
-        workspace,
-        case_name: "authored_case".into(),
-        seed: 99,
-    });
+    let (response, logs) =
+        crate::Runtime::new().process_request(crate::RuntimeRequest::RunRhaiCase {
+            workspace,
+            case_name: "authored_case".into(),
+            seed: 99,
+        });
     assert!(logs.is_empty());
     match response {
         crate::RuntimeResponse::RhaiCaseResult {

@@ -197,7 +197,7 @@ mod tests {
         request.ground_cutoff = -100.0;
         let response = TrajectorySolver::new()
             .solve_with_collision(&request, |_, _| false)
-            .unwrap();
+            .expect("stationary trajectory should solve without collision");
         assert!(response.trajectory.len() >= 3);
     }
 }

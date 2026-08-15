@@ -129,6 +129,67 @@ impl AppHandle {
     }
 }
 
+fn initialize_renderer(
+    gl: &GL,
+) -> Result<
+    (
+        web_sys::WebGlProgram,
+        pystral_gate::render::Mesh,
+        HistoryManager,
+    ),
+    JsValue,
+> {
+    let vert_shader = compile_shader(gl, GL::VERTEX_SHADER, VERTEX_SHADER)?;
+    let frag_shader = compile_shader(gl, GL::FRAGMENT_SHADER, FRAGMENT_SHADER)?;
+    let program = link_program(gl, &vert_shader, &frag_shader)?;
+    gl.use_program(Some(&program));
+
+    let mut history = HistoryManager::new();
+    history.jump_to(0);
+    pystral_gate::render::set_ui_slider_max(history.log.len() as u32);
+
+    gl.enable(GL::DEPTH_TEST);
+    gl.enable(GL::CULL_FACE);
+    gl.enable(GL::BLEND);
+    gl.blend_func(GL::SRC_ALPHA, GL::ONE_MINUS_SRC_ALPHA);
+    gl.clear_color(0.1, 0.1, 0.1, 1.0);
+    Ok((program, create_sprite_mesh(gl), history))
+}
+
+fn request_initial_pg_rpg_log(worker_tx: futures::channel::mpsc::UnboundedSender<WorkerInput>) {
+    wasm_bindgen_futures::spawn_local(async move {
+        match fetch_assets().await {
+            Ok((bundle, atlas_json, spritesheet_rgba, width)) => {
+                let _ = worker_tx.unbounded_send(WorkerInput::RuntimeRequest(
+                    RuntimeRequest::GeneratePgRpgLog {
+                        bundle,
+                        atlas_json,
+                        spritesheet_rgba,
+                        spritesheet_width: width,
+                    },
+                ));
+            }
+            Err(error) => {
+                web_sys::console::error_1(&format!("Failed to fetch assets: {error:?}").into());
+            }
+        }
+    });
+}
+
+fn start_heartbeat_probe(worker_tx: futures::channel::mpsc::UnboundedSender<WorkerInput>) {
+    wasm_bindgen_futures::spawn_local(async move {
+        loop {
+            gloo_timers::future::TimeoutFuture::new(500).await;
+            if worker_tx
+                .unbounded_send(WorkerInput::HeartbeatProbe)
+                .is_err()
+            {
+                break;
+            }
+        }
+    });
+}
+
 #[wasm_bindgen]
 pub fn run_app() -> Result<AppHandle, JsValue> {
     let document = web_sys::window()
@@ -145,47 +206,12 @@ pub fn run_app() -> Result<AppHandle, JsValue> {
         .expect("Could not get WebGL context")
         .dyn_into()?;
 
-    let vert_shader = compile_shader(&gl, GL::VERTEX_SHADER, VERTEX_SHADER)?;
-    let frag_shader = compile_shader(&gl, GL::FRAGMENT_SHADER, FRAGMENT_SHADER)?;
-    let program = link_program(&gl, &vert_shader, &frag_shader)?;
-    gl.use_program(Some(&program));
-
-    // Initialize history with empty data
-    let mut history = HistoryManager::new();
-    history.jump_to(0);
-
-    pystral_gate::render::set_ui_slider_max(history.log.len() as u32);
-
-    let sprite_mesh = create_sprite_mesh(&gl);
-
-    gl.enable(GL::DEPTH_TEST);
-    gl.enable(GL::CULL_FACE);
-    gl.enable(GL::BLEND);
-    gl.blend_func(GL::SRC_ALPHA, GL::ONE_MINUS_SRC_ALPHA);
-    gl.clear_color(0.1, 0.1, 0.1, 1.0);
+    let (program, sprite_mesh, history) = initialize_renderer(&gl)?;
 
     let (app_tx, app_rx) = channel();
     let (worker_tx, mut worker_rx) = futures::channel::mpsc::unbounded::<WorkerInput>();
 
-    // Request initial pg_rpg log immediately
-    let worker_tx_clone = worker_tx.clone();
-    wasm_bindgen_futures::spawn_local(async move {
-        match fetch_assets().await {
-            Ok((bundle, atlas_json, spritesheet_rgba, width)) => {
-                let _ = worker_tx_clone.unbounded_send(WorkerInput::RuntimeRequest(
-                    RuntimeRequest::GeneratePgRpgLog {
-                        bundle,
-                        atlas_json,
-                        spritesheet_rgba,
-                        spritesheet_width: width,
-                    },
-                ));
-            }
-            Err(e) => {
-                web_sys::console::error_1(&format!("Failed to fetch assets: {:?}", e).into());
-            }
-        }
-    });
+    request_initial_pg_rpg_log(worker_tx.clone());
 
     let bridge = UnifiedWorker::spawn();
     let (mut bridge_sender, mut bridge_listener) = bridge.split();
@@ -353,21 +379,8 @@ pub fn run_app() -> Result<AppHandle, JsValue> {
         }
     });
 
-    // Liveness probes are control traffic, not gameplay history. They let the
-    // UI distinguish an idle worker from one blocked in synchronous runtime
-    // work without imposing a gameplay step or resource ceiling.
-    let heartbeat_tx = worker_tx.clone();
-    wasm_bindgen_futures::spawn_local(async move {
-        loop {
-            gloo_timers::future::TimeoutFuture::new(500).await;
-            if heartbeat_tx
-                .unbounded_send(WorkerInput::HeartbeatProbe)
-                .is_err()
-            {
-                break;
-            }
-        }
-    });
+    // Liveness probes are control traffic, not gameplay history.
+    start_heartbeat_probe(worker_tx.clone());
 
     start_render_loop(gl, program, sprite_mesh, history, app_rx, worker_tx);
 

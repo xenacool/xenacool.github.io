@@ -1,6 +1,70 @@
 use super::*;
 
 impl Runtime {
+    pub(super) fn start_pg_rpg_simulation(
+        &mut self,
+        bundle: ScenarioBundle,
+        atlas_json: String,
+        spritesheet_rgba: Vec<u8>,
+        spritesheet_width: u32,
+    ) -> RuntimeResponse {
+        let script = match bundle.root_rhai() {
+            Ok(script) => script,
+            Err(error) => return RuntimeResponse::Error(error),
+        };
+        let mut session = match RhaiSession::new(
+            &script,
+            HistoryManager::new(),
+            atlas_json,
+            spritesheet_rgba,
+            spritesheet_width,
+        ) {
+            Ok(session) => session,
+            Err(error) => return RuntimeResponse::Error(format!("Rhai Error: {error}")),
+        };
+        let history = match session.history() {
+            Ok(history) => history,
+            Err(error) => return RuntimeResponse::Error(error),
+        };
+        self.pg_rpg_sim = session.simulation().ok();
+        self.pg_rpg_history = Some(history.clone());
+        self.rhai_session = Some(session);
+        self.pg_rpg_sequence_number = 0;
+        self.pg_rpg_completion_emitted = false;
+        self.next_npc_request_id = 1;
+        self.next_target_session_id = 1;
+        self.active_target_session = None;
+        RuntimeResponse::PgRpgSimulationStarted(history)
+    }
+
+    pub(super) fn run_rhai_case(
+        &self,
+        workspace: VirtualRhaiWorkspace,
+        case_name: String,
+        seed: u64,
+    ) -> RuntimeResponse {
+        let mut session = match RhaiSession::from_virtual_workspace(
+            &workspace,
+            HistoryManager::new(),
+            String::new(),
+            Vec::new(),
+            0,
+            seed,
+        ) {
+            Ok(session) => session,
+            Err(error) => return RuntimeResponse::Error(format!("Rhai Error: {error}")),
+        };
+        match session.run_named_case_json(&case_name) {
+            Ok(details) => RuntimeResponse::RhaiCaseResult {
+                case_name,
+                seed,
+                replay_header: session.replay_header(),
+                details,
+            },
+            Err(error) => RuntimeResponse::Error(format!("Rhai case error: {error}")),
+        }
+    }
+
     pub(super) fn commit_ability_request(
         &mut self,
         request_id: u64,
