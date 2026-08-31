@@ -106,7 +106,6 @@ fn main() {
     let atlas_height = rows * packed_h;
 
     let mut spritesheet = RgbaImage::new(atlas_width, atlas_height);
-    let mut sdfsheet = RgbaImage::new(atlas_width, atlas_height);
     let mut current_tile = 0;
 
     atlas.width = atlas_width;
@@ -124,15 +123,6 @@ fn main() {
             spritesheet
                 .copy_from(&img, x, y)
                 .expect("Failed to copy image to spritesheet");
-            let sdf =
-                spritestack_processing::signed_distance_field(w as usize, h as usize, img.as_raw());
-            let sdf_image = RgbaImage::from_fn(w, h, |px, py| {
-                let value = sdf[(py * w + px) as usize];
-                Rgba([value, value, value, 255])
-            });
-            sdfsheet
-                .copy_from(&sdf_image, x, y)
-                .expect("Failed to copy SDF image to spritesheet");
             // Extrude the edge pixels into the one-pixel gutter. This keeps
             // linear filtering and future outline passes from sampling the
             // neighboring slice while preserving antialiased color edges.
@@ -156,7 +146,6 @@ fn main() {
     }
 
     write_optimized_png(&web_dir.join("spritesheet.png"), &spritesheet);
-    write_optimized_png(&web_dir.join("sdfsheet.png"), &sdfsheet);
 
     let atlas_json = serde_json::to_string_pretty(&atlas).expect("atlas must serialize");
     std::fs::write(web_dir.join("atlas.json"), atlas_json).expect("Failed to write atlas.json");

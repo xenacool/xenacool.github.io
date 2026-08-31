@@ -31,6 +31,7 @@ pub struct SpritestackProcessStats {
 /// Build a compact signed-distance field from an RGBA cutout. The zero
 /// contour is encoded as 128; values below are inside and values above are
 /// outside. Distances are clamped to a narrow four-pixel band for outline use.
+#[allow(dead_code)]
 pub fn signed_distance_field(width: usize, height: usize, rgba: &[u8]) -> Vec<u8> {
     let pixels = width.saturating_mul(height);
     let inside: Vec<bool> = rgba
@@ -73,6 +74,7 @@ pub fn signed_distance_field(width: usize, height: usize, rgba: &[u8]) -> Vec<u8
         .collect()
 }
 
+#[allow(dead_code)]
 fn neighbors4(x: usize, y: usize, width: usize, height: usize) -> [(usize, usize); 4] {
     [
         (x.saturating_sub(1), y),
