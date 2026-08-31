@@ -28,62 +28,6 @@ pub struct SpritestackProcessStats {
     pub alpha_pixels_changed: usize,
 }
 
-/// Build a compact signed-distance field from an RGBA cutout. The zero
-/// contour is encoded as 128; values below are inside and values above are
-/// outside. Distances are clamped to a narrow four-pixel band for outline use.
-#[allow(dead_code)]
-pub fn signed_distance_field(width: usize, height: usize, rgba: &[u8]) -> Vec<u8> {
-    let pixels = width.saturating_mul(height);
-    let inside: Vec<bool> = rgba
-        .chunks_exact(4)
-        .take(pixels)
-        .map(|pixel| pixel[3] >= 128)
-        .collect();
-    let mut distance = vec![u16::MAX; pixels];
-    let mut queue = VecDeque::new();
-    for index in 0..pixels {
-        let x = index % width.max(1);
-        let y = index / width.max(1);
-        let boundary = neighbors4(x, y, width, height)
-            .iter()
-            .any(|&(nx, ny)| inside[ny * width + nx] != inside[index]);
-        if boundary || (x == 0 || y == 0 || x + 1 == width || y + 1 == height) {
-            distance[index] = 0;
-            queue.push_back(index);
-        }
-    }
-    while let Some(index) = queue.pop_front() {
-        let next = distance[index].saturating_add(1);
-        let x = index % width.max(1);
-        let y = index / width.max(1);
-        for (nx, ny) in neighbors4(x, y, width, height) {
-            let neighbor = ny * width + nx;
-            if next < distance[neighbor] {
-                distance[neighbor] = next;
-                queue.push_back(neighbor);
-            }
-        }
-    }
-    distance
-        .into_iter()
-        .enumerate()
-        .map(|(index, value)| {
-            let band = value.min(4) as i32;
-            (128 + if inside[index] { -band * 32 } else { band * 32 }).clamp(0, 255) as u8
-        })
-        .collect()
-}
-
-#[allow(dead_code)]
-fn neighbors4(x: usize, y: usize, width: usize, height: usize) -> [(usize, usize); 4] {
-    [
-        (x.saturating_sub(1), y),
-        ((x + 1).min(width.saturating_sub(1)), y),
-        (x, y.saturating_sub(1)),
-        (x, (y + 1).min(height.saturating_sub(1))),
-    ]
-}
-
 /// Reduce RGB precision while preserving alpha exactly. This is intentionally
 /// separate from `process_slice`: quantization is a build-time bandwidth
 /// optimization, not a runtime transparency or silhouette policy.
@@ -275,28 +219,6 @@ mod tests {
         assert_eq!(rgba[7], 231);
         assert_eq!(&rgba[..3], &[16, 123, 255]);
         assert_eq!(&rgba[4..7], &[255, 0, 131]);
-    }
-
-    #[test]
-    fn signed_distance_field_encodes_inside_and_outside_band() {
-        let rgba = image(
-            3,
-            3,
-            &[
-                [0, 0, 0, 0],
-                [0, 0, 0, 0],
-                [0, 0, 0, 0],
-                [0, 0, 0, 0],
-                [255, 255, 255, 255],
-                [0, 0, 0, 0],
-                [0, 0, 0, 0],
-                [0, 0, 0, 0],
-                [0, 0, 0, 0],
-            ],
-        );
-        let sdf = signed_distance_field(3, 3, &rgba);
-        assert!(sdf[4] < 128);
-        assert!(sdf[0] > 128);
     }
 
     #[test]
