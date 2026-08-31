@@ -21,6 +21,36 @@ const FACING_ANGLES = Object.freeze({
     northwest: (Math.PI * 5) / 3,
 });
 
+const PRESENTATION_MOTION = Object.freeze({
+    idleAmplitude: 0.025,
+    walkAmplitude: 0.06,
+    hitRecoil: 0.08,
+});
+
+export function cubicBezierEase(t) {
+    const clamped = Math.max(0, Math.min(1, Number(t) || 0));
+    return clamped * clamped * (3 - 2 * clamped);
+}
+
+export function presentationOffset(entity, reducedMotion = false) {
+    if (reducedMotion) return [0, 0, 0];
+    const state = String(entity.animation_state || 'idle').toLowerCase();
+    const time = Math.max(0, Number(entity.animation_time_ms) || 0) / 1000;
+    if (state === 'idle') {
+        return [0, Math.sin(time * Math.PI * 2) * PRESENTATION_MOTION.idleAmplitude, 0];
+    }
+    if (state === 'walk' || state === 'move') {
+        const phase = (time % 0.5) / 0.5;
+        const arc = cubicBezierEase(phase < 0.5 ? phase * 2 : (1 - phase) * 2);
+        return [0, arc * PRESENTATION_MOTION.walkAmplitude, 0];
+    }
+    if (state === 'hit' || state === 'hurt') {
+        const recoil = Math.max(0, 1 - cubicBezierEase(Math.min(1, time / 0.25)));
+        return [0, recoil * PRESENTATION_MOTION.hitRecoil, 0];
+    }
+    return [0, 0, 0];
+}
+
 export function resolveAtlasRegion(atlas, asset, sliceIndex) {
     const regions = atlas?.spritestacks?.[asset];
     if (!Array.isArray(regions) || regions.length === 0) return null;
@@ -288,6 +318,7 @@ function applyNativeFrame(frame) {
     const texture = window.__pystralThreeNativeAtlasTexture;
     if (!atlas || !texture) return;
     const meshes = window.__pystralThreeNativeMeshes;
+    const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true;
     const seen = new Set();
     (frame.entities || []).forEach((entity) => {
         if (!entity.world_position || !entity.asset) return;
@@ -336,6 +367,10 @@ function applyNativeFrame(frame) {
             const spacing = Number(entity.stack_spacing) || 0;
             mesh.position.fromArray(entity.world_position);
             addCameraRelativeOffset(mesh.position, camera, entity.camera_offset);
+            const motion = presentationOffset(entity, reducedMotion);
+            mesh.position.x += motion[0] * scale;
+            mesh.position.y += motion[1] * scale;
+            mesh.position.z += motion[2] * scale;
             // Spracker layers are horizontal X/Z planes stacked from the
             // world anchor upward along Y. The asset metadata is the single
             // source of truth for footprint and stack span.
