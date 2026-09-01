@@ -68,51 +68,28 @@ export function resolveAtlasRegion(atlas, asset, sliceIndex) {
     };
 }
 
-export function createThreePresentation(canvas, sourceCanvas, options = {}) {
-    const nativeMode = options.native === true;
+export function createThreePresentation(canvas) {
     window.__pystralThreeStaticMap = null;
     window.__pystralThreeStaticMaterials = null;
-    // Rust resizes its source canvas on its first render tick. Establish a
-    // valid buffer first so Three.js never uploads a zero/undersized source.
-    // The compositor deliberately uses one backing pixel per CSS pixel. The
-    // Rust source canvas and the visible canvas must share this policy.
-    const initialWidth = Math.max(1, Math.floor(canvas.clientWidth));
-    const initialHeight = Math.max(1, Math.floor(canvas.clientHeight));
-    if (!nativeMode && sourceCanvas) {
-        sourceCanvas.width = initialWidth;
-        sourceCanvas.height = initialHeight;
-    }
     let renderer;
     try {
         renderer = new THREE.WebGLRenderer({ canvas, antialias: false, alpha: false });
     } catch (error) {
-        console.warn('Three.js WebGL2 renderer unavailable; using Rust fallback.', error);
+        console.warn('Three.js WebGL2 renderer unavailable.', error);
         return { available: false, dispose() {} };
     }
 
     renderer.setPixelRatio(1);
     renderer.setClearColor(0x1a1a1a, 1);
     const scene = new THREE.Scene();
-    if (nativeMode) {
-        scene.add(new THREE.HemisphereLight(0xffffff, 0x334455, 1.2));
-        const keyLight = new THREE.DirectionalLight(0xffffff, 1.0);
-        keyLight.position.set(4, 8, 6);
-        scene.add(keyLight);
-    }
-    const camera = nativeMode ? new THREE.Camera() : new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
-    const texture = nativeMode ? null : new THREE.CanvasTexture(sourceCanvas);
-    if (texture) {
-        texture.minFilter = THREE.NearestFilter;
-        texture.magFilter = THREE.NearestFilter;
-        texture.generateMipmaps = false;
-    }
-    const material = texture ? new THREE.MeshBasicMaterial({ map: texture }) : null;
-    const quad = material ? new THREE.Mesh(new THREE.PlaneGeometry(2, 2), material) : null;
-    if (quad) scene.add(quad);
+    scene.add(new THREE.HemisphereLight(0xffffff, 0x334455, 1.2));
+    const keyLight = new THREE.DirectionalLight(0xffffff, 1.0);
+    keyLight.position.set(4, 8, 6);
+    scene.add(keyLight);
+    const camera = new THREE.Camera();
     let atlasTexture = null;
     const nativeMeshes = new Map();
-    if (nativeMode) {
-        window.__pystralThreeNativeScene = scene;
+    window.__pystralThreeNativeScene = scene;
         window.__pystralThreeNativeCamera = camera;
         window.__pystralThreeNativeMeshes = nativeMeshes;
         window.__pystralThreeNativeProfile = { entities: 0, mapTiles: 0 };
@@ -123,12 +100,10 @@ export function createThreePresentation(canvas, sourceCanvas, options = {}) {
         atlasTexture.minFilter = THREE.NearestFilter;
         atlasTexture.magFilter = THREE.NearestFilter;
         atlasTexture.generateMipmaps = false;
-    }
 
     const profile = {
         frames: 0,
         resizeCalls: 0,
-        textureUploads: 0,
         totalRenderMs: 0,
         lastFrameAt: 0,
         lastFrameIntervalMs: 0,
@@ -199,7 +174,7 @@ export function createThreePresentation(canvas, sourceCanvas, options = {}) {
             map: window.__pystralThreeStaticMap || null,
             materials: window.__pystralThreeStaticMaterials || {},
         };
-        if (nativeMode) applyNativeFrame(window.__pystralThreeFrame);
+        applyNativeFrame(window.__pystralThreeFrame);
     };
     window.addEventListener('pystral-render-frame', frameListener);
     fetch('./web/atlas.json')
@@ -213,7 +188,6 @@ export function createThreePresentation(canvas, sourceCanvas, options = {}) {
         })
         .catch((error) => console.warn('Native atlas lookup unavailable:', error));
     let active = true;
-    let lastTextureUpload = -Infinity;
     const render = () => {
         if (!active) return;
         const frameStart = performance.now();
@@ -235,18 +209,8 @@ export function createThreePresentation(canvas, sourceCanvas, options = {}) {
             bucket.renderMs += performance.now() - frameStart;
             bucket.lastFrameAt = frameStart;
         }
-        // Uploading a full-resolution canvas every rAF can monopolize the GPU
-        // command queue and starve the simulation worker. Keep the idle path
-        // at 10 Hz, but upload each frame during camera motion so the visible
-        // tween is not quantized to ten samples per second.
-        const now = performance.now();
-        if (!nativeMode && (rotating || now - lastTextureUpload >= 100)) {
-            texture.needsUpdate = true;
-            lastTextureUpload = now;
-            profile.textureUploads += 1;
-        }
         renderer.render(scene, camera);
-        if (nativeMode) {
+        {
             const gl = renderer.getContext();
             profile.nativeGpu = {
                 drawCalls: renderer.info.render.calls,
@@ -291,10 +255,7 @@ export function createThreePresentation(canvas, sourceCanvas, options = {}) {
             delete window.__pystralThreeNativeMeshes;
             delete window.__pystralThreeNativeAtlasTexture;
             delete window.__pystralThreeActorCatalog;
-            texture?.dispose();
-            material?.dispose();
-            quad?.geometry.dispose();
-            atlasTexture?.dispose();
+        atlasTexture?.dispose();
             window.__pystralThreeNativeHexGeometry?.dispose();
             nativeMeshes.forEach((mesh) => {
                 mesh.geometry.dispose();
@@ -313,7 +274,7 @@ export function createThreePresentation(canvas, sourceCanvas, options = {}) {
 // The game uses the native atlas compositor exclusively. Keep the legacy
 // canvas path reachable for compatibility tests and constrained clients.
 export function createNativePresentation(canvas) {
-    return createThreePresentation(canvas, null, { native: true });
+    return createThreePresentation(canvas);
 }
 
 function applyNativeFrame(frame) {

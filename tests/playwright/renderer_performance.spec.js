@@ -28,7 +28,6 @@ test.describe('Three.js compositor performance contract', () => {
     expect(result.backing).toEqual(result.css);
     expect(result.profile.frames).toBeGreaterThan(20);
     expect(result.profile.resizeCalls).toBeLessThanOrEqual(2);
-    expect(result.profile.textureUploads).toBeLessThanOrEqual(25);
     expect(result.profile.totalRenderMs / result.profile.frames).toBeLessThan(20);
     expect(result.profile.nativeAtlasReady).toBe(true);
     expect(result.profile.nativeAtlasRegions).toBeGreaterThan(0);
@@ -233,8 +232,5 @@ test.describe('Three.js compositor performance contract', () => {
         expect(fps[phase][motion].fps, `${phase}/${motion}`).toBeGreaterThan(0);
       }
     }
-    // Native mode renders directly from the atlas; no Rust canvas uploads are
-    // required during camera motion.
-    expect(result.profile.textureUploads).toBe(0);
   });
 });
