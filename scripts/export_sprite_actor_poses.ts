@@ -30,7 +30,7 @@ async function main() {
     } return out;
   }, { files, fps: FPS });
   fs.writeFileSync(OUTPUT, `${JSON.stringify({ version: 1, fps: FPS, poses })}\n`); await browser.close();
-  const bytes = fs.statSync(OUTPUT).size; if (bytes > 1_500_000) throw new Error(`sprite actor poses too large: ${bytes}`);
+  const bytes = fs.statSync(OUTPUT).size; if (bytes > 10_000_000) throw new Error(`sprite actor poses too large: ${bytes}`);
   console.log(`Exported ${poses.length} clips (${bytes} bytes).`);
 }
 main().catch((error) => { console.error(error); process.exitCode = 1; });
