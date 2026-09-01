@@ -2,6 +2,7 @@
 // Rust publishes authoritative simulation presentation data; Three.js owns the
 // visible WebGL2 canvas.
 import * as THREE from './vendor/three.module.min.js';
+import { semanticColor } from './semantic_palette.js';
 
 const SPRITESTACK_Y_AXIS = new THREE.Vector3(0, 1, 0);
 const SPRITESTACK_X_AXIS = new THREE.Vector3(1, 0, 0);
@@ -68,7 +69,7 @@ export function resolveAtlasRegion(atlas, asset, sliceIndex) {
     };
 }
 
-export function createThreePresentation(canvas) {
+export function createNativePresentation(canvas) {
     window.__pystralThreeStaticMap = null;
     window.__pystralThreeStaticMaterials = null;
     let renderer;
@@ -95,13 +96,20 @@ export function createThreePresentation(canvas) {
     const camera = new THREE.Camera();
     let atlasTexture = null;
     const nativeMeshes = new Map();
+    const teamMarkers = new Map();
+    const teamMarkerGeometry = new THREE.RingGeometry(0.32, 0.40, 16);
+    const facingMarkerGeometry = new THREE.ConeGeometry(0.09, 0.18, 3);
     window.__pystralThreeNativeScene = scene;
         window.__pystralThreeNativeCamera = camera;
         window.__pystralThreeNativeMeshes = nativeMeshes;
         window.__pystralThreeNativeProfile = { entities: 0, mapTiles: 0 };
         atlasTexture = new THREE.TextureLoader().load('./web/spritesheet.png', () => {
-            window.__pystralThreeNativeAtlasTexture = atlasTexture;
-            if (window.__pystralThreeFrame) applyNativeFrame(window.__pystralThreeFrame);
+            // Publish only after atlas metadata is ready so frame consumers
+            // never observe a half-initialized native presentation.
+            if (window.__pystralThreeAtlas) {
+                window.__pystralThreeNativeAtlasTexture = atlasTexture;
+                if (window.__pystralThreeFrame) applyNativeFrame(window.__pystralThreeFrame);
+            }
         });
         atlasTexture.minFilter = THREE.NearestFilter;
         atlasTexture.magFilter = THREE.NearestFilter;
@@ -191,6 +199,14 @@ export function createThreePresentation(canvas) {
             profile.nativeAtlasRegions = Object.values(atlas.spritestacks || {})
                 .reduce((total, regions) => total + regions.length, 0);
             window.dispatchEvent(new CustomEvent('pystral-three-atlas-ready'));
+            if (atlasTexture?.image && !window.__pystralThreeNativeAtlasTexture) {
+                window.__pystralThreeNativeAtlasTexture = atlasTexture;
+            }
+            // A frame may have arrived while the texture was loading. Replay
+            // the retained contract now that both atlas inputs are available.
+            if (window.__pystralThreeNativeAtlasTexture && window.__pystralThreeFrame) {
+                applyNativeFrame(window.__pystralThreeFrame);
+            }
         })
         .catch((error) => console.warn('Native atlas lookup unavailable:', error));
     let active = true;
@@ -261,7 +277,7 @@ export function createThreePresentation(canvas) {
             delete window.__pystralThreeNativeMeshes;
             delete window.__pystralThreeNativeAtlasTexture;
             delete window.__pystralThreeActorCatalog;
-        atlasTexture?.dispose();
+            atlasTexture?.dispose();
             window.__pystralThreeNativeHexGeometry?.dispose();
             nativeMeshes.forEach((mesh) => {
                 mesh.geometry.dispose();
@@ -270,6 +286,12 @@ export function createThreePresentation(canvas) {
             (window.__pystralThreeNativeTileMeshes || new Map()).forEach((mesh) => {
                 mesh.material.dispose();
             });
+            teamMarkers.forEach((marker) => {
+                scene.remove(marker);
+                marker.traverse((child) => child.material?.dispose());
+            });
+            teamMarkerGeometry.dispose();
+            facingMarkerGeometry.dispose();
             delete window.__pystralThreeNativeHexGeometry;
             delete window.__pystralThreeNativeTileMeshes;
             renderer.dispose();
@@ -277,11 +299,6 @@ export function createThreePresentation(canvas) {
     };
 }
 
-// The game uses the native atlas compositor exclusively. Keep the legacy
-// canvas path reachable for compatibility tests and constrained clients.
-export function createNativePresentation(canvas) {
-    return createThreePresentation(canvas);
-}
 
 function applyNativeFrame(frame) {
     const scene = window.__pystralThreeNativeScene;
@@ -301,6 +318,7 @@ function applyNativeFrame(frame) {
     const meshes = window.__pystralThreeNativeMeshes;
     const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true;
     const seen = new Set();
+    const seenMarkers = new Set();
     (frame.entities || []).forEach((entity) => {
         if (!entity.world_position || !entity.asset) return;
         const sliceIndices = Array.isArray(entity.slice_indices) && entity.slice_indices.length > 0
@@ -317,7 +335,8 @@ function applyNativeFrame(frame) {
                     map: texture,
                     transparent: true,
                     alphaTest: 0.01,
-                    depthWrite: true,
+                    depthWrite: entity.kind !== 'projectile',
+                    blending: entity.kind === 'projectile' ? THREE.AdditiveBlending : THREE.NormalBlending,
                     // Facing is gameplay-authored and may point away from
                     // the current camera. Spritestack cutouts remain visible
                     // from either side while retaining that orientation.
@@ -339,6 +358,19 @@ function applyNativeFrame(frame) {
                 mesh.__pystralAtlasRegionKey = regionKey;
             }
             const scale = entity.scale || 1;
+            const teamRoleColor = entity.kind === 'projectile' ? '#7DEBFF' : '#FFFFFF';
+            if (mesh.__pystralTeamRoleColor !== teamRoleColor) {
+                const teamColor = new THREE.Color(teamRoleColor);
+                if (entity.kind === 'projectile') mesh.material.color.copy(teamColor);
+                else mesh.material.color.set('#FFFFFF');
+                const outlineShader = mesh.material.userData.outlineShader;
+                if (outlineShader?.uniforms.outlineColor) {
+                    outlineShader.uniforms.outlineColor.value = [
+                        teamColor.r * 0.35, teamColor.g * 0.35, teamColor.b * 0.35,
+                    ];
+                }
+                mesh.__pystralTeamRoleColor = teamRoleColor;
+            }
             const dimensions = Array.isArray(entity.stack_dimensions)
                 ? entity.stack_dimensions : [1, 0, 1];
             const unitHeight = Number(entity.unit_height) || 0;
@@ -388,6 +420,47 @@ function applyNativeFrame(frame) {
             seen.add(key);
         });
     });
+    (frame.entities || []).forEach((entity) => {
+        const indicator = entity.indicator || (entity.asset && Number(entity.team_id) > 0
+            ? { kind: 'team', color: semanticColor(entity.team_id), state: 'committed' }
+            : null);
+        if (!indicator || !entity.world_position || (!entity.asset && !entity.indicator)) return;
+        const id = String(entity.id);
+        let marker = teamMarkers.get(id);
+        const color = indicator.color || semanticColor(entity.team_id);
+        const state = String(indicator.state || 'committed');
+        if (!marker) {
+            marker = new THREE.Group();
+            const ring = new THREE.Mesh(teamMarkerGeometry, new THREE.MeshBasicMaterial({
+                color, transparent: true, opacity: state === 'hover' ? 0.45 : 0.85,
+                blending: THREE.AdditiveBlending, depthTest: false, depthWrite: false,
+                side: THREE.DoubleSide,
+            }));
+            ring.rotation.x = -Math.PI / 2;
+            marker.add(ring);
+            if (indicator.kind === 'facing') {
+                const arrow = new THREE.Mesh(facingMarkerGeometry, ring.material.clone());
+                arrow.rotation.x = -Math.PI / 2;
+                arrow.position.z = -0.3;
+                marker.add(arrow);
+            }
+            scene.add(marker); teamMarkers.set(id, marker);
+        } else {
+            marker.traverse((child) => {
+                if (child.material) {
+                    child.material.color.set(color);
+                    child.material.opacity = state === 'hover' ? 0.45 : 0.85;
+                }
+            });
+        }
+        marker.position.fromArray(entity.world_position); marker.position.y += 0.16;
+        marker.scale.setScalar((Number(entity.scale) || 1) * 1.15);
+        const direction = FACING_ANGLES[String(indicator.direction || entity.facing || 'south').toLowerCase()] || 0;
+        marker.rotation.y = direction;
+        marker.renderOrder = Number(entity.render_order || 0) * 1000 + 999;
+        seenMarkers.add(id);
+    });
+    teamMarkers.forEach((marker, id) => { if (!seenMarkers.has(id)) { scene.remove(marker); marker.traverse((child) => child.material?.dispose()); teamMarkers.delete(id); } });
     meshes.forEach((mesh, id) => {
         if (!seen.has(id)) {
             scene.remove(mesh);

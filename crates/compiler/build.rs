@@ -127,14 +127,14 @@ fn main() {
             // linear filtering and future outline passes from sampling the
             // neighboring slice while preserving antialiased color edges.
             for px in 0..w {
-                let top = *img.get_pixel(px, 0);
-                let bottom = *img.get_pixel(px, h - 1);
+                let top = nearest_opaque_edge_pixel(&img, px, 0, true);
+                let bottom = nearest_opaque_edge_pixel(&img, px, h - 1, true);
                 spritesheet.put_pixel(x + px, y - 1, top);
                 spritesheet.put_pixel(x + px, y + h, bottom);
             }
             for py in 0..h {
-                let left = *img.get_pixel(0, py);
-                let right = *img.get_pixel(w - 1, py);
+                let left = nearest_opaque_edge_pixel(&img, 0, py, false);
+                let right = nearest_opaque_edge_pixel(&img, w - 1, py, false);
                 spritesheet.put_pixel(x - 1, y + py, left);
                 spritesheet.put_pixel(x + w, y + py, right);
             }
@@ -154,6 +154,26 @@ fn main() {
         "cargo:warning=Generated spritesheet and atlas in {}",
         web_dir.display()
     );
+}
+
+fn nearest_opaque_edge_pixel(
+    image: &RgbaImage,
+    coordinate: u32,
+    edge: u32,
+    horizontal: bool,
+) -> image::Rgba<u8> {
+    let limit = if horizontal { image.height() } else { image.width() };
+    for distance in 0..limit {
+        let offset = if edge >= distance { edge - distance } else { edge + distance };
+        if offset >= limit { continue; }
+        let pixel = if horizontal {
+            *image.get_pixel(coordinate, offset)
+        } else {
+            *image.get_pixel(offset, coordinate)
+        };
+        if pixel[3] > 0 { return pixel; }
+    }
+    *image.get_pixel(if horizontal { coordinate } else { edge }, if horizontal { edge } else { coordinate })
 }
 
 /// Keep the runtime format as RGBA8 while maximizing lossless PNG compression.
