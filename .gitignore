@@ -28,4 +28,5 @@ __pycache__/
 web/atlas.json
 web/spritesheet.png
 web/sdfsheet.png
+web/sprite_actor_manifest.json
 web/favicon.ico
