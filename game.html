@@ -14,7 +14,6 @@
         body[data-loading-state="loading"] #hud-dock { pointer-events: none; visibility: hidden; }
         body[data-loading-state="loading"] #canvas { visibility: hidden; }
         canvas { width: 100vw; height: 100vh; display: block; }
-        #runtime-canvas { display: none; }
         #history-log-camera-controls {
             position: absolute;
             bottom: 20px;
@@ -503,7 +502,6 @@
     <button id="loading-retry" type="button" hidden>Retry</button>
 </section>
 <canvas id="canvas"></canvas>
-<canvas id="runtime-canvas" aria-hidden="true"></canvas>
 <div id="entity-viewer"></div>
 <div id="history-viewer"></div>
 <section id="heartbeat-panel" aria-label="Worker heartbeat">
