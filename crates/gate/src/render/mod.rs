@@ -107,6 +107,7 @@ pub struct RenderMaterialFrame {
 pub struct RenderEntityFrame {
     pub id: u64,
     pub kind: String,
+    pub team_id: Option<u8>,
     pub q: i32,
     pub r: i32,
     pub layer: i32,
@@ -231,6 +232,7 @@ impl RenderFrame {
                 RenderEntityFrame {
                     id: entity.id,
                     kind: entity.kind.clone(),
+                    team_id: property_u8(entity, "team_id"),
                     q: entity.hex.x,
                     r: entity.hex.y,
                     layer,
@@ -372,6 +374,13 @@ fn property_float(entity: &pystral_core::log::EntityState, name: &str, fallback:
     }
 }
 
+fn property_u8(entity: &pystral_core::log::EntityState, name: &str) -> Option<u8> {
+    match entity.properties.get(name) {
+        Some(pystral_core::log::PropertyValue::Float(value)) if *value >= 0.0 => Some(*value as u8),
+        _ => None,
+    }
+}
+
 fn entity_asset_name(entity: &pystral_core::log::EntityState) -> Option<&str> {
     match entity.properties.get("asset") {
         Some(pystral_core::log::PropertyValue::String(asset))
@@ -471,6 +480,7 @@ mod tests {
                 RenderEntityFrame {
                     id: 2,
                     kind: "character".to_string(),
+                    team_id: None,
                     q: 0,
                     r: 3,
                     layer: 0,
@@ -496,6 +506,7 @@ mod tests {
                 RenderEntityFrame {
                     id: 4,
                     kind: "character".to_string(),
+                    team_id: None,
                     q: 2,
                     r: 1,
                     layer: 0,
