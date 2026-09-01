@@ -81,10 +81,16 @@ export function createThreePresentation(canvas) {
 
     renderer.setPixelRatio(1);
     renderer.setClearColor(0x1a1a1a, 1);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     const scene = new THREE.Scene();
     scene.add(new THREE.HemisphereLight(0xffffff, 0x334455, 1.2));
     const keyLight = new THREE.DirectionalLight(0xffffff, 1.0);
     keyLight.position.set(4, 8, 6);
+    keyLight.castShadow = true;
+    keyLight.shadow.mapSize.set(1024, 1024);
+    keyLight.shadow.camera.near = 0.1;
+    keyLight.shadow.camera.far = 40;
     scene.add(keyLight);
     const camera = new THREE.Camera();
     let atlasTexture = null;
@@ -318,6 +324,7 @@ function applyNativeFrame(frame) {
                     side: THREE.DoubleSide,
                 });
                 mesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), entityMaterial);
+                mesh.castShadow = true;
                 scene.add(mesh);
                 meshes.set(key, mesh);
             }
@@ -442,6 +449,7 @@ function applyNativeMap(frame, scene) {
                 emissiveIntensity: definition.emissive ?? 0,
             });
             mesh = new THREE.Mesh(geometry, tileMaterial);
+            mesh.receiveShadow = true;
             scene.add(mesh);
             tileMeshes.set(key, mesh);
         }
