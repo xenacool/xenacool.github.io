@@ -2,8 +2,6 @@
 // Rust publishes authoritative simulation presentation data; Three.js owns the
 // visible WebGL2 canvas.
 import * as THREE from './vendor/three.module.min.js';
-import { semanticColor } from './semantic_palette.js';
-import { configureSpriteOutline } from './sprite_outline.js';
 
 const SPRITESTACK_Y_AXIS = new THREE.Vector3(0, 1, 0);
 const SPRITESTACK_X_AXIS = new THREE.Vector3(1, 0, 0);
@@ -321,7 +319,6 @@ function applyNativeFrame(frame) {
                     // from either side while retaining that orientation.
                     side: THREE.DoubleSide,
                 });
-                configureSpriteOutline(entityMaterial, texture, [4080, 5372]);
                 mesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), entityMaterial);
                 mesh.castShadow = true;
                 scene.add(mesh);
@@ -338,10 +335,11 @@ function applyNativeFrame(frame) {
                 mesh.__pystralAtlasRegionKey = regionKey;
             }
             const scale = entity.scale || 1;
-            const teamRoleColor = entity.kind === 'projectile' ? '#7DEBFF' : semanticColor(entity.team_id);
+            const teamRoleColor = entity.kind === 'projectile' ? '#7DEBFF' : '#FFFFFF';
             if (mesh.__pystralTeamRoleColor !== teamRoleColor) {
                 const teamColor = new THREE.Color(teamRoleColor);
-                mesh.material.color.copy(teamColor);
+                if (entity.kind === 'projectile') mesh.material.color.copy(teamColor);
+                else mesh.material.color.set('#FFFFFF');
                 const outlineShader = mesh.material.userData.outlineShader;
                 if (outlineShader?.uniforms.outlineColor) {
                     outlineShader.uniforms.outlineColor.value = [
