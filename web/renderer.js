@@ -70,7 +70,7 @@ export function resolveAtlasRegion(atlas, asset, sliceIndex) {
     };
 }
 
-export function createThreePresentation(canvas) {
+export function createNativePresentation(canvas) {
     window.__pystralThreeStaticMap = null;
     window.__pystralThreeStaticMaterials = null;
     let renderer;
@@ -279,11 +279,6 @@ export function createThreePresentation(canvas) {
     };
 }
 
-// The game uses the native atlas compositor exclusively. Keep the legacy
-// canvas path reachable for compatibility tests and constrained clients.
-export function createNativePresentation(canvas) {
-    return createThreePresentation(canvas);
-}
 
 function applyNativeFrame(frame) {
     const scene = window.__pystralThreeNativeScene;
