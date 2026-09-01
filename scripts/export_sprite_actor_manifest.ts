@@ -9,6 +9,10 @@ const JOB_DIR = path.join(process.cwd(), 'assets/gltf/jobs');
 const OUTPUT_FILE = path.join(process.cwd(), 'web/sprite_actor_manifest.json');
 const SPRACKER_URL = 'http://localhost:5173/';
 const SLICE_COUNT = 300;
+// Bone influence changes are smooth relative to the 300 raster layers. Keep
+// every fourth sample and retain the source coordinate so consumers can do a
+// nearest-sample lookup without inventing a second indexing scheme.
+const SLICE_STRIDE = 4;
 
 async function main() {
   const browser = await chromium.launch();
@@ -22,8 +26,10 @@ async function main() {
   await page.goto(SPRACKER_URL);
   await page.waitForFunction(() => (window as any).loadGltf !== undefined);
 
-  const actors = await page.evaluate(async ({ files, sliceCount }) => {
+  const actors = await page.evaluate(async ({ files, sliceCount, sliceStride }) => {
     const loadGltf = (window as any).loadGltf;
+    const round = (value: number) => Math.round(value * 10000) / 10000;
+    const vector = (values: number[]) => values.map(round);
     const output: Record<string, unknown> = {};
     for (const file of files) {
       const gltf = await loadGltf(`/local-models/jobs/${file}`);
@@ -62,20 +68,24 @@ async function main() {
         slice_count: sliceCount,
         bones: bones.map((bone, index) => ({
           index, name: bone.name, parent: bone.parent?.name || null,
-          rest_position: bone.position.toArray(), rest_quaternion: bone.quaternion.toArray(),
-          rest_scale: bone.scale.toArray(),
+          rest_position: vector(bone.position.toArray()),
+          rest_quaternion: vector(bone.quaternion.toArray()),
+          rest_scale: vector(bone.scale.toArray()),
         })),
-        slice_influences: slices.map((slice, index) => ({
-          slice: index,
-          vertices: slice.vertices,
+        slice_stride: sliceStride,
+        slice_influences: slices.filter((_, index) => index % sliceStride === 0).map((slice, index) => ({
+          slice: index * sliceStride,
           bones: [...slice.weights.entries()].sort((a, b) => b[1] - a[1]).slice(0, 2)
-            .map(([bone, weight]) => ({ bone, weight })),
+            .map(([bone, weight]) => ({ bone, weight: round(weight / Math.max(1, slice.vertices)) })),
         })),
       };
     }
     return output;
-  }, { files: fs.readdirSync(JOB_DIR).filter((file) => file.endsWith('.glb')).sort(), sliceCount: SLICE_COUNT });
-  fs.writeFileSync(OUTPUT_FILE, `${JSON.stringify({ version: 1, actors }, null, 2)}\n`);
+  }, { files: fs.readdirSync(JOB_DIR).filter((file) => file.endsWith('.glb')).sort(),
+    sliceCount: SLICE_COUNT, sliceStride: SLICE_STRIDE });
+  // Compact JSON is intentional: this is optional presentation metadata and
+  // must remain small enough to coexist with the raster atlas on Pages.
+  fs.writeFileSync(OUTPUT_FILE, `${JSON.stringify({ version: 2, actors })}\n`);
   await browser.close();
 }
 

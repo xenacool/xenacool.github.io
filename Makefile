@@ -1,10 +1,12 @@
-.PHONY: install build build-wasm run-web server watch deploy test test-fast test-browser test-browser-sequential test-static test-integration test-rhai nuke-deploy playwright-install playwright-test playwright reproduce-spritestacks export-sprite-actor-manifest report-animation-mappings temporal-bake-plan tla-check tla-worker-check tla-ui-check tla-animation-ack-check tla-simulation-bridge-check tla-casualty-boundary-check tla-lock-check debug-fixture-check check check-func-length check-loc
+.PHONY: install clean build wasm-bindgen-tool build-wasm run-web server watch deploy test test-fast test-browser test-browser-sequential test-static test-integration test-rhai nuke-deploy playwright-install playwright-test playwright reproduce-spritestacks export-sprite-actor-manifest report-animation-mappings temporal-bake-plan tla-check tla-worker-check tla-ui-check tla-animation-ack-check tla-simulation-bridge-check tla-casualty-boundary-check tla-lock-check debug-fixture-check check check-func-length check-loc
 
 TEST_LOG := .make-test.log
 # Keep the default feedback loop bounded. Browser and model tests should be
 # made faster when they approach this budget, not allowed to grow silently.
 TEST_BUDGET_SECONDS ?= 360
 TEST_TIMEOUT := $(shell command -v timeout 2>/dev/null || command -v gtimeout 2>/dev/null)
+WASM_BINDGEN_VERSION := 0.2.126
+WASM_BINDGEN ?= $(CURDIR)/.tools/wasm-bindgen/bin/wasm-bindgen
 TLA_VERSION := 1.8.0
 TLA_TOOLS_DIR := spec/.tla-tools
 TLA_TOOLS_JAR := $(TLA_TOOLS_DIR)/tla2tools.jar
@@ -111,6 +113,35 @@ FN_LIMIT := 200
 # the larger modules are being decomposed. Keep this as a hard upper bound.
 LOC_LIMIT := 750
 
+# Outputs owned by the compiler/bindgen/export tools. Keep this list explicit:
+# `make clean` must never remove source assets, the separate assets checkout,
+# or tracked authored web data.
+GENERATED_WEB_ASSETS := \
+	web/atlas.json \
+	web/spritesheet.png \
+	web/sdfsheet.png \
+	web/sprite_actor_manifest.json \
+	web/pystral_gate.js \
+	web/pystral_gate_bg.wasm
+
+clean:
+	@for file in $(GENERATED_WEB_ASSETS); do \
+		if [ -e "$$file" ]; then echo "Removing $$file"; rm -f "$$file"; fi; \
+	done
+
+# Keep the bindgen executable aligned with Cargo.lock and independent of any
+# globally installed CLI. WASM_BINDGEN remains overridable for CI/toolchains.
+wasm-bindgen-tool:
+	@if [ ! -x "$(WASM_BINDGEN)" ]; then \
+		echo "Installing wasm-bindgen-cli $(WASM_BINDGEN_VERSION) locally..."; \
+		cargo install wasm-bindgen-cli --version "$(WASM_BINDGEN_VERSION)" \
+			--locked --root "$(CURDIR)/.tools/wasm-bindgen"; \
+	fi
+	@actual=$$($(WASM_BINDGEN) --version | awk '{print $$2}'); \
+	if [ "$$actual" != "$(WASM_BINDGEN_VERSION)" ]; then \
+		echo "wasm-bindgen $$actual found; expected $(WASM_BINDGEN_VERSION)" >&2; exit 1; \
+	fi
+
 check-loc:
 	@echo "Checking lines of code per file..."
 	@failures=""; \
@@ -173,13 +204,13 @@ check: check-func-length check-loc
 build: check
 	cargo build --package pystral_compiler
 
-build-wasm: check
+build-wasm: check wasm-bindgen-tool
 	@if [ ! -f "web/atlas.json" ] || [ ! -f "web/spritesheet.png" ]; then \
 		touch crates/compiler/build.rs; \
 	fi
 	cargo build --target wasm32-unknown-unknown
 	mkdir -p web
-	wasm-bindgen --target web --out-dir web --no-typescript target/wasm32-unknown-unknown/debug/pystral_gate.wasm
+	$(WASM_BINDGEN) --target web --out-dir web --no-typescript target/wasm32-unknown-unknown/debug/pystral_gate.wasm
 
 test: check
 
@@ -291,7 +322,11 @@ export-sprite-actor-manifest: install
 		sleep 1; \
 		if [ $$attempt -eq 60 ]; then cat /tmp/pystral-spracker.log; exit 1; fi; \
 	done; \
-	node --experimental-strip-types scripts/export_sprite_actor_manifest.ts
+	node --experimental-strip-types scripts/export_sprite_actor_manifest.ts; \
+	bytes=$$(wc -c < web/sprite_actor_manifest.json); \
+	if [ "$$bytes" -gt 700000 ]; then \
+		echo "sprite actor manifest is too large ($$bytes bytes; limit 700000)" >&2; exit 1; \
+	fi
 
 # One-time metadata export through the local Spracker page. The runtime only
 # consumes web/animation_catalog.json and has no Spracker dependency.
@@ -325,7 +360,7 @@ deploy:
 	grep -v "web/pystral_gate_bg.wasm" .gitignore > .gitignore.tmp && mv .gitignore.tmp .gitignore
 	grep -v "web/spritesheet.png" .gitignore > .gitignore.tmp && mv .gitignore.tmp .gitignore
 	grep -v "web/atlas.json" .gitignore > .gitignore.tmp && mv .gitignore.tmp .gitignore
-	wasm-bindgen --target web --out-dir web --no-typescript target/wasm32-unknown-unknown/debug/pystral_gate.wasm
+	$(WASM_BINDGEN) --target web --out-dir web --no-typescript target/wasm32-unknown-unknown/debug/pystral_gate.wasm
 	# Keep every static entry point and its worker in the Pages artifact. All
 	# asset URLs are document-relative, so this works at / locally and at a
 	# repository subpath on github.io.

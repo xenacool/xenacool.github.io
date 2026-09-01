@@ -6,6 +6,7 @@
 /reference
 # Rust builds
 /target
+/.tools/wasm-bindgen/
 # This file contains environment-specific configuration like linker settings
 .cargo/config.toml
 web/pystral_gate.js
