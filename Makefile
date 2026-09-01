@@ -1,4 +1,4 @@
-.PHONY: install clean build wasm-bindgen-tool build-wasm run-web server watch deploy test test-fast test-browser test-browser-sequential test-static test-integration test-rhai nuke-deploy playwright-install playwright-test playwright reproduce-spritestacks export-sprite-actor-manifest report-animation-mappings temporal-bake-plan tla-check tla-worker-check tla-ui-check tla-animation-ack-check tla-simulation-bridge-check tla-casualty-boundary-check tla-lock-check debug-fixture-check check check-func-length check-loc
+.PHONY: install clean build wasm-bindgen-tool build-wasm run-web server watch deploy test test-fast test-browser test-browser-sequential test-static test-integration test-rhai nuke-deploy playwright-install playwright-test playwright reproduce-spritestacks export-sprite-actor-manifest export-sprite-actor-poses report-animation-mappings temporal-bake-plan tla-check tla-worker-check tla-ui-check tla-animation-ack-check tla-simulation-bridge-check tla-casualty-boundary-check tla-lock-check debug-fixture-check check check-func-length check-loc
 
 TEST_LOG := .make-test.log
 # Keep the default feedback loop bounded. Browser and model tests should be
@@ -327,6 +327,12 @@ export-sprite-actor-manifest: install
 	if [ "$$bytes" -gt 700000 ]; then \
 		echo "sprite actor manifest is too large ($$bytes bytes; limit 700000)" >&2; exit 1; \
 	fi
+
+export-sprite-actor-poses: install
+	@set -e; npm --prefix assets/spracker run dev -- --host 127.0.0.1 > /tmp/pystral-spracker.log 2>&1 & \
+	server_pid=$$!; trap 'kill $$server_pid 2>/dev/null || true' EXIT INT TERM; \
+	for attempt in $$(seq 1 60); do curl --silent --fail http://127.0.0.1:5173/ >/dev/null && break; sleep 1; done; \
+	node --experimental-strip-types scripts/export_sprite_actor_poses.ts
 
 # One-time metadata export through the local Spracker page. The runtime only
 # consumes web/animation_catalog.json and has no Spracker dependency.
