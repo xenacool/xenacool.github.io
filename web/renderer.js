@@ -78,8 +78,10 @@ export function createThreePresentation(canvas, sourceCanvas, options = {}) {
     // Rust source canvas and the visible canvas must share this policy.
     const initialWidth = Math.max(1, Math.floor(canvas.clientWidth));
     const initialHeight = Math.max(1, Math.floor(canvas.clientHeight));
-    sourceCanvas.width = initialWidth;
-    sourceCanvas.height = initialHeight;
+    if (!nativeMode && sourceCanvas) {
+        sourceCanvas.width = initialWidth;
+        sourceCanvas.height = initialHeight;
+    }
     let renderer;
     try {
         renderer = new THREE.WebGLRenderer({ canvas, antialias: false, alpha: false });
@@ -310,8 +312,8 @@ export function createThreePresentation(canvas, sourceCanvas, options = {}) {
 
 // The game uses the native atlas compositor exclusively. Keep the legacy
 // canvas path reachable for compatibility tests and constrained clients.
-export function createNativePresentation(canvas, sourceCanvas) {
-    return createThreePresentation(canvas, sourceCanvas, { native: true });
+export function createNativePresentation(canvas) {
+    return createThreePresentation(canvas, null, { native: true });
 }
 
 function applyNativeFrame(frame) {

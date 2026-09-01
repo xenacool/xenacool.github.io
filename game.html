@@ -697,7 +697,6 @@
             window.set_loading_state('loading', 'Loading game assets…', 25);
             threePresentation = createNativePresentation(
                 document.getElementById('canvas'),
-                document.getElementById('runtime-canvas'),
             );
             if (threePresentation.available) {
                 document.body.dataset.renderer = 'native';
