@@ -1,4 +1,4 @@
-.PHONY: install build build-wasm run-web server watch deploy test test-fast test-browser test-browser-sequential test-static test-integration test-rhai nuke-deploy playwright-install playwright-test playwright reproduce-spritestacks report-animation-mappings temporal-bake-plan tla-check tla-worker-check tla-ui-check tla-animation-ack-check tla-simulation-bridge-check tla-casualty-boundary-check tla-lock-check debug-fixture-check check check-func-length check-loc
+.PHONY: install build build-wasm run-web server watch deploy test test-fast test-browser test-browser-sequential test-static test-integration test-rhai nuke-deploy playwright-install playwright-test playwright reproduce-spritestacks export-sprite-actor-manifest report-animation-mappings temporal-bake-plan tla-check tla-worker-check tla-ui-check tla-animation-ack-check tla-simulation-bridge-check tla-casualty-boundary-check tla-lock-check debug-fixture-check check check-func-length check-loc
 
 TEST_LOG := .make-test.log
 # Keep the default feedback loop bounded. Browser and model tests should be
@@ -12,11 +12,18 @@ TLA_BUILD_DIR := spec/_build
 TLA_URL := https://github.com/tlaplus/tlaplus/releases/download/v$(TLA_VERSION)/tla2tools.jar
 
 install:
-	@if [ ! -d "assets" ]; then \
+	@if [ ! -d "assets/.git" ]; then \
 		echo "Cloning assets..."; \
+		if [ -e "assets" ]; then echo "assets exists but is not a Git checkout"; exit 1; fi; \
 		git clone git@github.com:xenacool/xenacool_assets.git assets; \
 	else \
-		echo "Assets already installed."; \
+		if [ -n "$$(git -C assets status --porcelain)" ]; then \
+			echo "Assets checkout has local changes; leaving it untouched."; \
+		else \
+			git -C assets fetch origin main; \
+			git -C assets checkout main; \
+			git -C assets pull --ff-only origin main; \
+		fi; \
 	fi
 
 playwright: playwright-install playwright-test
@@ -273,6 +280,18 @@ reproduce-spritestacks:
 		fi; \
 	done; \
 	node --experimental-strip-types scripts/reproduce_spritestacks.ts
+
+export-sprite-actor-manifest: install
+	@set -e; \
+	npm --prefix assets/spracker run dev -- --host 127.0.0.1 > /tmp/pystral-spracker.log 2>&1 & \
+	server_pid=$$!; \
+	trap 'kill $$server_pid 2>/dev/null || true' EXIT INT TERM; \
+	for attempt in $$(seq 1 60); do \
+		if curl --silent --fail http://127.0.0.1:5173/ >/dev/null; then break; fi; \
+		sleep 1; \
+		if [ $$attempt -eq 60 ]; then cat /tmp/pystral-spracker.log; exit 1; fi; \
+	done; \
+	node --experimental-strip-types scripts/export_sprite_actor_manifest.ts
 
 # One-time metadata export through the local Spracker page. The runtime only
 # consumes web/animation_catalog.json and has no Spracker dependency.
