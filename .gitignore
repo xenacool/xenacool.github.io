@@ -30,4 +30,5 @@ web/atlas.json
 web/spritesheet.png
 web/sdfsheet.png
 web/sprite_actor_manifest.json
+web/sprite_actor_poses.json
 web/favicon.ico
