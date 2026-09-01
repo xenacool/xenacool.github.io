@@ -1,7 +1,9 @@
 // Readable semantic colors (authored in OKLCH, represented as sRGB for Three).
 const PALETTE = Object.freeze({
-    neutral: '#F2F4F7', player: '#4EA8DE', ally: '#2A9D8F',
-    enemy: '#E76F51', elite: '#B565D9',
+    // White is intentional: entities without a semantic team must retain the
+    // authored sprite colors instead of being gray-tinted by multiplication.
+    neutral: '#FFFFFF', player: '#8CCCF2', ally: '#82D8C9',
+    enemy: '#F5A08C', elite: '#D7A6EA',
 });
 
 export function teamRole(teamId) {
