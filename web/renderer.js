@@ -337,7 +337,18 @@ function applyNativeFrame(frame) {
                 mesh.__pystralAtlasRegionKey = regionKey;
             }
             const scale = entity.scale || 1;
-            mesh.material.color.set(semanticColor(entity.team_id));
+            const teamRoleColor = semanticColor(entity.team_id);
+            if (mesh.__pystralTeamRoleColor !== teamRoleColor) {
+                const teamColor = new THREE.Color(teamRoleColor);
+                mesh.material.color.copy(teamColor);
+                const outlineShader = mesh.material.userData.outlineShader;
+                if (outlineShader?.uniforms.outlineColor) {
+                    outlineShader.uniforms.outlineColor.value = [
+                        teamColor.r * 0.35, teamColor.g * 0.35, teamColor.b * 0.35,
+                    ];
+                }
+                mesh.__pystralTeamRoleColor = teamRoleColor;
+            }
             const dimensions = Array.isArray(entity.stack_dimensions)
                 ? entity.stack_dimensions : [1, 0, 1];
             const unitHeight = Number(entity.unit_height) || 0;
