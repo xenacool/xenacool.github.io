@@ -615,7 +615,7 @@
 </div>
 <script type="module">
     import init, { run_app } from './web/pystral_gate.js';
-    import { createThreePresentation } from './web/renderer.js';
+    import { createNativePresentation } from './web/renderer.js';
 
     document.body.dataset.loadingState = 'loading';
     const loadingPanel = document.getElementById('loading-panel');
@@ -695,10 +695,9 @@
             await wasmReady;
             if (attemptId !== currentAttemptId) return;
             window.set_loading_state('loading', 'Loading game assets…', 25);
-            threePresentation = createThreePresentation(
+            threePresentation = createNativePresentation(
                 document.getElementById('canvas'),
                 document.getElementById('runtime-canvas'),
-                { native: true },
             );
             if (threePresentation.available) {
                 document.body.dataset.renderer = 'native';

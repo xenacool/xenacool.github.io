@@ -308,6 +308,12 @@ export function createThreePresentation(canvas, sourceCanvas, options = {}) {
     };
 }
 
+// The game uses the native atlas compositor exclusively. Keep the legacy
+// canvas path reachable for compatibility tests and constrained clients.
+export function createNativePresentation(canvas, sourceCanvas) {
+    return createThreePresentation(canvas, sourceCanvas, { native: true });
+}
+
 function applyNativeFrame(frame) {
     const scene = window.__pystralThreeNativeScene;
     const camera = window.__pystralThreeNativeCamera;
