@@ -22,3 +22,17 @@ export function solveTwoBoneIK(root, target, upperLength, lowerLength) {
     ];
     return { upperAngle, lowerAngle: baseAngle + elbowAngle, elbow, end, clamped: distance !== reach };
 }
+
+export function blendAngle(from, to, amount) {
+    const t = Math.max(0, Math.min(1, Number(amount) || 0));
+    let delta = (to - from + Math.PI) % (Math.PI * 2) - Math.PI;
+    return from + delta * t;
+}
+
+export function blendTwoBonePose(previous, solved, amount) {
+    if (!previous) return { upperAngle: solved.upperAngle, lowerAngle: solved.lowerAngle };
+    return {
+        upperAngle: blendAngle(previous.upperAngle, solved.upperAngle, amount),
+        lowerAngle: blendAngle(previous.lowerAngle, solved.lowerAngle, amount),
+    };
+}
