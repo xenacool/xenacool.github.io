@@ -314,7 +314,8 @@ function applyNativeFrame(frame) {
                     map: texture,
                     transparent: true,
                     alphaTest: 0.01,
-                    depthWrite: true,
+                    depthWrite: entity.kind !== 'projectile',
+                    blending: entity.kind === 'projectile' ? THREE.AdditiveBlending : THREE.NormalBlending,
                     // Facing is gameplay-authored and may point away from
                     // the current camera. Spritestack cutouts remain visible
                     // from either side while retaining that orientation.
@@ -337,7 +338,7 @@ function applyNativeFrame(frame) {
                 mesh.__pystralAtlasRegionKey = regionKey;
             }
             const scale = entity.scale || 1;
-            const teamRoleColor = semanticColor(entity.team_id);
+            const teamRoleColor = entity.kind === 'projectile' ? '#7DEBFF' : semanticColor(entity.team_id);
             if (mesh.__pystralTeamRoleColor !== teamRoleColor) {
                 const teamColor = new THREE.Color(teamRoleColor);
                 mesh.material.color.copy(teamColor);
