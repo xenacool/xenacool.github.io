@@ -712,6 +712,11 @@
             }
             window.app = app;
             bindControlsOnce();
+            // Optional actor metadata is loaded after the runtime is live so
+            // readiness cannot delay or replay the synchronous frame path.
+            import('./web/sprite_actor.js').then(({ loadActorCatalog }) =>
+                loadActorCatalog().then((catalog) => threePresentation?.setActorCatalog(catalog))
+            ).catch(() => {});
         } catch (err) {
             if (attemptId !== currentAttemptId) return;
             console.error('Main thread initialization failed:', err);

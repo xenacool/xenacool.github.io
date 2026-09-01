@@ -273,6 +273,11 @@ export function createThreePresentation(canvas, sourceCanvas, options = {}) {
 
     return {
         available: true,
+        setActorCatalog(catalog) {
+            // Metadata is retained for the next presentation effect pass. It
+            // deliberately does not replay or mutate the authoritative frame.
+            window.__pystralThreeActorCatalog = catalog instanceof Map ? catalog : new Map();
+        },
         dispose() {
             active = false;
             window.removeEventListener('pystral-render-frame', frameListener);
@@ -283,6 +288,7 @@ export function createThreePresentation(canvas, sourceCanvas, options = {}) {
             delete window.__pystralThreeNativeCamera;
             delete window.__pystralThreeNativeMeshes;
             delete window.__pystralThreeNativeAtlasTexture;
+            delete window.__pystralThreeActorCatalog;
             texture?.dispose();
             material?.dispose();
             quad?.geometry.dispose();
