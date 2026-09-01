@@ -111,8 +111,7 @@ pub struct RenderEntityFrame {
     pub q: i32,
     pub r: i32,
     pub layer: i32,
-    /// State name after `LoopHandler::get_current_state` has applied the
-    /// active FSM presentation properties. Three.js must not resolve this.
+    /// State name after FSM presentation properties are applied.
     pub animation_state: String,
     /// Rust-owned elapsed time for the active presentation FSM state.
     pub animation_time_ms: f32,

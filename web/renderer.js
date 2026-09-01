@@ -2,6 +2,7 @@
 // Rust publishes authoritative simulation presentation data; Three.js owns the
 // visible WebGL2 canvas.
 import * as THREE from './vendor/three.module.min.js';
+import { semanticColor } from './semantic_palette.js';
 
 const SPRITESTACK_Y_AXIS = new THREE.Vector3(0, 1, 0);
 const SPRITESTACK_X_AXIS = new THREE.Vector3(1, 0, 0);
@@ -339,6 +340,7 @@ function applyNativeFrame(frame) {
                 mesh.__pystralAtlasRegionKey = regionKey;
             }
             const scale = entity.scale || 1;
+            mesh.material.color.set(semanticColor(entity.team_id));
             const dimensions = Array.isArray(entity.stack_dimensions)
                 ? entity.stack_dimensions : [1, 0, 1];
             const unitHeight = Number(entity.unit_height) || 0;
