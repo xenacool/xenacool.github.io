@@ -3,7 +3,6 @@
 // visible WebGL2 canvas.
 import * as THREE from './vendor/three.module.min.js';
 import { semanticColor } from './semantic_palette.js';
-import { configureSpriteOutline } from './sprite_outline.js';
 
 const SPRITESTACK_Y_AXIS = new THREE.Vector3(0, 1, 0);
 const SPRITESTACK_X_AXIS = new THREE.Vector3(1, 0, 0);
@@ -343,10 +342,6 @@ function applyNativeFrame(frame) {
                     // from either side while retaining that orientation.
                     side: THREE.DoubleSide,
                 });
-                // Do not outline individual Spracker layers: that creates
-                // dark seams throughout a stacked character. The composited
-                // silhouette pass will opt in explicitly once available.
-                if (entity.outline === true) configureSpriteOutline(entityMaterial, texture, undefined, region);
                 mesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), entityMaterial);
                 mesh.castShadow = true;
                 scene.add(mesh);
