@@ -108,16 +108,6 @@ export function createThreePresentation(canvas, sourceCanvas, options = {}) {
     const quad = material ? new THREE.Mesh(new THREE.PlaneGeometry(2, 2), material) : null;
     if (quad) scene.add(quad);
     let atlasTexture = null;
-    let actorCatalog = new Map();
-    const enrichActorMeshes = () => nativeMeshes.forEach((mesh) => {
-        const [asset, slice] = String(mesh.__pystralActorAssetSlice || ':').split(':');
-        const actor = actorCatalog.get(String(asset || '').replace(/\.glb$/i, '').split('/').pop());
-        mesh.__pystralActor = actor || null;
-        const stride = Math.max(1, Number(actor?.slice_stride) || 1);
-        const samples = actor?.slice_influences || [];
-        const index = Math.max(0, Math.min(samples.length - 1, Math.round((Number(slice) || 0) / stride)));
-        mesh.__pystralSliceInfluence = samples[index]?.bones || null;
-    });
     const nativeMeshes = new Map();
     if (nativeMode) {
         window.__pystralThreeNativeScene = scene;
@@ -283,10 +273,6 @@ export function createThreePresentation(canvas, sourceCanvas, options = {}) {
 
     return {
         available: true,
-        setActorCatalog(catalog) {
-            actorCatalog = catalog instanceof Map ? catalog : new Map();
-            enrichActorMeshes();
-        },
         dispose() {
             active = false;
             window.removeEventListener('pystral-render-frame', frameListener);
@@ -360,8 +346,6 @@ function applyNativeFrame(frame) {
                 scene.add(mesh);
                 meshes.set(key, mesh);
             }
-            mesh.__pystralActorAssetSlice = `${entity.asset}:${sliceIndex}`;
-            enrichActorMeshes();
             const regionKey = `${region.x}:${region.y}:${region.width}:${region.height}`;
             if (mesh.__pystralAtlasRegionKey !== regionKey) {
                 const uv = mesh.geometry.getAttribute('uv');
