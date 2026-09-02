@@ -52,9 +52,6 @@ extern "C" {
     #[wasm_bindgen(js_namespace = window)]
     pub fn update_action_log(json: &str);
 
-    /// Publishes presentation-only state for the JavaScript renderer. The
-    /// existing Rust renderer remains the pixel owner until the WebGL2
-    /// migration is independently validated.
     #[wasm_bindgen(js_namespace = window)]
     pub fn publish_render_frame(json: &str);
 
@@ -104,6 +101,14 @@ pub struct RenderMaterialFrame {
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq)]
+pub struct RenderIndicatorFrame {
+    pub kind: String,
+    pub color: [f32; 3],
+    pub state: String,
+    pub direction: String,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq)]
 pub struct RenderEntityFrame {
     pub id: u64,
     pub kind: String,
@@ -111,15 +116,11 @@ pub struct RenderEntityFrame {
     pub q: i32,
     pub r: i32,
     pub layer: i32,
-    /// State name after FSM presentation properties are applied.
     pub animation_state: String,
-    /// Rust-owned elapsed time for the active presentation FSM state.
     pub animation_time_ms: f32,
-    /// Rust-resolved discrete animation frame, when the active state exposes
-    /// one through the existing slice_index property track.
     pub animation_frame: Option<u32>,
-    /// Authoritative gameplay facing, separate from camera billboard yaw.
     pub facing: String,
+    pub indicator: RenderIndicatorFrame,
     pub render_order: u64,
     pub asset: Option<String>,
     pub scale: f32,
@@ -127,19 +128,11 @@ pub struct RenderEntityFrame {
     pub rotation_z: f32,
     pub rotation_y: f32,
     pub camera_offset: [f32; 3],
-    /// Rust-resolved layers from the authoritative `AssetCollection`. The
-    /// browser may map these indices to static atlas UVs, but it must not
-    /// choose, reorder, or synthesize slices.
     pub slice_indices: Vec<u32>,
     pub selected_slice_index: Option<u32>,
-    /// Authored spritestack volume dimensions: X footprint, Y stack span,
-    /// and Z footprint, all in world units at scale 1.
     pub stack_dimensions: [f32; 3],
-    /// Distance between adjacent source slices in world units.
     pub stack_spacing: f32,
-    /// Canonical two-hex vertical clearance used by gameplay collision.
     pub unit_height: f32,
-    /// Rust-resolved world anchor `[x, y, z]` for native presentation.
     pub world_position: Option<[f32; 3]>,
 }
 
@@ -187,8 +180,6 @@ impl RenderFrame {
         positions: Option<&HashMap<u64, [f32; 3]>>,
         animation_times: Option<&HashMap<u64, f32>>,
     ) -> Self {
-        // Asset collections are immutable for a world state. Decode the
-        // metadata once per frame rather than once per renderable entity.
         let (asset_metadata, asset_animations) = state
             .asset_collections
             .get("primitives")
@@ -270,6 +261,7 @@ impl RenderFrame {
                         })
                         .unwrap_or_default(),
                     facing: entity_facing(entity),
+                    indicator: RenderIndicatorFrame { kind: "facing".to_string(), color: [0.95, 0.72, 0.22], state: "committed".to_string(), direction: entity_facing(entity) },
                     selected_slice_index: entity_asset_name(entity)
                         .and_then(|asset| asset_metadata.get(asset).map(|meta| meta.0))
                         .and_then(|count| resolved_slice_index(entity, count)),
@@ -303,9 +295,6 @@ impl RenderFrame {
             })
             .collect::<Vec<_>>();
         cameras.sort_by_key(|camera| camera.id);
-        // Map and materials are static scene data. Publishing them only in
-        // the first frame avoids serializing the same large payload at rAF
-        // frequency; the browser retains the last static scene description.
         let map = (tick == 0)
             .then(|| {
                 state
@@ -451,7 +440,7 @@ pub fn link_program(
 
 #[cfg(test)]
 mod tests {
-    use super::{RenderCameraFrame, RenderEntityFrame, RenderFrame};
+    use super::{RenderCameraFrame, RenderEntityFrame, RenderFrame, RenderIndicatorFrame};
     use hexx::Hex;
     use pystral_compiler::assets::{AssetCollection, SpriteAnimation};
     use pystral_core::domain::{Spritestack, SpritestackSlice};
@@ -487,6 +476,7 @@ mod tests {
                     animation_time_ms: 0.0,
                     animation_frame: None,
                     facing: "south".to_string(),
+                    indicator: RenderIndicatorFrame { kind: "facing".to_string(), color: [0.95, 0.72, 0.22], state: "committed".to_string(), direction: "south".to_string() },
                     render_order: 2,
                     asset: None,
                     scale: 1.0,
@@ -513,6 +503,7 @@ mod tests {
                     animation_time_ms: 0.0,
                     animation_frame: None,
                     facing: "south".to_string(),
+                    indicator: RenderIndicatorFrame { kind: "facing".to_string(), color: [0.95, 0.72, 0.22], state: "committed".to_string(), direction: "south".to_string() },
                     render_order: 4,
                     asset: None,
                     scale: 1.0,

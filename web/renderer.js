@@ -2,7 +2,7 @@
 // Rust publishes authoritative simulation presentation data; Three.js owns the
 // visible WebGL2 canvas.
 import * as THREE from './vendor/three.module.min.js';
-import { semanticColor } from './semantic_palette.js';
+import { createMaskResources } from './actor_mask.js';
 
 const SPRITESTACK_Y_AXIS = new THREE.Vector3(0, 1, 0);
 const SPRITESTACK_X_AXIS = new THREE.Vector3(1, 0, 0);
@@ -70,6 +70,7 @@ export function resolveAtlasRegion(atlas, asset, sliceIndex) {
 }
 
 export function createNativePresentation(canvas) {
+    const actorMaskEnabled = new URLSearchParams(globalThis.location?.search || '').has('actor-mask');
     window.__pystralThreeStaticMap = null;
     window.__pystralThreeStaticMaterials = null;
     let renderer;
@@ -94,15 +95,20 @@ export function createNativePresentation(canvas) {
     keyLight.shadow.camera.far = 40;
     scene.add(keyLight);
     const camera = new THREE.Camera();
+    const actorMask = actorMaskEnabled ? createMaskResources(THREE) : null;
     let atlasTexture = null;
     const nativeMeshes = new Map();
     const teamMarkers = new Map();
+    window.__pystralThreeNativeMarkers = teamMarkers;
     const teamMarkerGeometry = new THREE.RingGeometry(0.32, 0.40, 16);
-    const facingMarkerGeometry = new THREE.ConeGeometry(0.09, 0.18, 3);
+    const facingMarkerGeometry = new THREE.ConeGeometry(0.16, 0.42, 3);
+    window.__pystralThreeTeamMarkerGeometry = teamMarkerGeometry;
+    window.__pystralThreeFacingMarkerGeometry = facingMarkerGeometry;
     window.__pystralThreeNativeScene = scene;
         window.__pystralThreeNativeCamera = camera;
         window.__pystralThreeNativeMeshes = nativeMeshes;
-        window.__pystralThreeNativeProfile = { entities: 0, mapTiles: 0 };
+    window.__pystralThreeNativeProfile = { entities: 0, mapTiles: 0 };
+    window.__pystralThreeMaskEnabled = actorMaskEnabled;
         atlasTexture = new THREE.TextureLoader().load('./web/spritesheet.png', () => {
             // Publish only after atlas metadata is ready so frame consumers
             // never observe a half-initialized native presentation.
@@ -275,9 +281,13 @@ export function createNativePresentation(canvas) {
             delete window.__pystralThreeNativeScene;
             delete window.__pystralThreeNativeCamera;
             delete window.__pystralThreeNativeMeshes;
+            delete window.__pystralThreeNativeMarkers;
+            delete window.__pystralThreeTeamMarkerGeometry;
+            delete window.__pystralThreeFacingMarkerGeometry;
             delete window.__pystralThreeNativeAtlasTexture;
             delete window.__pystralThreeActorCatalog;
             atlasTexture?.dispose();
+            actorMask?.dispose();
             window.__pystralThreeNativeHexGeometry?.dispose();
             nativeMeshes.forEach((mesh) => {
                 mesh.geometry.dispose();
@@ -292,6 +302,15 @@ export function createNativePresentation(canvas) {
             });
             teamMarkerGeometry.dispose();
             facingMarkerGeometry.dispose();
+            if (window.__pystralThreeCompass) {
+                window.__pystralThreeCompass.traverse((child) => {
+                    child.material?.map?.dispose();
+                    child.material?.dispose();
+                    child.geometry?.dispose();
+                });
+                scene.remove(window.__pystralThreeCompass);
+                delete window.__pystralThreeCompass;
+            }
             delete window.__pystralThreeNativeHexGeometry;
             delete window.__pystralThreeNativeTileMeshes;
             renderer.dispose();
@@ -316,6 +335,9 @@ function applyNativeFrame(frame) {
     const texture = window.__pystralThreeNativeAtlasTexture;
     if (!atlas || !texture) return;
     const meshes = window.__pystralThreeNativeMeshes;
+    const teamMarkers = window.__pystralThreeNativeMarkers;
+    const teamMarkerGeometry = window.__pystralThreeTeamMarkerGeometry;
+    const facingMarkerGeometry = window.__pystralThreeFacingMarkerGeometry;
     const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true;
     const seen = new Set();
     const seenMarkers = new Set();
@@ -402,7 +424,7 @@ function applyNativeFrame(frame) {
             );
             mesh.renderOrder = Number(entity.render_order || 0) * 1000 + stackIndex;
             const authoredYaw = Number(entity.rotation_y || 0);
-            const facingAngle = FACING_ANGLES[String(entity.facing || 'south').toLowerCase()] || 0;
+            const facingAngle = FACING_ANGLES[String(entity.facing).toLowerCase()] ?? 0;
             SPRITESTACK_FACING.setFromAxisAngle(
                 SPRITESTACK_Y_AXIS, facingAngle + authoredYaw,
             );
@@ -421,13 +443,14 @@ function applyNativeFrame(frame) {
         });
     });
     (frame.entities || []).forEach((entity) => {
-        const indicator = entity.indicator || (entity.asset && Number(entity.team_id) > 0
-            ? { kind: 'team', color: semanticColor(entity.team_id), state: 'committed' }
-            : null);
-        if (!indicator || !entity.world_position || (!entity.asset && !entity.indicator)) return;
+        const indicator = entity.indicator;
+        if (!indicator || !entity.world_position) return;
+        if (indicator.kind === 'facing' && (!entity.asset || !isActorEntity(entity))) return;
         const id = String(entity.id);
         let marker = teamMarkers.get(id);
-        const color = indicator.color || semanticColor(entity.team_id);
+        const color = Array.isArray(indicator.color)
+            ? new THREE.Color(indicator.color[0], indicator.color[1], indicator.color[2])
+            : new THREE.Color(indicator.color);
         const state = String(indicator.state || 'committed');
         if (!marker) {
             marker = new THREE.Group();
@@ -441,23 +464,24 @@ function applyNativeFrame(frame) {
             if (indicator.kind === 'facing') {
                 const arrow = new THREE.Mesh(facingMarkerGeometry, ring.material.clone());
                 arrow.rotation.x = -Math.PI / 2;
-                arrow.position.z = -0.3;
+                arrow.position.z = -0.46;
                 marker.add(arrow);
             }
             scene.add(marker); teamMarkers.set(id, marker);
         } else {
             marker.traverse((child) => {
                 if (child.material) {
-                    child.material.color.set(color);
+                    child.material.color.copy(color);
                     child.material.opacity = state === 'hover' ? 0.45 : 0.85;
                 }
             });
         }
         marker.position.fromArray(entity.world_position); marker.position.y += 0.16;
         marker.scale.setScalar((Number(entity.scale) || 1) * 1.15);
-        const direction = FACING_ANGLES[String(indicator.direction || entity.facing || 'south').toLowerCase()] || 0;
+        const direction = FACING_ANGLES[String(indicator.direction).toLowerCase()];
+        if (direction === undefined) return;
         marker.rotation.y = direction;
-        marker.renderOrder = Number(entity.render_order || 0) * 1000 + 999;
+        marker.renderOrder = Number(entity.render_order || 0) * 1000 + 100000;
         seenMarkers.add(id);
     });
     teamMarkers.forEach((marker, id) => { if (!seenMarkers.has(id)) { scene.remove(marker); marker.traverse((child) => child.material?.dispose()); teamMarkers.delete(id); } });
@@ -474,6 +498,10 @@ function applyNativeFrame(frame) {
         mapTiles: frame.map?.tiles?.length || window.__pystralThreeNativeProfile?.mapTiles || 0,
         nativeMeshCount: meshes.size,
     };
+}
+
+function isActorEntity(entity) {
+    return !['prompt', 'rock', 'world', 'camera', 'projectile'].includes(String(entity.kind).toLowerCase());
 }
 
 function addCameraRelativeOffset(position, camera, offset) {
@@ -541,10 +569,55 @@ function applyNativeMap(frame, scene) {
             tileMeshes.delete(key);
         }
     });
+    updateCompass(map, pointy, sizeX, sizeZ, scene, window.__pystralThreeNativeCamera);
     window.__pystralThreeNativeProfile = {
         ...(window.__pystralThreeNativeProfile || {}),
         mapTiles: tileMeshes.size,
     };
+}
+
+function updateCompass(map, pointy, sizeX, sizeZ, scene, camera) {
+    const lowest = (map.tiles || []).reduce((best, tile) =>
+        !best || Number(tile.bottom || 0) < Number(best.bottom || 0) ? tile : best, null);
+    if (!lowest) return;
+    const compassY = Number(lowest.bottom || 0) + Number(lowest.height || 1) + 0.02;
+    const anchor = pointy
+        ? [Math.sqrt(3) * (lowest.q + lowest.r / 2) * sizeX, compassY, 1.5 * lowest.r * sizeZ]
+        : [1.5 * lowest.q * sizeX, compassY, Math.sqrt(3) * (lowest.r + lowest.q / 2) * sizeZ];
+    let compass = window.__pystralThreeCompass;
+    if (!compass) {
+        compass = new THREE.Group();
+        const ring = new THREE.Mesh(new THREE.RingGeometry(0.55, 0.60, 24), new THREE.MeshBasicMaterial({
+            color: 0xf5d76e, transparent: true, opacity: 0.8, depthTest: true, depthWrite: false,
+        }));
+        ring.rotation.x = -Math.PI / 2;
+        compass.add(ring);
+        ['N', 'NE', 'SE', 'S', 'SW', 'NW'].forEach((label, index) => {
+            const texture = new THREE.CanvasTexture(compassLabelCanvas(label));
+            texture.minFilter = THREE.NearestFilter;
+            const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, transparent: true, depthTest: true, depthWrite: false }));
+            const angle = index * Math.PI / 3;
+            sprite.position.set(Math.cos(angle) * 0.78, 0.02, Math.sin(angle) * 0.78);
+            sprite.scale.set(0.28, 0.14, 1);
+            compass.add(sprite);
+        });
+        scene.add(compass);
+        window.__pystralThreeCompass = compass;
+    }
+    compass.position.set(anchor[0], anchor[1], anchor[2]);
+    const elements = camera?.matrixWorld.elements;
+    if (elements) compass.rotation.y = Math.atan2(elements[8], elements[10]);
+    compass.renderOrder = 200000;
+}
+
+function compassLabelCanvas(label) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 64; canvas.height = 32;
+    const context = canvas.getContext('2d');
+    context.font = 'bold 20px sans-serif';
+    context.textAlign = 'center'; context.textBaseline = 'middle';
+    context.fillStyle = '#fff4b0'; context.fillText(label, 32, 16);
+    return canvas;
 }
 
 function createFpsBucket() {
