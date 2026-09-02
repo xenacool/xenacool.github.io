@@ -27,3 +27,13 @@ export function createMaskPass(width = 1, height = 1) {
     fragmentShader: ACTOR_MASK_FRAGMENT_SHADER,
     dilationShader: ACTOR_MASK_DILATE_FRAGMENT_SHADER };
 }
+
+export function createMaskResources(THREE, width = 1, height = 1) {
+  const target = new THREE.WebGLRenderTarget(width, height, { depthBuffer: false, stencilBuffer: false });
+  const scene = new THREE.Scene();
+  const quadScene = new THREE.Scene();
+  const quadCamera = new THREE.Camera();
+  const material = new THREE.MeshBasicMaterial({ transparent: true, alphaTest: 0.01 });
+  return { target, scene, quadScene, quadCamera, material,
+    dispose() { material.dispose(); target.dispose(); } };
+}
