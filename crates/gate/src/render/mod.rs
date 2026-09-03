@@ -117,6 +117,7 @@ pub struct RenderEntityFrame {
     pub r: i32,
     pub layer: i32,
     pub animation_state: String,
+    pub rig: Option<String>, pub animation_clip: Option<String>,
     pub animation_time_ms: f32,
     pub animation_frame: Option<u32>,
     pub facing: String,
@@ -227,6 +228,8 @@ impl RenderFrame {
                     r: entity.hex.y,
                     layer,
                     animation_state: entity.animation_state.clone(),
+                    rig: property_string(entity, "rig"),
+                    animation_clip: property_string(entity, "animation_clip"),
                     animation_time_ms: animation_times
                         .and_then(|times| times.get(&entity.id).copied())
                         .unwrap_or(0.0),
@@ -377,6 +380,8 @@ fn entity_asset_name(entity: &pystral_core::log::EntityState) -> Option<&str> {
     }
 }
 
+fn property_string(entity: &pystral_core::log::EntityState, name: &str) -> Option<String> { match entity.properties.get(name) { Some(pystral_core::log::PropertyValue::String(value)) | Some(pystral_core::log::PropertyValue::AssetRef(value)) => Some(value.clone()), _ => None } }
+
 fn entity_rotation_y(entity: &pystral_core::log::EntityState) -> f32 {
     property_float(entity, "rotation_y", 0.0)
 }
@@ -473,6 +478,8 @@ mod tests {
                     r: 3,
                     layer: 0,
                     animation_state: "idle".to_string(),
+                    rig: None,
+                    animation_clip: None,
                     animation_time_ms: 0.0,
                     animation_frame: None,
                     facing: "south".to_string(),
@@ -500,6 +507,8 @@ mod tests {
                     r: 1,
                     layer: 0,
                     animation_state: "idle".to_string(),
+                    rig: None,
+                    animation_clip: None,
                     animation_time_ms: 0.0,
                     animation_frame: None,
                     facing: "south".to_string(),

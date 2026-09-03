@@ -13,13 +13,14 @@ const SPRITESTACK_HORIZONTAL_SLICE = new THREE.Quaternion()
 // reused across slices without sharing mutable state with the scene.
 const SPRITESTACK_FACING = new THREE.Quaternion();
 const SPRITESTACK_AUTHORED_ROTATION = new THREE.Quaternion();
+const HEX_DIRECTION_OFFSET = Math.PI / 6;
 const FACING_ANGLES = Object.freeze({
-    north: 0,
-    northeast: Math.PI / 3,
-    southeast: (Math.PI * 2) / 3,
-    south: Math.PI,
-    southwest: (Math.PI * 4) / 3,
-    northwest: (Math.PI * 5) / 3,
+    north: HEX_DIRECTION_OFFSET,
+    northeast: Math.PI / 3 + HEX_DIRECTION_OFFSET,
+    southeast: (Math.PI * 2) / 3 + HEX_DIRECTION_OFFSET,
+    south: Math.PI + HEX_DIRECTION_OFFSET,
+    southwest: (Math.PI * 4) / 3 + HEX_DIRECTION_OFFSET,
+    northwest: (Math.PI * 5) / 3 + HEX_DIRECTION_OFFSET,
 });
 
 const PRESENTATION_MOTION = Object.freeze({
@@ -56,6 +57,7 @@ export function presentationOffset(entity, reducedMotion = false) {
     }
     return [0, 0, 0];
 }
+
 
 export function resolveAtlasRegion(atlas, asset, sliceIndex) {
     const regions = atlas?.spritestacks?.[asset];
@@ -650,7 +652,7 @@ function updateCompass(map, pointy, sizeX, sizeZ, scene, camera) {
             const texture = new THREE.CanvasTexture(compassLabelCanvas(label));
             texture.minFilter = THREE.NearestFilter;
             const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, transparent: true, depthTest: true, depthWrite: false }));
-            const angle = index * Math.PI / 3;
+            const angle = index * Math.PI / 3 + HEX_DIRECTION_OFFSET;
             sprite.position.set(Math.cos(angle) * 0.78, 0.02, Math.sin(angle) * 0.78);
             sprite.scale.set(0.28, 0.14, 1);
             compass.add(sprite);

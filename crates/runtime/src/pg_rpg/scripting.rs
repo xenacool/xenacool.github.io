@@ -495,6 +495,28 @@ fn register_history_methods(engine: &mut Engine) {
     );
 
     engine.register_fn(
+        "set_pose_rig",
+        |history: &mut HistoryManager, id: i64, rig: &str| {
+            history.push_and_apply(Event::UpdateProperty {
+                id: id as u64,
+                property: "rig".to_string(),
+                value: PropertyValue::String(rig.to_string()),
+            });
+        },
+    );
+
+    engine.register_fn(
+        "set_animation_clip",
+        |history: &mut HistoryManager, id: i64, clip: &str| {
+            history.push_and_apply(Event::UpdateProperty {
+                id: id as u64,
+                property: "animation_clip".to_string(),
+                value: PropertyValue::String(clip.to_string()),
+            });
+        },
+    );
+
+    engine.register_fn(
         "set_facing",
         |history: &mut HistoryManager,
          id: i64,
