@@ -82,6 +82,7 @@ export function createNativePresentation(canvas) {
     }
 
     renderer.setPixelRatio(1);
+    renderer.autoClear = false;
     renderer.setClearColor(0x1a1a1a, 1);
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -96,6 +97,7 @@ export function createNativePresentation(canvas) {
     scene.add(keyLight);
     const camera = new THREE.Camera();
     const actorMask = actorMaskEnabled ? createMaskResources(THREE) : null;
+    window.__pystralThreeActorMask = actorMask;
     let atlasTexture = null;
     const nativeMeshes = new Map();
     const teamMarkers = new Map();
@@ -227,6 +229,23 @@ export function createNativePresentation(canvas) {
         }
         profile.lastFrameAt = frameStart;
         resize();
+        renderer.setRenderTarget(null);
+        renderer.setClearColor(0x1a1a1a, 1);
+        renderer.clear(true, true, true);
+        if (actorMask) {
+            actorMask.resize(Math.max(1, Math.floor(canvas.width / 2)), Math.max(1, Math.floor(canvas.height / 2)));
+            actorMask.material.uniforms.atlas.value = atlasTexture;
+            renderer.setRenderTarget(actorMask.target);
+            renderer.setClearColor(0x000000, 0);
+            renderer.clear();
+            renderer.render(actorMask.scene, camera);
+            renderer.setRenderTarget(null);
+            renderer.setClearColor(0x1a1a1a, 1);
+            window.__pystralThreeMaskProfile = {
+                meshes: actorMaskMeshes.size,
+                target: [actorMask.target.width, actorMask.target.height],
+            };
+        }
         const rotating = cameraMotionPending || frameStart < cameraMotionUntil;
         cameraMotionPending = false;
         const phase = phaseForStatus(window.__pystralWorkerStatus);
@@ -238,6 +257,9 @@ export function createNativePresentation(canvas) {
             bucket.lastFrameAt = frameStart;
         }
         renderer.render(scene, camera);
+        if (actorMask) {
+            renderer.render(actorMask.quadScene, actorMask.quadCamera);
+        }
         {
             const gl = renderer.getContext();
             profile.nativeGpu = {
@@ -282,11 +304,15 @@ export function createNativePresentation(canvas) {
             delete window.__pystralThreeNativeCamera;
             delete window.__pystralThreeNativeMeshes;
             delete window.__pystralThreeNativeMarkers;
+            delete window.__pystralThreeActorMask;
+            delete window.__pystralThreeMaskProfile;
             delete window.__pystralThreeTeamMarkerGeometry;
             delete window.__pystralThreeFacingMarkerGeometry;
             delete window.__pystralThreeNativeAtlasTexture;
             delete window.__pystralThreeActorCatalog;
             atlasTexture?.dispose();
+            actorMaskMeshes.forEach((mesh) => mesh.material.dispose());
+            actorMaskMeshes.clear();
             actorMask?.dispose();
             window.__pystralThreeNativeHexGeometry?.dispose();
             nativeMeshes.forEach((mesh) => {
@@ -338,6 +364,7 @@ function applyNativeFrame(frame) {
     const teamMarkers = window.__pystralThreeNativeMarkers;
     const teamMarkerGeometry = window.__pystralThreeTeamMarkerGeometry;
     const facingMarkerGeometry = window.__pystralThreeFacingMarkerGeometry;
+    const actorMask = window.__pystralThreeActorMask;
     const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true;
     const seen = new Set();
     const seenMarkers = new Set();
@@ -426,7 +453,7 @@ function applyNativeFrame(frame) {
             const authoredYaw = Number(entity.rotation_y || 0);
             const facingAngle = FACING_ANGLES[String(entity.facing).toLowerCase()] ?? 0;
             SPRITESTACK_FACING.setFromAxisAngle(
-                SPRITESTACK_Y_AXIS, facingAngle + authoredYaw,
+                SPRITESTACK_Y_AXIS, -facingAngle + authoredYaw,
             );
             SPRITESTACK_AUTHORED_ROTATION.setFromAxisAngle(
                 SPRITESTACK_Z_AXIS, -Number(entity.rotation_z || 0),
@@ -439,6 +466,8 @@ function applyNativeFrame(frame) {
             mesh.userData.animationState = entity.animation_state || 'idle';
             mesh.userData.animationTimeMs = Number(entity.animation_time_ms || 0);
             mesh.userData.animationFrame = entity.animation_frame ?? null;
+            mesh.userData.entityKind = entity.kind;
+            if (actorMask) syncMaskMesh(actorMask, mesh, key, texture);
             seen.add(key);
         });
     });
@@ -480,7 +509,9 @@ function applyNativeFrame(frame) {
         marker.scale.setScalar((Number(entity.scale) || 1) * 1.15);
         const direction = FACING_ANGLES[String(indicator.direction).toLowerCase()];
         if (direction === undefined) return;
-        marker.rotation.y = direction;
+        // The arrow mesh points along local -Z; negate the world heading so
+        // east/west remain aligned with the authored facing convention.
+        marker.rotation.y = -direction;
         marker.renderOrder = Number(entity.render_order || 0) * 1000 + 100000;
         seenMarkers.add(id);
     });
@@ -493,11 +524,32 @@ function applyNativeFrame(frame) {
             meshes.delete(id);
         }
     });
+    if (actorMask) actorMask.scene.children.slice().forEach((mesh) => {
+        if (mesh.isMesh && !seen.has(mesh.userData.sourceKey)) {
+            actorMask.scene.remove(mesh); mesh.material.dispose(); actorMaskMeshes.delete(mesh.userData.sourceKey);
+        }
+    });
     window.__pystralThreeNativeProfile = {
         entities: new Set([...meshes.keys()].map((key) => key.split(':')[0])).size,
         mapTiles: frame.map?.tiles?.length || window.__pystralThreeNativeProfile?.mapTiles || 0,
         nativeMeshCount: meshes.size,
     };
+}
+
+const actorMaskMeshes = new Map();
+function syncMaskMesh(mask, source, key, texture) {
+    let mesh = actorMaskMeshes.get(key);
+    if (!mesh) {
+        mesh = new THREE.Mesh(source.geometry, mask.material.clone());
+        mesh.userData.sourceKey = key;
+        mask.scene.add(mesh);
+        actorMaskMeshes.set(key, mesh);
+    }
+    mesh.position.copy(source.position);
+    mesh.quaternion.copy(source.quaternion);
+    mesh.scale.copy(source.scale);
+    mesh.renderOrder = source.renderOrder;
+    mesh.material.uniforms.atlas.value = texture;
 }
 
 function isActorEntity(entity) {
