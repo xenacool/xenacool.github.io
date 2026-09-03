@@ -7,9 +7,10 @@ const scriptsDir = path.resolve(__dirname, '..', '..', 'web', 'scripts');
 const fixturesDir = path.join(scriptsDir, 'fixtures');
 
 function specSources() {
-  return fs.readdirSync(__dirname)
-    .filter((file) => file.endsWith('.spec.js'))
-    .map((file) => fs.readFileSync(path.join(__dirname, file), 'utf8'))
+  return [__dirname, path.join(__dirname, 'trpg')]
+    .flatMap((dir) => fs.readdirSync(dir)
+      .filter((file) => file.endsWith('.spec.js'))
+      .map((file) => fs.readFileSync(path.join(dir, file), 'utf8')))
     .join('\n');
 }
 

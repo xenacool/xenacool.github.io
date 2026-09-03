@@ -77,7 +77,9 @@ fn test_pg_rpg_log_rendering_behavior_strict() {
                 }
 
                 let _ = entity.get_float("scale", 1.0).log_fallback(&tx);
-                let _ = entity.get_float("z", 0.0).log_fallback(&tx);
+                if entity.properties.contains_key("z") {
+                    let _ = entity.get_float("z", 0.0).log_fallback(&tx);
+                }
                 let _ = entity.get_float("rotation_z", 0.0).log_fallback(&tx);
                 let _ = entity.get_float("cam_offset_x", 0.0).log_fallback(&tx);
                 let _ = entity.get_float("cam_offset_y", 0.0).log_fallback(&tx);

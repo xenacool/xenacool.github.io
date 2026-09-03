@@ -107,6 +107,7 @@ impl Runtime {
             for (property, value) in [
                 ("asset", pystral_core::log::PropertyValue::AssetRef(kind)),
                 ("scale", pystral_core::log::PropertyValue::Float(0.6)),
+                ("z", pystral_core::log::PropertyValue::Float(0.0)),
                 (
                     "layer",
                     pystral_core::log::PropertyValue::Float(unit.position.layer as f32),
