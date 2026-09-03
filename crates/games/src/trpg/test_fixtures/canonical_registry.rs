@@ -162,6 +162,7 @@ pub(super) fn populate(mut config: SkirmishConfig) -> SkirmishConfig {
             emit_tags: vec![],
             consume_tags: vec![],
             mana_gain: 0,
+            mana_cost: 0, health_cost: 0, health_floor: 1,
         },
         ScriptMovementDef {
             name: "Manafeet".into(),
@@ -173,6 +174,7 @@ pub(super) fn populate(mut config: SkirmishConfig) -> SkirmishConfig {
             emit_tags: vec![("Mana".into(), 1)],
             consume_tags: vec![],
             mana_gain: 5,
+            mana_cost: 0, health_cost: 0, health_floor: 1,
         },
         ScriptMovementDef {
             name: "Shadow Step".into(),
@@ -184,6 +186,7 @@ pub(super) fn populate(mut config: SkirmishConfig) -> SkirmishConfig {
             emit_tags: vec![],
             consume_tags: vec![],
             mana_gain: 0,
+            mana_cost: 0, health_cost: 0, health_floor: 1,
         },
         ScriptMovementDef {
             name: "Rattle Dash".into(),
@@ -195,6 +198,7 @@ pub(super) fn populate(mut config: SkirmishConfig) -> SkirmishConfig {
             emit_tags: vec![],
             consume_tags: vec![],
             mana_gain: 0,
+            mana_cost: 0, health_cost: 0, health_floor: 1,
         },
     ];
     config.script_abilities = builtin_script_abilities();

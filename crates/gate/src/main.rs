@@ -39,6 +39,7 @@ fn simulation_request_label(request: &RuntimeRequest) -> &'static str {
         RuntimeRequest::RefreshAvailableActions { .. } => "RefreshAvailableActions",
         RuntimeRequest::SolveIk(_) | RuntimeRequest::GeneratePgRpgLog { .. } => "Other",
         RuntimeRequest::RunRhaiCase { .. } => "RunRhaiCase",
+        RuntimeRequest::InspectNpcPerception { .. } => "InspectNpcPerception",
     }
 }
 

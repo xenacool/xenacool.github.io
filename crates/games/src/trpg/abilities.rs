@@ -178,6 +178,13 @@ pub struct ResolvedAbilityCost {
 }
 
 impl ResolvedAbilityCost {
+    /// Ordinary abilities must consume at least one turn resource. Terminal
+    /// actions such as Wait are represented by their own tasks and remain
+    /// deliberately cost-free.
+    pub fn spends_resource(&self) -> bool {
+        self.ap > 0 || self.health > 0 || self.mana > 0 || !self.consumed_tags.is_empty()
+    }
+
     pub fn can_pay(&self, unit: &crate::UnitState) -> bool {
         unit.action_points >= i32::from(self.ap)
             && unit.mana >= i32::from(self.mana)
@@ -237,9 +244,45 @@ pub struct MoveProgram {
     pub emit_tags: Vec<(TagId, u8)>,
     pub consume_tags: Vec<(TagId, u8, u8)>,
     pub mana_gain: i32,
+    pub mana_cost: u16,
+    pub health_cost: u16,
+    pub health_floor: i32,
 }
 
 impl MoveProgram {
+    /// Consume the movement tags used by this action. The pathfinder applies
+    /// the same greedy ordering while calculating its AP discount.
+    pub fn consume_action_tags(&self, tags: &mut TagBag) -> Vec<(TagId, u8)> {
+        self.consume_tags
+            .iter()
+            .filter_map(|(tag, stacks, _)| {
+                (tags.consume(*tag, *stacks) == *stacks).then_some((*tag, *stacks))
+            })
+            .collect()
+    }
+
+    /// Fixed resources paid once when a movement action is committed. AP and
+    /// tag discounts remain step/path-dependent and are resolved separately.
+    pub fn can_pay_resources(&self, health: i32, mana: i32) -> bool {
+        mana >= i32::from(self.mana_cost)
+            && health - i32::from(self.health_cost) >= self.health_floor
+    }
+
+    pub fn apply_resources(&self, health: &mut i32, mana: &mut i32) {
+        *mana = mana.saturating_sub(i32::from(self.mana_cost));
+        *health = (*health - i32::from(self.health_cost)).max(self.health_floor);
+    }
+
+    pub fn has_action_cost(&self, ap: u8, tags: &TagBag) -> bool {
+        ap > 0
+            || self.mana_cost > 0
+            || self.health_cost > 0
+            || self
+                .consume_tags
+                .iter()
+                .any(|(tag, stacks, _)| tags.count(*tag) >= *stacks)
+    }
+
     pub fn get_ap_cost(&self, total_steps_so_far: u8, tag_bag: &mut TagBag) -> u8 {
         let current_step = total_steps_so_far + 1;
         let mut base_cost = 1;
@@ -264,7 +307,60 @@ impl MoveProgram {
 
 #[cfg(test)]
 mod cost_tests {
-    use crate::{AgentId, GridCell, SkirmishConfig};
+    use super::MoveProgram;
+    use crate::{AgentId, GridCell, MovementId, SkirmishConfig, TagBag, TagId};
+
+    #[test]
+    fn movement_alternative_resources_respect_health_floor() {
+        let movement = MoveProgram {
+            id: MovementId(1),
+            name: "Blood Step".into(),
+            steps_ap_cost: vec![(1, 0)],
+            vertical_deltas: vec![],
+            crosses_holes: false,
+            crosses_occupied: false,
+            teleport_range: None,
+            emit_tags: vec![],
+            consume_tags: vec![],
+            mana_gain: 0,
+            mana_cost: 2,
+            health_cost: 3,
+            health_floor: 5,
+        };
+        assert!(movement.can_pay_resources(8, 2));
+        assert!(!movement.can_pay_resources(7, 1));
+        let (mut health, mut mana) = (8, 4);
+        movement.apply_resources(&mut health, &mut mana);
+        assert_eq!((health, mana), (5, 2));
+        let mut tags = TagBag::default();
+        assert!(movement.consume_action_tags(&mut tags).is_empty());
+        assert!(movement.has_action_cost(0, &tags));
+    }
+
+    #[test]
+    fn consumed_tag_counts_as_movement_cost_when_ap_is_zero() {
+        let tag = TagId(7);
+        let movement = MoveProgram {
+            id: MovementId(2),
+            name: "Tagged Step".into(),
+            steps_ap_cost: vec![(1, 0)],
+            vertical_deltas: vec![],
+            crosses_holes: false,
+            crosses_occupied: false,
+            teleport_range: None,
+            emit_tags: vec![],
+            consume_tags: vec![(tag, 1, 1)],
+            mana_gain: 0,
+            mana_cost: 0,
+            health_cost: 0,
+            health_floor: 1,
+        };
+        let mut tags = TagBag::default();
+        tags.counts.insert(tag, 1);
+        assert!(movement.has_action_cost(0, &tags));
+        assert_eq!(movement.consume_action_tags(&mut tags), vec![(tag, 1)]);
+        assert_eq!(tags.count(tag), 0);
+    }
 
     #[test]
     fn resolved_cost_is_atomic_and_consumes_discount_once() {

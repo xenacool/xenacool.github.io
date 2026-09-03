@@ -85,7 +85,7 @@ impl Task<TacticalDomain> for AbilityTask {
                 return None;
             };
             let live_cost = ability_def.resolve_cost(&current_attacker.turn_tags);
-            if live_cost != self.cost || !live_cost.can_pay(current_attacker) {
+            if live_cost != self.cost || !live_cost.spends_resource() || !live_cost.can_pay(current_attacker) {
                 return None;
             }
             let mut rng = ctx.state_diff.initial_state.rng.clone();
@@ -175,7 +175,7 @@ impl Task<TacticalDomain> for AbilityTask {
                 .get(&self.ability_id)
                 .is_some_and(|ability| {
                     let cost = ability.resolve_cost(&unit.turn_tags);
-                    cost == self.cost && cost.can_pay(unit)
+                    cost == self.cost && cost.spends_resource() && cost.can_pay(unit)
                 })
                 && crate::tasks::ability_target_is_legal_with_world(
                     &state,

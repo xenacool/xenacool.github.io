@@ -259,6 +259,9 @@ fn test_ap_movement_costs() {
         emit_tags: vec![],
         consume_tags: vec![],
         mana_gain: 0,
+        mana_cost: 0,
+        health_cost: 0,
+        health_floor: 1,
     };
 
     assert_eq!(move_prog.get_ap_cost(0, &mut tag_bag), 1);
@@ -297,6 +300,9 @@ fn test_tag_discount() {
         emit_tags: vec![],
         consume_tags: vec![(tag1, 1, 1)], // Consume 1 stack of tag1 for 1 AP discount
         mana_gain: 0,
+        mana_cost: 0,
+        health_cost: 0,
+        health_floor: 1,
     };
 
     // No tag, cost should be normal
@@ -362,10 +368,6 @@ fn test_damage_calculation() {
         projectile_profile: None,
         area_radius: 0,
         programs: RPGPrograms::new(),
-        facing_rule: None,
-        front_damage_multiplier: (1, 1),
-        side_damage_multiplier: (1, 1),
-        rear_damage_multiplier: (1, 1),
         facing_rule: None,
         front_damage_multiplier: (1, 1),
         side_damage_multiplier: (1, 1),
@@ -486,6 +488,10 @@ fn passive_effects_apply_from_authored_fields_without_name_dispatch() {
         projectile_profile: None,
         area_radius: 0,
         programs: RPGPrograms::new(),
+        facing_rule: None,
+        front_damage_multiplier: (1, 1),
+        side_damage_multiplier: (1, 1),
+        rear_damage_multiplier: (1, 1),
     };
 
     assert_eq!(attacker.stats_with_passives(&passives).constitution, 14);

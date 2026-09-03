@@ -1,3 +1,39 @@
+/// The phase is explicit because reactions interrupt an actor's turn rather
+/// than becoming ordinary actions in the same frontier.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
+pub enum NpcTurnPhase {
+    Active,
+    ReactionWindow,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
+pub struct NpcResourceLedger {
+    pub action_points: i32,
+    pub mana: i32,
+    pub health: i32,
+    pub turn_tags: TagBag,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
+pub struct NpcTurnContinuation {
+    pub agent_id: u64,
+    pub snapshot_fingerprint: u64,
+}
+
+/// Immutable snapshot used by NPC and browser integration tests. It is built
+/// beside action enumeration so tests observe the same state space as planning.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct NpcPerception {
+    pub agent_id: u64,
+    pub actions: AvailableActions,
+    pub units: Vec<(u64, pystral_games::UnitState)>,
+    pub grid: pystral_games::TacticalGrid,
+    pub pending_reactions: Vec<(u64, u32, u64)>,
+    pub phase: NpcTurnPhase,
+    pub resources: NpcResourceLedger,
+    pub continuation: NpcTurnContinuation,
+}
+
 impl TacticalSimulation {
     pub fn turn_limit_reached(&self) -> bool {
         self.maximum_turn_count != 0 && self.completed_rounds >= self.maximum_turn_count
@@ -89,9 +125,12 @@ impl TacticalSimulation {
                         job.abilities
                             .iter()
                             .filter_map(|id| {
-                                self.state.ability_registry.get(id).map(|ability| {
+                                self.state.ability_registry.get(id).and_then(|ability| {
                                     let cost = ability.resolve_cost(&unit.turn_tags);
-                                    AvailableAbility {
+                                    if !cost.spends_resource() {
+                                        return None;
+                                    }
+                                    Some(AvailableAbility {
                                         id: ability.id.0,
                                         name: ability.name.clone(),
                                         base_ap_cost: cost.base_ap,
@@ -109,7 +148,7 @@ impl TacticalSimulation {
                                         discount_label: cost.consumed_tags.first().and_then(
                                             |(tag, _)| self.state.tag_names.get(tag).cloned(),
                                         ),
-                                    }
+                                    })
                                 })
                             })
                             .collect()
@@ -129,6 +168,59 @@ impl TacticalSimulation {
                 .map(job_actions)
                 .collect(),
         })
+    }
+
+    pub fn perceived_state(&self, agent_id: i64) -> Option<NpcPerception> {
+        let actions = self.get_available_actions(agent_id)?;
+        let agent_id = u64::try_from(agent_id).ok()?;
+        let unit = self.state.agents.get(&AgentId(u32::try_from(agent_id).ok()?))?;
+        let units = self.state.agents.iter()
+            .map(|(id, unit)| (u64::from(id.0), unit.clone())).collect();
+        let pending_reactions = self.state.reaction_queue.iter()
+            .map(|(owner, reaction, target)| (u64::from(owner.0), reaction.0, u64::from(target.0)))
+            .collect();
+        Some(NpcPerception {
+            agent_id,
+            actions,
+            units,
+            grid: self.state.grid.clone(),
+            pending_reactions,
+            phase: if self
+                .state
+                .reaction_queue
+                .iter()
+                .any(|(owner, _, _)| owner.0 as u64 == agent_id)
+            {
+                NpcTurnPhase::ReactionWindow
+            } else {
+                NpcTurnPhase::Active
+            },
+            resources: NpcResourceLedger {
+                action_points: unit.action_points,
+                mana: unit.mana,
+                health: unit.health,
+                turn_tags: unit.turn_tags.clone(),
+            },
+            continuation: NpcTurnContinuation {
+                agent_id,
+                snapshot_fingerprint: self.snapshot_fingerprint(),
+            },
+        })
+    }
+
+    /// Preview one legal action without mutating the authoritative simulation.
+    /// The resulting perception is recomputed, so emitted/consumed tags and
+    /// newly opened reactions are visible to the next decision.
+    pub fn preview_action(
+        &self,
+        agent_id: u64,
+        action: TacticalDisplayAction,
+    ) -> Result<NpcPerception, String> {
+        let mut preview = self.clone();
+        preview.apply_npc_action(AgentId(u32::try_from(agent_id).map_err(|_| "invalid agent")?), action)?;
+        preview
+            .perceived_state(agent_id as i64)
+            .ok_or_else(|| format!("agent {agent_id} is no longer perceivable"))
     }
 
     pub fn move_preview(
@@ -176,6 +268,12 @@ impl TacticalSimulation {
             ),
             destination,
         )?;
+        let movement_program = self
+            .state
+            .agents
+            .get(&validated.agent)
+            .and_then(|unit| self.state.movement_registry.get(&unit.movement_ability))
+            .cloned();
         let unit = self
             .state
             .agents
@@ -186,6 +284,10 @@ impl TacticalSimulation {
         }
         unit.position = validated.destination;
         unit.action_points -= i32::from(validated.ap_cost);
+        if let Some(program) = movement_program {
+            program.apply_resources(&mut unit.health, &mut unit.mana);
+            program.consume_action_tags(&mut unit.turn_tags);
+        }
         Ok(validated)
     }
 

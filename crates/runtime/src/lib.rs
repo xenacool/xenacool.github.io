@@ -186,6 +186,9 @@ pub enum RuntimeRequest {
     RefreshAvailableActions {
         unit_id: u64,
     },
+    InspectNpcPerception {
+        unit_id: u64,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -250,6 +253,9 @@ pub enum RuntimeResponse {
     },
     AvailableActionsRefreshed {
         actions: AvailableActions,
+    },
+    NpcPerception {
+        perception: crate::pg_rpg::simulation::NpcPerception,
     },
     AnimationAcknowledged {
         continuation: RuntimeContinuation,
@@ -356,6 +362,14 @@ impl Runtime {
             RuntimeRequest::RefreshAvailableActions { unit_id } => {
                 self.refresh_available_actions(unit_id)
             }
+            RuntimeRequest::InspectNpcPerception { unit_id } => self
+                .pg_rpg_sim
+                .as_ref()
+                .and_then(|sim| sim.perceived_state(unit_id as i64))
+                .map_or_else(
+                    || RuntimeResponse::Error(format!("Unknown NPC unit {unit_id}")),
+                    |perception| RuntimeResponse::NpcPerception { perception },
+                ),
             RuntimeRequest::RequestMctsDecision {
                 request_id,
                 unit_id,

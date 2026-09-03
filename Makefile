@@ -1,4 +1,4 @@
-.PHONY: install clean build wasm-bindgen-tool build-wasm run-web server watch deploy test test-fast test-browser test-browser-sequential test-static test-integration test-rhai nuke-deploy playwright-install playwright-test playwright reproduce-spritestacks export-sprite-actor-manifest export-sprite-actor-poses report-animation-mappings temporal-bake-plan tla-check tla-worker-check tla-ui-check tla-animation-ack-check tla-simulation-bridge-check tla-casualty-boundary-check tla-lock-check debug-fixture-check check check-func-length check-loc
+.PHONY: install clean build wasm-bindgen-tool build-wasm run-web server watch deploy test test-fast test-browser test-browser-sequential test-static test-integration test-rhai test-perception nuke-deploy playwright-install playwright-test playwright reproduce-spritestacks export-sprite-actor-manifest export-sprite-actor-poses report-animation-mappings temporal-bake-plan tla-check tla-worker-check tla-ui-check tla-animation-ack-check tla-simulation-bridge-check tla-casualty-boundary-check tla-lock-check debug-fixture-check check check-func-length check-loc
 
 TEST_LOG := .make-test.log
 # Keep the default feedback loop bounded. Browser and model tests should be
@@ -254,12 +254,19 @@ test:
 	echo "=== selftest ==="; $(MAKE) --no-print-directory selftest || status=1;\
 	echo "=== test-proxy ==="; $(MAKE) --no-print-directory test-proxy || status=1;\
 	echo "=== cargo-test ==="; $(MAKE) --no-print-directory test-integration || status=1;\
+	echo "=== test-perception ==="; $(MAKE) --no-print-directory test-perception || status=1;\
 	echo "Test output written above; aggregated status $$status";\
 	exit $$status
 
 # Independently invocable layers keep the aggregate timeout from hiding which
 # verification class is slow or failing.
-test-fast: tla-check check debug-fixture-check
+test-fast: tla-check check debug-fixture-check test-perception
+
+# Small deterministic contract tests for the shared NPC perceived-state and
+# resource-cost seam. Keep this in the normal loops before widening coverage.
+test-perception:
+	cargo test -p pystral_runtime perceived_state_is_authoritative_snapshot_for_planning
+	cargo test -p pystral_games --lib ability_task::tests
 
 test-browser: test-browser-sequential
 

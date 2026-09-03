@@ -1,5 +1,5 @@
 const { test, expect } = require('@playwright/test');
-const { loadWithFixture } = require('./helpers');
+const { loadWithFixture } = require('../helpers');
 
 async function waitForPlayerBoundary(page) {
   await page.waitForFunction(() => {

@@ -1,5 +1,5 @@
 const { test, expect } = require('@playwright/test');
-const { loadWithFixture } = require('./helpers');
+const { loadWithFixture } = require('../helpers');
 
 test.beforeEach(async ({ page }) => {
   await loadWithFixture(page, 'player_boundary');

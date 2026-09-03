@@ -162,18 +162,33 @@ fn nearest_opaque_edge_pixel(
     edge: u32,
     horizontal: bool,
 ) -> image::Rgba<u8> {
-    let limit = if horizontal { image.height() } else { image.width() };
+    let limit = if horizontal {
+        image.height()
+    } else {
+        image.width()
+    };
     for distance in 0..limit {
-        let offset = if edge >= distance { edge - distance } else { edge + distance };
-        if offset >= limit { continue; }
+        let offset = if edge >= distance {
+            edge - distance
+        } else {
+            edge + distance
+        };
+        if offset >= limit {
+            continue;
+        }
         let pixel = if horizontal {
             *image.get_pixel(coordinate, offset)
         } else {
             *image.get_pixel(offset, coordinate)
         };
-        if pixel[3] > 0 { return pixel; }
+        if pixel[3] > 0 {
+            return pixel;
+        }
     }
-    *image.get_pixel(if horizontal { coordinate } else { edge }, if horizontal { edge } else { coordinate })
+    *image.get_pixel(
+        if horizontal { coordinate } else { edge },
+        if horizontal { edge } else { coordinate },
+    )
 }
 
 /// Keep the runtime format as RGBA8 while maximizing lossless PNG compression.

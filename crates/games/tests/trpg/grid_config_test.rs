@@ -12,11 +12,8 @@ fn scenario_grid_can_define_large_sparse_multilayer_domain() {
     grid.set_tile(GridCell::new(Hex::ZERO, 1), TileType::Rock)
         .unwrap();
 
-    let mut config = SkirmishConfig::new(42);
+    let mut config = SkirmishConfig::new_empty(42);
     config.set_grid(grid);
-    config
-        .add_unit(1, 1, "Caveman", GridCell::new(Hex::ZERO, 0))
-        .unwrap();
     let state = config.build_state().unwrap();
 
     assert_eq!(

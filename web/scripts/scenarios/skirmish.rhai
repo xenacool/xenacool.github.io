@@ -62,6 +62,8 @@ scenario.add_script_movement(plain_move);
 scenario.add_script_movement(manafeet);
 scenario.add_script_movement(shadow_step);
 scenario.add_script_movement(rattle_dash);
+// Seven turn tags are registered for the demo. Movement currently consumes no
+// tags; abilities emit/consume them (notably Fresh Soul for Soul Drain).
 fn add_tag(scenario, name, max_stacks) {
     let tag = new_script_tag(name);
     tag.set_max_stacks(max_stacks);

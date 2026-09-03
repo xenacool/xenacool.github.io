@@ -1,5 +1,5 @@
 const { test, expect } = require('@playwright/test');
-const { loadWithFixture } = require('./helpers');
+const { loadWithFixture } = require('../helpers');
 
 async function sendAccepted(page, input) {
   await page.evaluate((actionInput) => new Promise((resolve, reject) => {

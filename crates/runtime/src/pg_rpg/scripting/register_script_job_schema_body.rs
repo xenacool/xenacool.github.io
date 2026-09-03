@@ -434,6 +434,9 @@
             emit_tags: Vec::new(),
             consume_tags: Vec::new(),
             mana_gain: 0,
+            mana_cost: 0,
+            health_cost: 0,
+            health_floor: 1,
         })
         .register_fn(
             "add_step_cost",
@@ -487,5 +490,11 @@
                     .map_err(|_| script_error("Movement mana gain is out of range"))?;
                 Ok(())
             },
-        );
+        )
+        .register_fn("set_mana_cost", |movement: &mut ScriptMovementDef, amount: i64| {
+            movement.mana_cost = amount as u16;
+        })
+        .register_fn("set_health_cost", |movement: &mut ScriptMovementDef, amount: i64| {
+            movement.health_cost = amount as u16;
+        });
 }
