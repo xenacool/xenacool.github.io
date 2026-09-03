@@ -75,7 +75,6 @@ export function resolveAtlasRegion(atlas, asset, sliceIndex) {
 }
 
 export function createNativePresentation(canvas) {
-    const actorMaskEnabled = new URLSearchParams(globalThis.location?.search || '').has('actor-mask');
     window.__pystralThreeStaticMap = null;
     window.__pystralThreeStaticMaterials = null;
     let renderer;
@@ -101,7 +100,7 @@ export function createNativePresentation(canvas) {
     keyLight.shadow.camera.far = 40;
     scene.add(keyLight);
     const camera = new THREE.Camera();
-    const actorMask = actorMaskEnabled ? createMaskResources(THREE) : null;
+    const actorMask = createMaskResources(THREE);
     window.__pystralThreeActorMask = actorMask;
     let atlasTexture = null;
     const nativeMeshes = new Map();
@@ -115,7 +114,7 @@ export function createNativePresentation(canvas) {
         window.__pystralThreeNativeCamera = camera;
         window.__pystralThreeNativeMeshes = nativeMeshes;
     window.__pystralThreeNativeProfile = { entities: 0, mapTiles: 0 };
-    window.__pystralThreeMaskEnabled = actorMaskEnabled;
+    window.__pystralThreeMaskEnabled = true;
         atlasTexture = new THREE.TextureLoader().load('./web/spritesheet.png', () => {
             // Publish only after atlas metadata is ready so frame consumers
             // never observe a half-initialized native presentation.

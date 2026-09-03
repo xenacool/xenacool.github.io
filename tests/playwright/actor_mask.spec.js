@@ -20,15 +20,15 @@ test('actor mask exposes WebGL2 alpha and dilation shaders', async ({ page }) =>
   expect(result[1]).toContain('1.-c');
 });
 
-test('actor mask pass bundles the three render stages', async ({ page }) => {
+test('actor mask pass bundles the three render stages by default', async ({ page }) => {
   await page.goto('/game.html');
   const result = await page.evaluate(async () => (await import('/web/actor_mask.js')).createMaskPass(64, 32));
   expect(result).toMatchObject({ width: 64, height: 32 });
   expect(result.dilationShader).toContain('mask');
 });
 
-test('actor mask compositor allocates a live render target', async ({ page }) => {
-  await page.goto('/game.html?actor-mask=true');
+test('actor mask compositor allocates a live render target by default', async ({ page }) => {
+  await page.goto('/game.html');
   await page.waitForFunction(() => window.__pystralThreeMaskProfile, null, { timeout: 10000 });
   const profile = await page.evaluate(() => window.__pystralThreeMaskProfile);
   expect(profile.target[0]).toBeGreaterThan(0);
