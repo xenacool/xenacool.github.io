@@ -26,3 +26,11 @@ test('actor mask pass bundles the three render stages', async ({ page }) => {
   expect(result).toMatchObject({ width: 64, height: 32 });
   expect(result.dilationShader).toContain('mask');
 });
+
+test('actor mask compositor allocates a live render target', async ({ page }) => {
+  await page.goto('/game.html?actor-mask=true');
+  await page.waitForFunction(() => window.__pystralThreeMaskProfile, null, { timeout: 10000 });
+  const profile = await page.evaluate(() => window.__pystralThreeMaskProfile);
+  expect(profile.target[0]).toBeGreaterThan(0);
+  expect(profile.target[1]).toBeGreaterThan(0);
+});
