@@ -27,6 +27,11 @@ const PRESENTATION_MOTION = Object.freeze({
     walkAmplitude: 0.06,
     hitRecoil: 0.08,
 });
+export function hexCenter(q, r, pointy, sizeX, sizeZ) {
+    return pointy
+        ? [Math.sqrt(3) * (q + r / 2) * sizeX, 1.5 * r * sizeZ]
+        : [1.5 * q * sizeX, Math.sqrt(3) * (r + q / 2) * sizeZ];
+}
 
 export function cubicBezierEase(t) {
     const clamped = Math.max(0, Math.min(1, Number(t) || 0));
@@ -577,9 +582,10 @@ function applyNativeMap(frame, scene) {
     let geometry = window.__pystralThreeNativeHexGeometry;
     if (!geometry || window.__pystralThreeNativeHexGeometryKey !== geometryKey) {
         geometry?.dispose();
-        // CylinderGeometry's axis is Y; rotating its six-sided cross-section
-        // gives the same pointy/flat convention as hexx's world layout.
-        geometry = new THREE.CylinderGeometry(1, 1, 1, 6, 1, false, pointy ? Math.PI / 6 : 0);
+        // CylinderGeometry's radial convention is x=sin(theta), z=cos(theta).
+        // Therefore theta=0 puts vertices on the z axis (pointy-top), while
+        // theta=PI/6 puts vertices on the x axis (flat-top), matching hexx.
+        geometry = new THREE.CylinderGeometry(1, 1, 1, 6, 1, false, pointy ? 0 : Math.PI / 6);
         geometry.scale(sizeX, 1, sizeZ);
         window.__pystralThreeNativeHexGeometry = geometry;
         window.__pystralThreeNativeHexGeometryKey = geometryKey;
@@ -587,9 +593,7 @@ function applyNativeMap(frame, scene) {
     const seen = new Set();
     (map.tiles || []).forEach((tile, index) => {
         const key = `${tile.q}:${tile.r}:${tile.layer}:${index}`;
-        const [x, z] = pointy
-            ? [Math.sqrt(3) * (tile.q + tile.r / 2) * sizeX, 1.5 * tile.r * sizeZ]
-            : [1.5 * tile.q * sizeX, Math.sqrt(3) * (tile.r + tile.q / 2) * sizeZ];
+        const [x, z] = hexCenter(tile.q, tile.r, pointy, sizeX, sizeZ);
         let mesh = tileMeshes.get(key);
         if (!mesh) {
             const definition = materials[tile.material] || {};
@@ -633,9 +637,8 @@ function updateCompass(map, pointy, sizeX, sizeZ, scene, camera) {
         !best || Number(tile.bottom || 0) < Number(best.bottom || 0) ? tile : best, null);
     if (!lowest) return;
     const compassY = Number(lowest.bottom || 0) + Number(lowest.height || 1) + 0.02;
-    const anchor = pointy
-        ? [Math.sqrt(3) * (lowest.q + lowest.r / 2) * sizeX, compassY, 1.5 * lowest.r * sizeZ]
-        : [1.5 * lowest.q * sizeX, compassY, Math.sqrt(3) * (lowest.r + lowest.q / 2) * sizeZ];
+    const [anchorX, anchorZ] = hexCenter(lowest.q, lowest.r, pointy, sizeX, sizeZ);
+    const anchor = [anchorX, compassY, anchorZ];
     let compass = window.__pystralThreeCompass;
     if (!compass) {
         compass = new THREE.Group();
