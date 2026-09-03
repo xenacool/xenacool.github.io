@@ -100,6 +100,11 @@ impl TacticalSimulation {
                                         mana_cost: cost.mana,
                                         health_floor: cost.health_floor,
                                         affordable: cost.can_pay(unit),
+                                        legal_target_count: u16::try_from(
+                                            pystral_games::tasks::legal_ability_targets(
+                                                &self.state, agent, *id,
+                                            ).len(),
+                                        ).unwrap_or(u16::MAX),
                                         ap_discount: cost.base_ap.saturating_sub(cost.ap),
                                         discount_label: cost.consumed_tags.first().and_then(
                                             |(tag, _)| self.state.tag_names.get(tag).cloned(),

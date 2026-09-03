@@ -52,6 +52,7 @@ pub struct AvailableAbility {
     pub affordable: bool,
     pub ap_discount: u8,
     pub discount_label: Option<String>,
+    pub legal_target_count: u16,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]

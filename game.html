@@ -1136,6 +1136,7 @@
                             : `${ability.ap_cost} AP`,
                         ability.health_cost > 0 ? `${ability.health_cost} HP (floor ${ability.health_floor})` : '',
                         ability.mana_cost > 0 ? `${ability.mana_cost} MP` : '',
+                        `${ability.legal_target_count || 0} legal targets`,
                         ability.affordable ? '' : 'unaffordable',
                     ].filter(Boolean).join(', '),
                     `menu-ability:${ability.id}`,
