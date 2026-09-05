@@ -669,6 +669,7 @@
         hudDock.dataset.actionContent = 'false';
         hudDock.dataset.unitStateContent = 'false';
         window.__pystralLastTransientState = null;
+        window.__pystralCameraAxial = { q: 0, r: 0 };
         window.previewActive = false;
         window.__pystralHistoryExportSource = null;
         window.__pystralHeartbeatReceivedAt = 0;
@@ -788,8 +789,30 @@
         focusables[next].scrollIntoView({ block: 'nearest' });
         return true;
     };
+    const CAMERA_AXIAL_DELTAS = Object.freeze({
+        left: Object.freeze({ q: -1, r: 0 }),
+        right: Object.freeze({ q: 1, r: 0 }),
+        up: Object.freeze({ q: 0, r: -1 }),
+        down: Object.freeze({ q: 0, r: 1 }),
+    });
+    window.__pystralCameraAxial = { q: 0, r: 0 };
+    window.__pystralCameraNav = null;
+    const dispatchCameraNavigation = (direction) => {
+        const delta = CAMERA_AXIAL_DELTAS[direction];
+        if (!delta) return;
+        window.__pystralCameraAxial.q += delta.q;
+        window.__pystralCameraAxial.r += delta.r;
+        window.__pystralCameraNav?.(direction);
+    };
     document.addEventListener('keydown', (event) => {
         if (event.target.matches('input, textarea, select')) return;
+        if (hudDock.dataset.hudMode === 'play' && CAMERA_AXIAL_DELTAS[
+            event.key.replace('Arrow', '').toLowerCase()
+        ]) {
+            dispatchCameraNavigation(event.key.replace('Arrow', '').toLowerCase());
+            event.preventDefault();
+            return;
+        }
         if (event.key === 'ArrowDown' && ['actions', 'diagnostics'].includes(hudDock.dataset.hudMode)) {
             if (movePanelFocus(1)) event.preventDefault();
         }
@@ -1421,10 +1444,11 @@
             window.__pystralThreeMarkCameraMotion?.();
             currentApp()?.camera_nav(direction);
         };
-        document.getElementById('nav-up').addEventListener('click', () => cameraNav('up'));
-        document.getElementById('nav-down').addEventListener('click', () => cameraNav('down'));
-        document.getElementById('nav-left').addEventListener('click', () => cameraNav('left'));
-        document.getElementById('nav-right').addEventListener('click', () => cameraNav('right'));
+        window.__pystralCameraNav = cameraNav;
+        document.getElementById('nav-up').addEventListener('click', () => dispatchCameraNavigation('up'));
+        document.getElementById('nav-down').addEventListener('click', () => dispatchCameraNavigation('down'));
+        document.getElementById('nav-left').addEventListener('click', () => dispatchCameraNavigation('left'));
+        document.getElementById('nav-right').addEventListener('click', () => dispatchCameraNavigation('right'));
 
         document.getElementById('action-up').addEventListener('click', () => window.sendActionInput('up'));
         document.getElementById('action-down').addEventListener('click', () => window.sendActionInput('down'));

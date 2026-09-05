@@ -1,30 +1,10 @@
 const { test, expect } = require('@playwright/test');
-const { loadWithFixture, waitForPlayerBoundary } = require('../helpers');
-
-async function sendAccepted(page, input) {
-  await page.evaluate((actionInput) => new Promise((resolve, reject) => {
-    const before = window.__pystralAcceptedActionCounts[actionInput] || 0;
-    const check = () => {
-      if ((window.__pystralAcceptedActionCounts[actionInput] || 0) > before) {
-        cleanup();
-        resolve();
-      }
-    };
-    const cleanup = () => {
-      window.removeEventListener('pystral-debug-trace', check);
-      clearInterval(poll);
-      clearTimeout(timer);
-    };
-    const poll = setInterval(check, 25);
-    const timer = setTimeout(() => {
-      cleanup();
-      reject(new Error(`input was not accepted: ${actionInput}; ${window.__pystralWorkerStatus}`));
-    }, 8000);
-    window.addEventListener('pystral-debug-trace', check);
-    window.app.action_nav(actionInput);
-    check();
-  }), input);
-}
+const {
+  loadWithFixture,
+  sendAcceptedAction,
+  waitForPlayerBoundary,
+} = require('../helpers');
+const sendAccepted = sendAcceptedAction;
 
 async function waitForNecromancer(page, predicate = () => true) {
   await page.waitForFunction((predicateSource) => {

@@ -1,5 +1,10 @@
 const { test, expect } = require('@playwright/test');
-const { loadWithFixture, waitForPlayerBoundary: waitForProtocolBoundary } = require('../helpers');
+const {
+  loadWithFixture,
+  sendAcceptedAction,
+  waitForAnimationBarrier,
+  waitForPlayerBoundary: waitForProtocolBoundary,
+} = require('../helpers');
 
 async function waitForPlayerBoundary(page) {
   await page.waitForFunction(() => {
@@ -17,35 +22,7 @@ async function waitForPlayerBoundary(page) {
   }, { timeout: 15000 });
 }
 
-async function sendAccepted(page, input) {
-  await page.evaluate((actionInput) => new Promise((resolve, reject) => {
-    const before = window.__pystralDebugTraces.filter(
-      (trace) => trace === `unified worker accepted action input ${actionInput}`,
-    ).length;
-    const check = () => {
-      const accepted = window.__pystralDebugTraces.filter(
-        (trace) => trace === `unified worker accepted action input ${actionInput}`,
-      ).length;
-      if (accepted > before) {
-        cleanup();
-        resolve();
-      }
-    };
-    const cleanup = () => {
-      window.removeEventListener('pystral-debug-trace', check);
-      clearInterval(poll);
-      clearTimeout(timer);
-    };
-    const poll = setInterval(check, 50);
-    const timer = setTimeout(() => {
-      cleanup();
-      reject(new Error(`input was not accepted: ${actionInput}`));
-    }, 5000);
-    window.addEventListener('pystral-debug-trace', check);
-    window.app.action_nav(actionInput);
-    check();
-  }), input);
-}
+const sendAccepted = sendAcceptedAction;
 
 async function castFireball(page) {
   const menu = page.locator('#action-menu');
@@ -74,7 +51,7 @@ async function castFireball(page) {
   }
   await sendAccepted(page, `menu-target:${(await target.getAttribute('data-menu-key')).split(':')[1]}`);
   await sendAccepted(page, 'confirm');
-  await expect(menu).toHaveAttribute('data-animation-pending', 'true', { timeout: 5000 });
+  await waitForAnimationBarrier(page);
   return true;
 }
 

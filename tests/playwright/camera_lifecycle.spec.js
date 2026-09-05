@@ -30,4 +30,46 @@ test.describe('Camera lifecycle playback', () => {
     await expect(page.locator('#slider-value')).toHaveText('0');
   });
 
+  test('camera arrows use axial q/r deltas without changing gameplay history', async ({ page }) => {
+    await page.waitForFunction(() => window.__pystralCameraAxial !== undefined);
+    await page.waitForFunction(() => document.body.dataset.historyReady === 'true');
+    await page.waitForFunction(() => {
+      const current = Number(document.getElementById('history-slider').max);
+      const previous = window.__cameraHistoryMax;
+      window.__cameraHistoryMax = current;
+      window.__cameraHistoryStable = previous === current
+        ? (window.__cameraHistoryStable || 0) + 1 : 0;
+      return current > 0 && window.__cameraHistoryStable >= 3;
+    });
+    const before = await page.evaluate(() => ({
+      axial: { ...window.__pystralCameraAxial },
+      history: document.getElementById('history-slider').max,
+      replayInputs: window.__pystralReplayInputs.length,
+    }));
+    const left = page.locator('#nav-left');
+    const right = page.locator('#nav-right');
+    await expect.poll(() => page.evaluate(() => ({
+      left: document.getElementById('nav-left').style.display,
+      right: document.getElementById('nav-right').style.display,
+    })), { timeout: 15000 }).toEqual({ left: 'block', right: 'block' });
+
+    await left.click();
+    await expect.poll(() => page.evaluate(() => ({
+      ...window.__pystralCameraAxial,
+      replayInputs: window.__pystralReplayInputs.length,
+    }))).toEqual({ q: before.axial.q - 1, r: before.axial.r, replayInputs: before.replayInputs });
+
+    await page.keyboard.press('ArrowRight');
+    await expect.poll(() => page.evaluate(() => ({
+      ...window.__pystralCameraAxial,
+      replayInputs: window.__pystralReplayInputs.length,
+    }))).toEqual({ q: before.axial.q, r: before.axial.r, replayInputs: before.replayInputs });
+
+    await page.keyboard.press('ArrowDown');
+    await expect.poll(() => page.evaluate(() => ({
+      ...window.__pystralCameraAxial,
+      replayInputs: window.__pystralReplayInputs.length,
+    }))).toEqual({ q: before.axial.q, r: before.axial.r + 1, replayInputs: before.replayInputs });
+  });
+
 });

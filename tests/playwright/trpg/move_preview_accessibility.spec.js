@@ -2,6 +2,8 @@ const { test, expect } = require('@playwright/test');
 const {
   loadWithFixture,
   protocolClock,
+  chooseFacing,
+  waitForAnimationBarrier,
   waitForPlayerBoundary,
 } = require('../helpers');
 
@@ -18,8 +20,7 @@ async function waitForHistoryToSettle(page, afterClock = null) {
 async function completeEndTurn(page) {
   const before = await protocolClock(page);
   await page.getByRole('button', { name: 'End Turn' }).click();
-  await expect(page.getByRole('button', { name: 'Face S', exact: true })).toBeVisible({ timeout: 10000 });
-  await page.getByRole('button', { name: 'Face S', exact: true }).click();
+  await chooseFacing(page);
   await waitForHistoryToSettle(page, before);
 }
 
@@ -80,12 +81,12 @@ test('committed abilities report target count and restore the originating abilit
   const target = page.locator('[data-menu-key^="target:"]').first();
   await expect(target).toBeVisible();
   await target.click();
+  const beforeCommit = await protocolClock(page);
   await page.getByRole('button', { name: 'Action', exact: true }).click({ force: true });
 
-  await expect(menu).toHaveAttribute('data-animation-pending', 'true', { timeout: 5000 });
+  await waitForAnimationBarrier(page);
   await expect(status).toContainText(/ability \(\d+ target(s)?\) committed/i);
-  await waitForHistoryToSettle(page);
-  await expect(menu).toHaveAttribute('data-animation-pending', 'false');
+  await waitForHistoryToSettle(page, beforeCommit);
   await expect(ability).toBeFocused();
 });
 
@@ -129,12 +130,15 @@ test('cell-area abilities expose cell centers and report affected targets', asyn
   const cellTarget = page.getByRole('button', { name: /Cell q/ }).first();
   await expect(cellTarget).toBeVisible();
   await cellTarget.click();
+  // Capture the predecessor before confirmation. The animation barrier may
+  // observe the worker's complete response before the boundary helper starts;
+  // using a post-response clock would make a successful action look stale.
+  const beforeCommit = await protocolClock(page);
   await page.getByRole('button', { name: 'Action', exact: true }).click({ force: true });
 
-  await expect(menu).toHaveAttribute('data-animation-pending', 'true', { timeout: 5000 });
+  await waitForAnimationBarrier(page);
   await expect(status).toContainText(/ability \(\d+ target(s)?\) committed/i);
-  await waitForHistoryToSettle(page);
-  await expect(menu).toHaveAttribute('data-animation-pending', 'false');
+  await waitForHistoryToSettle(page, beforeCommit);
   await expect(areaAbility).toBeFocused();
 });
 
@@ -169,8 +173,16 @@ test('stale preview rejection refreshes to the source cell', async ({ page }) =>
   await expect(occupy).toBeVisible();
 
   await occupy.click({ force: true });
+  const before = await protocolClock(page);
   await confirm.click({ force: true });
-  await expect(status).toContainText(/Move rejected:/, { timeout: 10000 });
+  await page.waitForFunction(({ baseline }) => {
+    const output = Number(window.__pystralWorkerLatestSeq || 0);
+    const input = Number(window.__pystralWorkerLatestInputSeq || 0);
+    const status = document.getElementById('action-menu-status')?.textContent || '';
+    return output > baseline.output && input > baseline.input && status.includes('Move rejected:');
+  }, { baseline: before }, { timeout: 10000 });
+  const after = await protocolClock(page);
+  expect(after.history).toBe(before.history);
   await expect(status).toContainText(expectedSource);
 });
 
@@ -185,12 +197,12 @@ test('committed movement waits for its animation barrier', async ({ page }) => {
   await expect(menu).toBeVisible({ timeout: 40000 });
   await action.click({ force: true });
   await expect(status).toContainText(/Move preview: selected/);
+  const before = await protocolClock(page);
   await action.click({ force: true });
 
-  await expect(menu).toHaveAttribute('data-animation-pending', 'true', { timeout: 5000 });
+  await waitForAnimationBarrier(page, { timeout: 15000 });
   await expect(status).toContainText(/Move committed/);
-  await waitForHistoryToSettle(page);
-  await expect(menu).toHaveAttribute('data-animation-pending', 'false');
+  await waitForHistoryToSettle(page, before);
   await expect(status).toContainText(/Move preview: selected/);
 });
 

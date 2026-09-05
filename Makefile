@@ -270,16 +270,17 @@ test-perception:
 
 test-browser: test-browser-sequential
 
-# The runtime owns a shared WASM/WebGL lifecycle and the browser tests exercise
-# that lifecycle heavily.  Serial coverage is the deterministic default;
-# callers can still opt into parallel stress with PLAYWRIGHT_WORKERS=N.
-PLAYWRIGHT_WORKERS ?= 1
+# Each Playwright worker owns an isolated browser context and page. Keep the
+# protocol-sensitive TRPG and worker-heartbeat specs serialized, while
+# allowing independent root-level UI/render specs to overlap. Two workers are
+# conservative on WebGL/WASM hosts; callers can tune this with
+# PLAYWRIGHT_WORKERS=N.
+PLAYWRIGHT_WORKERS ?= 2
+PLAYWRIGHT_PARALLEL_SPECS := $(filter-out tests/playwright/worker_heartbeat.spec.js,$(wildcard tests/playwright/*.spec.js))
 test-browser-sequential:
 	$(MAKE) --no-print-directory build-wasm
-	npx playwright test --workers=$(PLAYWRIGHT_WORKERS) \
-		--grep-invert "should show action buttons|move preview exposes accessible status and returns to the top-level menu|ability descriptors open legal targets and restore focus through the menu path|committed abilities report target count and restore the originating ability focus|Wait ends the player turn through the action protocol"
-	npx playwright test --workers=1 \
-		--grep "should show action buttons|move preview exposes accessible status and returns to the top-level menu|ability descriptors open legal targets and restore focus through the menu path|committed abilities report target count and restore the originating ability focus|Wait ends the player turn through the action protocol"
+	npx playwright test --workers=$(PLAYWRIGHT_WORKERS) $(PLAYWRIGHT_PARALLEL_SPECS)
+	npx playwright test --workers=1 tests/playwright/trpg tests/playwright/worker_heartbeat.spec.js
 
 test-static: check debug-fixture-check
 
