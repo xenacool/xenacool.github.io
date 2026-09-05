@@ -21,7 +21,11 @@ test('loading failure names the failed asset and retry recovers', async ({ page 
   let attempts = 0;
   await page.route('**/web/atlas.json', async (route) => {
     attempts += 1;
-    if (attempts === 1) {
+    // The renderer and Rust loader both request atlas.json during one
+    // startup attempt. Fail both consumers so the test observes the
+    // authoritative loader error rather than racing the renderer's optional
+    // atlas lookup.
+    if (attempts <= 2) {
       await route.abort('failed');
       return;
     }
@@ -36,6 +40,7 @@ test('loading failure names the failed asset and retry recovers', async ({ page 
   await retry.click();
   await expect(page.locator('#loading-panel')).toBeHidden({ timeout: 15000 });
   await expect(page.locator('body')).toHaveAttribute('data-loading-state', 'ready');
+  expect(attempts).toBeGreaterThanOrEqual(3);
 });
 
 test('repeated retry replaces the attempt without duplicating controls or reloading', async ({ page }) => {

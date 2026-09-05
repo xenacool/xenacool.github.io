@@ -1,5 +1,5 @@
 const { test, expect } = require('@playwright/test');
-const { loadWithFixture } = require('../helpers');
+const { loadWithFixture, waitForPlayerBoundary: waitForProtocolBoundary } = require('../helpers');
 
 async function waitForPlayerBoundary(page) {
   await page.waitForFunction(() => {
@@ -54,7 +54,7 @@ async function castFireball(page) {
     const heading = await page.locator('#action-menu-heading').innerText();
     await sendAccepted(
       page,
-      heading === 'Unit 1 action menu' ? 'menu-job:secondary:0' : 'menu-job:primary',
+      heading.startsWith('Unit 1 action menu') ? 'menu-job:secondary:0' : 'menu-job:primary',
     );
     await waitForPlayerBoundary(page);
   }
@@ -127,7 +127,10 @@ async function expectCompletion(page, outcome) {
 test('pg_rpg casualty boundary skips dead units and reaches victory', async ({ page }) => {
   test.setTimeout(90000);
   await loadScenario(page, 'casualty');
-  await waitForPlayerBoundary(page);
+  await waitForProtocolBoundary(page, {
+    after: { output: -1, input: -1, history: -1 },
+    unitId: 1,
+  });
 
   expect(await castFireball(page)).toBe(true);
   await page.waitForFunction(() => {

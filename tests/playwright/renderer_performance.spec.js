@@ -27,6 +27,7 @@ test.describe('Three.js compositor performance contract', () => {
 
     expect(result.backing).toEqual(result.css);
     expect(result.profile.frames).toBeGreaterThan(20);
+    expect(result.profile.targetFps).toBe(60);
     expect(result.profile.resizeCalls).toBeLessThanOrEqual(2);
     expect(result.profile.totalRenderMs / result.profile.frames).toBeLessThan(20);
     expect(result.profile.nativeAtlasReady).toBe(true);

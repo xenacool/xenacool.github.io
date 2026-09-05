@@ -470,8 +470,7 @@ pub fn reachable_cells(
         .get(&unit.movement_ability)
         .ok_or_else(|| format!("Unknown movement ability: {:?}", unit.movement_ability))?;
     let can_pay_resources = |ap: u8| {
-        i32::from(ap) <= unit.action_points
-            && program.can_pay_resources(unit.health, unit.mana)
+        i32::from(ap) <= unit.action_points && program.can_pay_resources(unit.health, unit.mana)
     };
     let occupied: std::collections::HashSet<GridCell> = state
         .agents

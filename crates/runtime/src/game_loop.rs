@@ -436,6 +436,30 @@ impl Runtime {
                 action_points,
             });
         }
+        if let Some(unit) = self.pg_rpg_sim.as_ref().and_then(|sim| {
+            sim.state
+                .agents
+                .get(&npc_engine_core::AgentId(unit_id as u32))
+        }) {
+            let facing = unit.facing.as_property();
+            let current_facing = history
+                .current_state
+                .entities
+                .iter()
+                .find(|entity| entity.id == unit_id)
+                .and_then(|entity| entity.properties.get("facing"))
+                .and_then(|value| match value {
+                    pystral_core::log::PropertyValue::String(value) => Some(value.as_str()),
+                    _ => None,
+                });
+            if current_facing.is_some() && current_facing != Some(facing) {
+                history.push_and_apply(Event::UpdateProperty {
+                    id: unit_id,
+                    property: "facing".into(),
+                    value: pystral_core::log::PropertyValue::String(facing.into()),
+                });
+            }
+        }
         let barrier_id = Self::append_action_barrier(history, &mut self.pg_rpg_sequence_number);
         let mut update = HistoryManager::new();
         update.log = history.log[start_idx..].to_vec();

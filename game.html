@@ -733,6 +733,10 @@
     // Keep all transient panels inside one layout owner.
 
     const hudModes = ['play', 'actions', 'diagnostics'];
+    // A user-selected mode owns the HUD until they explicitly select another
+    // mode. Runtime state updates may refresh panel contents, but must not
+    // steal focus during NPC-engine trampoline/auto-step transitions.
+    let hudModePinned = false;
     const refreshHudEmptyState = () => {
         const empty = document.getElementById('hud-empty-state');
         const mode = hudDock.dataset.hudMode;
@@ -745,8 +749,9 @@
         empty.textContent = messages[mode] || '';
         empty.style.display = messages[mode] && !hasContent ? 'block' : 'none';
     };
-    window.setHudMode = (mode) => {
+    window.setHudMode = (mode, userSelected = false) => {
         const next = hudModes.includes(mode) ? mode : 'play';
+        if (userSelected) hudModePinned = true;
         hudDock.dataset.hudMode = next;
         document.querySelectorAll('[data-hud-mode]').forEach((button) => {
             if (button.tagName === 'BUTTON') {
@@ -758,7 +763,7 @@
         refreshHudEmptyState();
     };
     document.querySelectorAll('#hud-mode-bar [data-hud-mode]').forEach((button) => {
-        button.addEventListener('click', () => window.setHudMode(button.dataset.hudMode));
+        button.addEventListener('click', () => window.setHudMode(button.dataset.hudMode, true));
     });
     document.getElementById('history-download-context').addEventListener('click', () => {
         document.getElementById('download-history').click();
@@ -1009,9 +1014,9 @@
         hudDock.dataset.unitStateContent = (state.unit_states || []).length ? 'true' : 'false';
         stack.dataset.playerDecision = actions ? 'true' : 'false';
         hudDock.dataset.playerDecision = actions ? 'true' : 'false';
-        if (actions) {
+        if (actions && !hudModePinned) {
             window.setHudMode('actions');
-        } else if (hudDock.dataset.hudMode === 'actions' && !state.game_completed) {
+        } else if (!actions && !hudModePinned && hudDock.dataset.hudMode === 'actions' && !state.game_completed) {
             window.setHudMode('play');
         }
         const status = document.getElementById('action-menu-status');

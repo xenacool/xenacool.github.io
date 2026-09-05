@@ -562,7 +562,6 @@ impl Runtime {
                 action_points: unit.action_points,
             });
         }
-        history.push_and_apply(Event::TurnCompleted { unit_id });
     }
 
     /// The Rhai session owns the resumable scheduler, while `pg_rpg_sim` is the

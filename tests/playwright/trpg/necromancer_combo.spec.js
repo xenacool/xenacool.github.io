@@ -1,5 +1,5 @@
 const { test, expect } = require('@playwright/test');
-const { loadWithFixture } = require('../helpers');
+const { loadWithFixture, waitForPlayerBoundary } = require('../helpers');
 
 async function sendAccepted(page, input) {
   await page.evaluate((actionInput) => new Promise((resolve, reject) => {
@@ -76,6 +76,10 @@ test('Rhai Necromancer raises, harvests, and spends Fresh Soul on Soul Drain', a
   await loadWithFixture(page, 'necromancer_combo');
   await page.goto('/game.html');
   await page.waitForFunction(() => window.app !== undefined, { timeout: 10000 });
+  await waitForPlayerBoundary(page, {
+    after: { output: -1, input: -1, history: -1 },
+    unitId: 5,
+  });
   await waitForNecromancer(page, (unit) => unit.mana === 0 && unit.action_points === 4);
 
   const raise = await openAbility(page, 'Raise Skeleton');

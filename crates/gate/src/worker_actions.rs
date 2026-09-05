@@ -174,19 +174,24 @@ impl UnifiedWorker {
             } else {
                 RuntimeResponse::Error("Facing is only available after End Turn".to_string())
             }
-        } else if direction == "end-turn" {
+        } else if direction == "end-turn" || direction == "wait" {
             if let Some(actions) = self.current_actions.clone() {
                 let request_id = self.next_action_request_id;
                 self.next_action_request_id += 1;
                 self.is_simulating = true;
                 self.last_sent_sequence_number = self.last_acked_sequence_number;
-                self.enqueue_simulation_request(
+                let request = if direction == "end-turn" {
                     RuntimeRequest::CommitEndTurn {
                         request_id,
                         unit_id: actions.unit_id,
-                    },
-                    PendingSimulation::Action { is_confirm },
-                );
+                    }
+                } else {
+                    RuntimeRequest::CommitWait {
+                        request_id,
+                        unit_id: actions.unit_id,
+                    }
+                };
+                self.enqueue_simulation_request(request, PendingSimulation::Action { is_confirm });
                 return None;
             } else {
                 RuntimeResponse::Error("No player action menu is available".to_string())

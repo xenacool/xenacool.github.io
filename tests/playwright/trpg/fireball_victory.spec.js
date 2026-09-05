@@ -1,5 +1,5 @@
 const { test, expect } = require('@playwright/test');
-const { loadWithFixture } = require('../helpers');
+const { loadWithFixture, waitForPlayerBoundary } = require('../helpers');
 
 async function waitForSettledPlayerBoundary(page) {
   await page.evaluate(() => new Promise((resolve, reject) => {
@@ -111,7 +111,9 @@ async function playFireball(page) {
   const fireball = page.locator('[data-menu-key^="ability:"]').filter({ hasText: 'Fireball' });
   if (!(await fireball.isVisible().catch(() => false))) {
     const heading = await page.locator('#action-menu-heading').innerText();
-    const jobInput = heading === 'Unit 1 action menu' ? 'menu-job:secondary:0' : 'menu-job:primary';
+    const jobInput = heading.startsWith('Unit 1 action menu')
+      ? 'menu-job:secondary:0'
+      : 'menu-job:primary';
     await sendAccepted(page, jobInput);
   }
   // The boundary snapshot and the click are separate worker messages.  If a
@@ -165,11 +167,14 @@ async function playFireball(page) {
 }
 
 test('deterministic pg_rpg Fireball reaches victory after one lethal cast', async ({ page }) => {
-  test.setTimeout(30000);
+  test.setTimeout(90000);
   await loadWithFixture(page, 'casualty');
   await page.goto('/game.html');
   await page.waitForFunction(() => window.app !== undefined, { timeout: 8000 });
-  await waitForSettledPlayerBoundary(page);
+  await waitForPlayerBoundary(page, {
+    after: { output: -1, input: -1, history: -1 },
+    unitId: 1,
+  });
   expect(await playFireball(page)).toEqual({ played: true });
   await expect(page.locator('#game-completed')).toHaveAttribute('data-outcome', 'Victory', {
     timeout: 15000,

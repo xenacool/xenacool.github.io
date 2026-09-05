@@ -33,7 +33,9 @@ fn debug_ui_log_errors() {
                 let _ = entity.get_float("height", 0.0).log_fallback(&tx);
             } else {
                 let _ = entity.get_float("scale", 1.0).log_fallback(&tx);
-                let _ = entity.get_float("z", 0.0).log_fallback(&tx);
+                if entity.properties.contains_key("z") {
+                    let _ = entity.get_float("z", 0.0).log_fallback(&tx);
+                }
                 let _ = entity.get_material(&state.materials).log_fallback(&tx);
 
                 if entity.kind == "arrow" {

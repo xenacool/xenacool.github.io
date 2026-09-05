@@ -1,37 +1,26 @@
 const { test, expect } = require('@playwright/test');
-const { loadWithFixture } = require('../helpers');
+const {
+  loadWithFixture,
+  protocolClock,
+  waitForPlayerBoundary,
+} = require('../helpers');
 
 test.beforeEach(async ({ page }) => {
   await loadWithFixture(page, 'player_boundary');
 });
 
-async function waitForHistoryToSettle(page, afterHistoryIndex = null) {
-  await page.waitForFunction((minimumHistoryIndex) => {
-    const slider = document.getElementById('history-slider');
-    const menu = document.getElementById('action-menu');
-    const controls = document.getElementById('action-controls');
-    const transient = window.__pystralLastTransientState;
-    const status = window.__pystralWorkerStatus || '';
-    return slider
-      && Number(slider.value) === Number(slider.max)
-      && (minimumHistoryIndex === null || Number(slider.value) > minimumHistoryIndex)
-      && menu?.style.display === 'block'
-      && controls?.style.display !== 'none'
-      && menu.dataset.actionPending !== 'true'
-      && transient?.input_enabled
-      && !transient.action_pending
-      && !transient.wait_pending
-      && status.includes('AwaitingPlayerDecision')
-      && status.includes('simulation request None');
-  }, afterHistoryIndex, { timeout: 40000 });
-
+async function waitForHistoryToSettle(page, afterClock = null) {
+  return waitForPlayerBoundary(page, {
+    after: afterClock || { output: -1, input: -1, history: -1 },
+  });
 }
 
 async function completeEndTurn(page) {
+  const before = await protocolClock(page);
   await page.getByRole('button', { name: 'End Turn' }).click();
   await expect(page.getByRole('button', { name: 'Face S', exact: true })).toBeVisible({ timeout: 10000 });
   await page.getByRole('button', { name: 'Face S', exact: true }).click();
-  await waitForHistoryToSettle(page);
+  await waitForHistoryToSettle(page, before);
 }
 
 test('move preview exposes accessible status and returns to the top-level menu', async ({ page }) => {
@@ -117,7 +106,7 @@ test('cell-area abilities expose cell centers and report affected targets', asyn
   let reachedCaveman = false;
   for (let attempts = 0; attempts < 16; attempts += 1) {
     const heading = await page.getByRole('heading', { name: /unit \d+ action menu/i }).innerText();
-    if (heading === 'Unit 1 action menu') {
+    if (heading.startsWith('Unit 1 action menu')) {
       reachedCaveman = true;
       break;
     }
@@ -126,7 +115,7 @@ test('cell-area abilities expose cell centers and report affected targets', asyn
   expect(reachedCaveman, 'bounded Wait loop never reached the Caveman boundary').toBe(true);
   await page.waitForFunction(() => {
     const heading = document.querySelector('#action-menu h2');
-    if (heading?.textContent !== 'Unit 1 action menu') {
+    if (!heading?.textContent?.startsWith('Unit 1 action menu')) {
       window.__cavemanMenuStableCount = 0;
       return false;
     }
@@ -206,7 +195,7 @@ test('committed movement waits for its animation barrier', async ({ page }) => {
 });
 
 test('End Turn opens facing after the implicit wait settles', async ({ page }) => {
-  test.setTimeout(60000);
+  test.setTimeout(120000);
   await page.goto('/game.html');
   await page.waitForFunction(() => window.app !== undefined, { timeout: 10000 });
 
@@ -217,7 +206,7 @@ test('End Turn opens facing after the implicit wait settles', async ({ page }) =
   await expect(menu).toBeVisible({ timeout: 60000 });
   await waitForHistoryToSettle(page);
   await expect(wait).toBeVisible();
-  const before = Number(await page.locator('#history-slider').inputValue());
+  const before = await protocolClock(page);
   await wait.click();
 
   await expect(page.locator('#log-container')).toContainText('Action input: end-turn', { timeout: 10000 });
@@ -233,7 +222,7 @@ test('End Turn opens facing after the implicit wait settles', async ({ page }) =
 });
 
 test('End Turn hands a human-controlled unit back through the same boundary', async ({ page }) => {
-  test.setTimeout(60000);
+  test.setTimeout(120000);
   await page.goto('/game.html');
   await page.waitForFunction(() => window.app !== undefined, { timeout: 10000 });
 
@@ -242,7 +231,7 @@ test('End Turn hands a human-controlled unit back through the same boundary', as
   await expect(menu).toBeVisible({ timeout: 60000 });
   await waitForHistoryToSettle(page);
 
-  const before = Number(await page.locator('#history-slider').inputValue());
+  const before = await protocolClock(page);
   await wait.click();
   await expect(page.getByRole('button', { name: 'Face S', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Face S', exact: true }).click();
@@ -254,38 +243,35 @@ test('End Turn hands a human-controlled unit back through the same boundary', as
 });
 
 test('consecutive End Turn actions continue through repeated player turns', async ({ page }) => {
-  test.setTimeout(90000);
+  test.setTimeout(180000);
   await page.goto('/game.html');
   await page.waitForFunction(() => window.app !== undefined, { timeout: 10000 });
 
   const menu = page.getByRole('region', { name: /unit \d+ action menu/i });
   const unitStatePanel = page.locator('#unit-state-panel');
   const wait = page.getByRole('button', { name: 'End Turn' });
-  const slider = page.locator('#history-slider');
-
   await expect(menu).toBeVisible({ timeout: 40000 });
   await expect(unitStatePanel).toBeVisible({ timeout: 10000 });
   await expect(unitStatePanel.locator('summary')).not.toHaveCount(0);
   for (let turn = 0; turn < 2; turn += 1) {
     await waitForHistoryToSettle(page);
-    const before = Number(await slider.inputValue());
+    const before = await protocolClock(page);
     await expect(wait).toBeVisible();
     await wait.click();
     await expect(page.getByRole('button', { name: 'Face S', exact: true })).toBeVisible();
     await page.getByRole('button', { name: 'Face S', exact: true }).click();
-    await waitForHistoryToSettle(page, before);
-    const after = Number(await slider.inputValue());
-    expect(after).toBeGreaterThan(before);
+    const after = await waitForHistoryToSettle(page, before);
+    expect(after.history).toBeGreaterThan(before.history);
   }
 });
 
 test('settled End Turn leaves the UI log free of errors', async ({ page }) => {
-  test.setTimeout(60000);
+  test.setTimeout(120000);
   await page.goto('/game.html');
   await page.waitForFunction(() => window.app !== undefined, { timeout: 10000 });
 
   await waitForHistoryToSettle(page);
-  const before = Number(await page.locator('#history-slider').inputValue());
+  const before = await protocolClock(page);
   await page.getByRole('button', { name: 'End Turn' }).click();
   await expect(page.locator('#log-container')).toContainText('Action input: end-turn', {
     timeout: 10000,

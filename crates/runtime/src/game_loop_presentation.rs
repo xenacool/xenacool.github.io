@@ -106,6 +106,21 @@ impl Runtime {
             });
             for (property, value) in [
                 ("asset", pystral_core::log::PropertyValue::AssetRef(kind)),
+                (
+                    "team_id",
+                    pystral_core::log::PropertyValue::Float(unit.team_id as f32),
+                ),
+                (
+                    "primary_job",
+                    pystral_core::log::PropertyValue::String(
+                        after
+                            .state
+                            .job_registry
+                            .get(&unit.primary_job)
+                            .map(|job| job.name.clone())
+                            .unwrap_or_default(),
+                    ),
+                ),
                 ("scale", pystral_core::log::PropertyValue::Float(0.6)),
                 ("z", pystral_core::log::PropertyValue::Float(0.0)),
                 (

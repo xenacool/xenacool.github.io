@@ -85,7 +85,10 @@ impl Task<TacticalDomain> for AbilityTask {
                 return None;
             };
             let live_cost = ability_def.resolve_cost(&current_attacker.turn_tags);
-            if live_cost != self.cost || !live_cost.spends_resource() || !live_cost.can_pay(current_attacker) {
+            if live_cost != self.cost
+                || !live_cost.spends_resource()
+                || !live_cost.can_pay(current_attacker)
+            {
                 return None;
             }
             let mut rng = ctx.state_diff.initial_state.rng.clone();

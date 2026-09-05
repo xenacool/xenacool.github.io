@@ -364,7 +364,7 @@ impl TacticalSimulation {
                 })
                 .unwrap_or_else(|| "missing actor".to_string());
             return Err(format!(
-                "NPC candidate {:?} failed revalidation for agent {} (snapshot={}, {}, legal_actions={:?})",
+                "Action {:?} failed revalidation for agent {} (snapshot={}, {}, legal_actions={:?})",
                 action,
                 agent.0,
                 self.snapshot_fingerprint(),
