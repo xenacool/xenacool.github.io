@@ -91,6 +91,9 @@
                 emit_tags: vec![],
                 consume_tags: vec![],
                 mana_gain: 0,
+                mana_cost: 0,
+                health_cost: 0,
+                health_floor: 1,
             },
         );
         let unit = state.agents.get_mut(&AgentId(1)).unwrap();

@@ -130,6 +130,9 @@ export function createNativePresentation(canvas) {
         atlasTexture.generateMipmaps = false;
 
     const profile = {
+        // 60 Hz is the highest stable target across supported WebGL2 browsers;
+        // requestAnimationFrame naturally adapts down on slower displays.
+        targetFps: 60,
         frames: 0,
         resizeCalls: 0,
         totalRenderMs: 0,
@@ -376,6 +379,10 @@ function applyNativeFrame(frame) {
     const seenMarkers = new Set();
     (frame.entities || []).forEach((entity) => {
         if (!entity.world_position || !entity.asset) return;
+        // Pose identity is authored by the runtime frame. Keep it explicit at
+        // the compositor boundary; never infer a clip from a generic state.
+        const rig = entity.rig || null;
+        const animationClip = entity.animation_clip || null;
         const sliceIndices = Array.isArray(entity.slice_indices) && entity.slice_indices.length > 0
             ? entity.slice_indices
             : [entity.selected_slice_index ?? 0];
@@ -668,11 +675,11 @@ function updateCompass(map, pointy, sizeX, sizeZ, scene, camera) {
 
 function compassLabelCanvas(label) {
     const canvas = document.createElement('canvas');
-    canvas.width = 64; canvas.height = 32;
+    canvas.width = 96; canvas.height = 48;
     const context = canvas.getContext('2d');
-    context.font = 'bold 20px sans-serif';
+    context.font = 'bold 30px sans-serif';
     context.textAlign = 'center'; context.textBaseline = 'middle';
-    context.fillStyle = '#fff4b0'; context.fillText(label, 32, 16);
+    context.fillStyle = '#fff4b0'; context.fillText(label, 48, 24);
     return canvas;
 }
 

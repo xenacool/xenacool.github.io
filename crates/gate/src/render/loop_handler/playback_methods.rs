@@ -93,19 +93,26 @@ impl LoopHandler {
                         _ => None,
                     })
                     .unwrap_or(0);
-                ctx.movement_tweens.insert(
-                    *id,
-                    MovementTween {
-                        from_hex,
-                        to_hex: *destination,
-                        from_layer,
-                        to_layer: from_layer,
-                        start_time_ms: now,
-                        duration_ms: f64::from(transition.duration_ms),
-                        transition: transition.clone(),
-                        tweeners: None,
-                    },
-                );
+                if let Some(tween) = ctx.movement_tweens.get_mut(id) {
+                    tween.to_hex = *destination;
+                    tween.to_layer = from_layer;
+                    tween.duration_ms += f64::from(transition.duration_ms);
+                    tween.tweeners = None;
+                } else {
+                    ctx.movement_tweens.insert(
+                        *id,
+                        MovementTween {
+                            from_hex,
+                            to_hex: *destination,
+                            from_layer,
+                            to_layer: from_layer,
+                            start_time_ms: now,
+                            duration_ms: f64::from(transition.duration_ms),
+                            transition: transition.clone(),
+                            tweeners: None,
+                        },
+                    );
+                }
             }
         } else if let Event::UpdateProperty {
             id,

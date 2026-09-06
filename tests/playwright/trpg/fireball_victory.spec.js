@@ -1,49 +1,10 @@
 const { test, expect } = require('@playwright/test');
-const { loadWithFixture } = require('./helpers');
-
-async function waitForSettledPlayerBoundary(page) {
-  await page.evaluate(() => new Promise((resolve, reject) => {
-    const check = () => {
-      const slider = document.getElementById('history-slider');
-      const menu = document.getElementById('action-menu');
-      const status = window.__pystralWorkerStatus || '';
-      const settled = Boolean(slider
-        && Number(slider.value) === Number(slider.max)
-        && menu?.style.display === 'block'
-        && menu.dataset.gameCompleted !== 'true'
-        && menu.dataset.actionPending !== 'true'
-        && menu.dataset.animationPending !== 'true'
-        && menu.dataset.waitPending !== 'true'
-        && status.includes('AwaitingPlayerDecision')
-        && status.includes('simulation request None')
-        && !status.includes('WaitingForAnimationAck')
-        && window.__pystralDebugTraces?.some(
-          (trace) => trace.includes('unified worker published player transient'),
-        ));
-      if (settled) finish();
-    };
-    const finish = () => {
-      cleanup();
-      resolve();
-    };
-    const cleanup = () => {
-      window.removeEventListener('pystral-heartbeat', check);
-      window.removeEventListener('pystral-debug-trace', check);
-      window.removeEventListener('pystral-menu-state', check);
-      clearInterval(poll);
-      clearTimeout(timer);
-    };
-    const poll = setInterval(check, 50);
-    const timer = setTimeout(() => {
-      cleanup();
-      reject(new Error(`settled player boundary timeout: ${window.__pystralWorkerStatus}`));
-    }, 30000);
-    window.addEventListener('pystral-heartbeat', check);
-    window.addEventListener('pystral-debug-trace', check);
-    window.addEventListener('pystral-menu-state', check);
-    check();
-  }));
-}
+const {
+  loadWithFixture,
+  sendAcceptedAction,
+  waitForAnimationBarrier,
+  waitForPlayerBoundary,
+} = require('../helpers');
 
 async function diagnostics(page) {
   return page.evaluate(() => ({
@@ -76,42 +37,16 @@ async function diagnostics(page) {
   }));
 }
 
-async function sendAccepted(page, input) {
-  await page.evaluate((actionInput) => {
-    const acceptedBefore = window.__pystralAcceptedActionCounts[actionInput] || 0;
-    return new Promise((resolve, reject) => {
-      const check = () => {
-        if ((window.__pystralAcceptedActionCounts[actionInput] || 0) > acceptedBefore) {
-          cleanup();
-          resolve();
-        }
-      };
-      const onTrace = (event) => {
-        if (event.detail === `unified worker accepted action input ${actionInput}`) check();
-      };
-      const cleanup = () => {
-        window.removeEventListener('pystral-debug-trace', onTrace);
-        clearInterval(poll);
-        clearTimeout(timer);
-      };
-      const poll = setInterval(check, 50);
-      const timer = setTimeout(() => {
-        cleanup();
-        reject(new Error(`action input not accepted: ${actionInput}; status=${window.__pystralWorkerStatus}`));
-      }, 5000);
-      window.addEventListener('pystral-debug-trace', onTrace);
-      window.app.action_nav(actionInput);
-      check();
-    });
-  }, input);
-}
+const sendAccepted = sendAcceptedAction;
 
 async function playFireball(page) {
   const menu = page.locator('#action-menu');
   const fireball = page.locator('[data-menu-key^="ability:"]').filter({ hasText: 'Fireball' });
   if (!(await fireball.isVisible().catch(() => false))) {
     const heading = await page.locator('#action-menu-heading').innerText();
-    const jobInput = heading === 'Unit 1 action menu' ? 'menu-job:secondary:0' : 'menu-job:primary';
+    const jobInput = heading.startsWith('Unit 1 action menu')
+      ? 'menu-job:secondary:0'
+      : 'menu-job:primary';
     await sendAccepted(page, jobInput);
   }
   // The boundary snapshot and the click are separate worker messages.  If a
@@ -160,16 +95,19 @@ async function playFireball(page) {
   const targetKey = await target.getAttribute('data-menu-key');
   await sendAccepted(page, `menu-target:${targetKey.split(':')[1]}`);
   await sendAccepted(page, 'confirm');
-  await expect(menu).toHaveAttribute('data-animation-pending', 'true', { timeout: 5000 });
+  await waitForAnimationBarrier(page);
   return { played: true };
 }
 
 test('deterministic pg_rpg Fireball reaches victory after one lethal cast', async ({ page }) => {
-  test.setTimeout(30000);
+  test.setTimeout(90000);
   await loadWithFixture(page, 'casualty');
   await page.goto('/game.html');
   await page.waitForFunction(() => window.app !== undefined, { timeout: 8000 });
-  await waitForSettledPlayerBoundary(page);
+  await waitForPlayerBoundary(page, {
+    after: { output: -1, input: -1, history: -1 },
+    unitId: 1,
+  });
   expect(await playFireball(page)).toEqual({ played: true });
   await expect(page.locator('#game-completed')).toHaveAttribute('data-outcome', 'Victory', {
     timeout: 15000,

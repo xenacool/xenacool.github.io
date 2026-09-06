@@ -669,6 +669,7 @@
         hudDock.dataset.actionContent = 'false';
         hudDock.dataset.unitStateContent = 'false';
         window.__pystralLastTransientState = null;
+        window.__pystralCameraAxial = { q: 0, r: 0 };
         window.previewActive = false;
         window.__pystralHistoryExportSource = null;
         window.__pystralHeartbeatReceivedAt = 0;
@@ -733,6 +734,10 @@
     // Keep all transient panels inside one layout owner.
 
     const hudModes = ['play', 'actions', 'diagnostics'];
+    // A user-selected mode owns the HUD until they explicitly select another
+    // mode. Runtime state updates may refresh panel contents, but must not
+    // steal focus during NPC-engine trampoline/auto-step transitions.
+    let hudModePinned = false;
     const refreshHudEmptyState = () => {
         const empty = document.getElementById('hud-empty-state');
         const mode = hudDock.dataset.hudMode;
@@ -745,8 +750,9 @@
         empty.textContent = messages[mode] || '';
         empty.style.display = messages[mode] && !hasContent ? 'block' : 'none';
     };
-    window.setHudMode = (mode) => {
+    window.setHudMode = (mode, userSelected = false) => {
         const next = hudModes.includes(mode) ? mode : 'play';
+        if (userSelected) hudModePinned = true;
         hudDock.dataset.hudMode = next;
         document.querySelectorAll('[data-hud-mode]').forEach((button) => {
             if (button.tagName === 'BUTTON') {
@@ -758,7 +764,7 @@
         refreshHudEmptyState();
     };
     document.querySelectorAll('#hud-mode-bar [data-hud-mode]').forEach((button) => {
-        button.addEventListener('click', () => window.setHudMode(button.dataset.hudMode));
+        button.addEventListener('click', () => window.setHudMode(button.dataset.hudMode, true));
     });
     document.getElementById('history-download-context').addEventListener('click', () => {
         document.getElementById('download-history').click();
@@ -783,8 +789,30 @@
         focusables[next].scrollIntoView({ block: 'nearest' });
         return true;
     };
+    const CAMERA_AXIAL_DELTAS = Object.freeze({
+        left: Object.freeze({ q: -1, r: 0 }),
+        right: Object.freeze({ q: 1, r: 0 }),
+        up: Object.freeze({ q: 0, r: -1 }),
+        down: Object.freeze({ q: 0, r: 1 }),
+    });
+    window.__pystralCameraAxial = { q: 0, r: 0 };
+    window.__pystralCameraNav = null;
+    const dispatchCameraNavigation = (direction) => {
+        const delta = CAMERA_AXIAL_DELTAS[direction];
+        if (!delta) return;
+        window.__pystralCameraAxial.q += delta.q;
+        window.__pystralCameraAxial.r += delta.r;
+        window.__pystralCameraNav?.(direction);
+    };
     document.addEventListener('keydown', (event) => {
         if (event.target.matches('input, textarea, select')) return;
+        if (hudDock.dataset.hudMode === 'play' && CAMERA_AXIAL_DELTAS[
+            event.key.replace('Arrow', '').toLowerCase()
+        ]) {
+            dispatchCameraNavigation(event.key.replace('Arrow', '').toLowerCase());
+            event.preventDefault();
+            return;
+        }
         if (event.key === 'ArrowDown' && ['actions', 'diagnostics'].includes(hudDock.dataset.hudMode)) {
             if (movePanelFocus(1)) event.preventDefault();
         }
@@ -1009,9 +1037,9 @@
         hudDock.dataset.unitStateContent = (state.unit_states || []).length ? 'true' : 'false';
         stack.dataset.playerDecision = actions ? 'true' : 'false';
         hudDock.dataset.playerDecision = actions ? 'true' : 'false';
-        if (actions) {
+        if (actions && !hudModePinned) {
             window.setHudMode('actions');
-        } else if (hudDock.dataset.hudMode === 'actions' && !state.game_completed) {
+        } else if (!actions && !hudModePinned && hudDock.dataset.hudMode === 'actions' && !state.game_completed) {
             window.setHudMode('play');
         }
         const status = document.getElementById('action-menu-status');
@@ -1136,6 +1164,7 @@
                             : `${ability.ap_cost} AP`,
                         ability.health_cost > 0 ? `${ability.health_cost} HP (floor ${ability.health_floor})` : '',
                         ability.mana_cost > 0 ? `${ability.mana_cost} MP` : '',
+                        `${ability.legal_target_count || 0} legal targets`,
                         ability.affordable ? '' : 'unaffordable',
                     ].filter(Boolean).join(', '),
                     `menu-ability:${ability.id}`,
@@ -1415,10 +1444,11 @@
             window.__pystralThreeMarkCameraMotion?.();
             currentApp()?.camera_nav(direction);
         };
-        document.getElementById('nav-up').addEventListener('click', () => cameraNav('up'));
-        document.getElementById('nav-down').addEventListener('click', () => cameraNav('down'));
-        document.getElementById('nav-left').addEventListener('click', () => cameraNav('left'));
-        document.getElementById('nav-right').addEventListener('click', () => cameraNav('right'));
+        window.__pystralCameraNav = cameraNav;
+        document.getElementById('nav-up').addEventListener('click', () => dispatchCameraNavigation('up'));
+        document.getElementById('nav-down').addEventListener('click', () => dispatchCameraNavigation('down'));
+        document.getElementById('nav-left').addEventListener('click', () => dispatchCameraNavigation('left'));
+        document.getElementById('nav-right').addEventListener('click', () => dispatchCameraNavigation('right'));
 
         document.getElementById('action-up').addEventListener('click', () => window.sendActionInput('up'));
         document.getElementById('action-down').addEventListener('click', () => window.sendActionInput('down'));

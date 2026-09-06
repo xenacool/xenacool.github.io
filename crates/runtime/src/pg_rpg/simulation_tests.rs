@@ -41,6 +41,58 @@ fn available_actions_include_job_names_and_all_abilities() {
 }
 
 #[test]
+fn perceived_state_is_authoritative_snapshot_for_planning() {
+    let mut scenario = SkirmishConfig::new(42);
+    scenario
+        .add_unit(1, 1, "Caveman", GridCell::new(hexx::Hex::ZERO, 0))
+        .unwrap();
+    scenario
+        .add_unit(2, 2, "Mage", GridCell::new(hexx::Hex::new(1, 0), 0))
+        .unwrap();
+    let mut simulation = TacticalSimulation::from_scenario(
+        scenario,
+        MCTSConfiguration {
+            seed: Some(42),
+            ..Default::default()
+        },
+    );
+    let reaction = simulation.state.agents[&AgentId(2)].reaction_abilities[0];
+    simulation
+        .state
+        .reaction_queue
+        .push((AgentId(2), reaction, AgentId(1)));
+
+    let perception = simulation.perceived_state(2).unwrap();
+    assert_eq!(perception.agent_id, 2);
+    assert_eq!(perception.units.len(), 2);
+    assert_eq!(perception.grid.tiles, simulation.state.grid.tiles);
+    assert_eq!(perception.phase, super::NpcTurnPhase::ReactionWindow);
+    assert_eq!(perception.resources.action_points, 4);
+    assert_eq!(perception.continuation.agent_id, 2);
+    assert_eq!(perception.pending_reactions, vec![(2, reaction.0, 1)]);
+    assert!(!perception.actions.movement.is_empty());
+    let fireball = perception
+        .actions
+        .primary_job
+        .abilities
+        .iter()
+        .find(|ability| ability.name == "Fireball")
+        .expect("mage exposes fireball");
+    assert!(fireball.affordable);
+    assert!(fireball.legal_target_count > 0);
+
+    let next = simulation
+        .preview_action(2, TacticalDisplayAction::Wait)
+        .unwrap();
+    assert_eq!(next.resources.action_points, 4);
+
+    // The runtime transport uses a binary serde format; this assertion keeps
+    // the snapshot fields directly comparable without imposing JSON's string
+    // key restriction on the hex-indexed grid.
+    assert_eq!(perception.grid.bounds, simulation.state.grid.bounds);
+}
+
+#[test]
 fn boundary_exposes_npc_before_its_typed_decision() {
     let mut scenario = SkirmishConfig::new(42);
     scenario

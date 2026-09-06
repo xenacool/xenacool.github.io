@@ -328,7 +328,7 @@ impl Behavior<TacticalDomain> for AbilityBehavior {
             let ability_def = &state.ability_registry[&ability_id];
             let cost = ability_def.resolve_cost(&unit.turn_tags);
 
-            if cost.can_pay(unit) {
+            if cost.spends_resource() && cost.can_pay(unit) {
                 for target_id in legal_ability_targets(&state, ctx.agent, ability_id) {
                     tasks.push(Box::new(AbilityTask {
                         agent: ctx.agent,
@@ -463,6 +463,8 @@ impl Task<TacticalDomain> for MoveTask {
             let move_ability_id = unit.movement_ability;
             let prog = movement_registry.get(&move_ability_id).cloned();
             if let Some(prog) = prog {
+                prog.apply_resources(&mut unit.health, &mut unit.mana);
+                prog.consume_action_tags(&mut unit.turn_tags);
                 for (tag, n) in prog.emit_tags {
                     let mut dummy_logger = Logger::default();
                     unit.turn_tags.emit(

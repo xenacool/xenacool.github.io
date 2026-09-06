@@ -39,7 +39,16 @@ fn simulation_request_label(request: &RuntimeRequest) -> &'static str {
         RuntimeRequest::RefreshAvailableActions { .. } => "RefreshAvailableActions",
         RuntimeRequest::SolveIk(_) | RuntimeRequest::GeneratePgRpgLog { .. } => "Other",
         RuntimeRequest::RunRhaiCase { .. } => "RunRhaiCase",
+        RuntimeRequest::InspectNpcPerception { .. } => "InspectNpcPerception",
     }
+}
+
+fn action_rejection_feedback(reason: &pystral_games::ActionError) -> String {
+    let label = match reason {
+        pystral_games::ActionError::IllegalAbility(_) => "Ability rejected",
+        _ => "Move rejected",
+    };
+    format!("{label}: {reason:?}")
 }
 
 #[wasm_bindgen]
@@ -308,7 +317,7 @@ fn start_worker_plumbing(
                     }
                     WorkerOutput::DebugTrace { message } => record_debug_trace(message),
                     WorkerOutput::ActionRejected { request_id, reason } => {
-                        update_action_feedback(&format!("Move rejected: {:?}", reason));
+                        update_action_feedback(&action_rejection_feedback(&reason));
                         let _ =
                             app_tx_clone.send(AppCommand::ActionRejected { request_id, reason });
                     }
@@ -352,7 +361,7 @@ fn handle_runtime_response(response: RuntimeResponse, app_tx: &Sender<AppCommand
             let _ = app_tx.send(AppCommand::AppendHistory(Box::new(history)));
         }
         RuntimeResponse::ActionRejected { reason, .. } => {
-            update_action_feedback(&format!("Move rejected: {:?}", reason))
+            update_action_feedback(&action_rejection_feedback(&reason))
         }
         _ => {}
     }

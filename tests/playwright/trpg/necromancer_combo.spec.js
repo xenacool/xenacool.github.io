@@ -1,30 +1,10 @@
 const { test, expect } = require('@playwright/test');
-const { loadWithFixture } = require('./helpers');
-
-async function sendAccepted(page, input) {
-  await page.evaluate((actionInput) => new Promise((resolve, reject) => {
-    const before = window.__pystralAcceptedActionCounts[actionInput] || 0;
-    const check = () => {
-      if ((window.__pystralAcceptedActionCounts[actionInput] || 0) > before) {
-        cleanup();
-        resolve();
-      }
-    };
-    const cleanup = () => {
-      window.removeEventListener('pystral-debug-trace', check);
-      clearInterval(poll);
-      clearTimeout(timer);
-    };
-    const poll = setInterval(check, 25);
-    const timer = setTimeout(() => {
-      cleanup();
-      reject(new Error(`input was not accepted: ${actionInput}; ${window.__pystralWorkerStatus}`));
-    }, 8000);
-    window.addEventListener('pystral-debug-trace', check);
-    window.app.action_nav(actionInput);
-    check();
-  }), input);
-}
+const {
+  loadWithFixture,
+  sendAcceptedAction,
+  waitForPlayerBoundary,
+} = require('../helpers');
+const sendAccepted = sendAcceptedAction;
 
 async function waitForNecromancer(page, predicate = () => true) {
   await page.waitForFunction((predicateSource) => {
@@ -76,6 +56,10 @@ test('Rhai Necromancer raises, harvests, and spends Fresh Soul on Soul Drain', a
   await loadWithFixture(page, 'necromancer_combo');
   await page.goto('/game.html');
   await page.waitForFunction(() => window.app !== undefined, { timeout: 10000 });
+  await waitForPlayerBoundary(page, {
+    after: { output: -1, input: -1, history: -1 },
+    unitId: 5,
+  });
   await waitForNecromancer(page, (unit) => unit.mana === 0 && unit.action_points === 4);
 
   const raise = await openAbility(page, 'Raise Skeleton');

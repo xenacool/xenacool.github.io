@@ -2,7 +2,7 @@
 // renderer (A1.0.3) must reproduce. Zero renderer change here — only a
 // test-harness init script forces preserveDrawingBuffer and counts GL calls.
 const { test, expect } = require('@playwright/test');
-const { loadWithFixture } = require('./helpers');
+const { loadWithFixture, waitForPlayerBoundary } = require('./helpers');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
@@ -49,47 +49,10 @@ test.beforeEach(async ({ page }) => {
 });
 
 async function waitForSettledPlayerBoundary(page) {
-  await page.evaluate(() => new Promise((resolve, reject) => {
-    const check = () => {
-      const slider = document.getElementById('history-slider');
-      const menu = document.getElementById('action-menu');
-      const status = window.__pystralWorkerStatus || '';
-      const settled = Boolean(slider
-        && Number(slider.value) === Number(slider.max)
-        && menu?.style.display === 'block'
-        && menu.dataset.gameCompleted !== 'true'
-        && menu.dataset.actionPending !== 'true'
-        && menu.dataset.animationPending !== 'true'
-        && menu.dataset.waitPending !== 'true'
-        && status.includes('AwaitingPlayerDecision')
-        && status.includes('simulation request None')
-        && !status.includes('WaitingForAnimationAck')
-        && window.__pystralDebugTraces?.some(
-          (trace) => trace.includes('unified worker published player transient'),
-        ));
-      if (settled) finish();
-    };
-    const finish = () => {
-      cleanup();
-      resolve();
-    };
-    const cleanup = () => {
-      window.removeEventListener('pystral-heartbeat', check);
-      window.removeEventListener('pystral-debug-trace', check);
-      window.removeEventListener('pystral-menu-state', check);
-      clearInterval(poll);
-      clearTimeout(timer);
-    };
-    const poll = setInterval(check, 50);
-    const timer = setTimeout(() => {
-      cleanup();
-      reject(new Error(`settled player boundary timeout: ${window.__pystralWorkerStatus}`));
-    }, 30000);
-    window.addEventListener('pystral-heartbeat', check);
-    window.addEventListener('pystral-debug-trace', check);
-    window.addEventListener('pystral-menu-state', check);
-    check();
-  }));
+  await waitForPlayerBoundary(page, {
+    after: { output: -1, input: -1, history: -1 },
+    timeout: 90000,
+  });
 }
 
 async function glStats(page) {

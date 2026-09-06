@@ -41,6 +41,11 @@ pub struct ScriptMovementDef {
     pub emit_tags: Vec<(String, u8)>,
     pub consume_tags: Vec<(String, u8, u8)>,
     pub mana_gain: i32,
+    /// Alternative resources paid per movement action. AP remains the demo
+    /// default; authored jobs may choose mana or health instead.
+    pub mana_cost: u16,
+    pub health_cost: u16,
+    pub health_floor: i32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -368,6 +373,9 @@ impl Ruleset {
                     emit_tags,
                     consume_tags: resolve_tags(&definition.consume_tags)?,
                     mana_gain: definition.mana_gain,
+                    mana_cost: definition.mana_cost,
+                    health_cost: definition.health_cost,
+                    health_floor: definition.health_floor,
                 },
             );
         }
@@ -470,6 +478,9 @@ mod tests {
             emit_tags: vec![],
             consume_tags: vec![],
             mana_gain,
+            mana_cost: 0,
+            health_cost: 0,
+            health_floor: 1,
         }
     }
 

@@ -499,12 +499,11 @@ impl LoopHandler {
         let log_len_changed =
             self.playback_state.last_history_log_len != self.history_manager.log.len();
         let mode_toggled = self.playback_state.last_debug_mode != debug_enabled;
-        let can_publish_diagnostics = !self.transient_state.action_pending;
-
-        if can_publish_diagnostics
-            && debug_enabled
-            && (index_changed || log_len_changed || mode_toggled)
-        {
+        // Diagnostics are a read-only projection of the authoritative frame.
+        // Keep publishing them while an action/animation is pending so a
+        // selected Diagnostics panel never becomes visible-but-empty during
+        // the NPC-engine trampoline.
+        if debug_enabled && (index_changed || log_len_changed || mode_toggled) {
             // Push Entity Data
             if let Ok(json) = serde_json::to_string(&state.entities) {
                 crate::render::update_entity_viewer(&json);
@@ -530,10 +529,8 @@ impl LoopHandler {
         // made `log_len_changed` true on every frame and serialized the full
         // HistoryManager continuously.  Opening debug happened to update the
         // watermark, which is why it appeared to make the front end faster.
-        if can_publish_diagnostics {
-            self.playback_state.last_history_log_len = self.history_manager.log.len();
-            self.playback_state.last_debug_mode = debug_enabled;
-        }
+        self.playback_state.last_history_log_len = self.history_manager.log.len();
+        self.playback_state.last_debug_mode = debug_enabled;
     }
 
     fn handle_sequence_number_acks(&mut self, now: f64) {

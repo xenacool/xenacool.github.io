@@ -434,6 +434,18 @@ pub fn validate_move(
     if unit.action_points < i32::from(ap_cost) {
         return Err(ActionError::InsufficientActionPoints);
     }
+    let program = state
+        .movement_registry
+        .get(&unit.movement_ability)
+        .ok_or(ActionError::UnknownMovement(unit.movement_ability))?;
+    if !program.can_pay_resources(unit.health, unit.mana) {
+        return Err(ActionError::InsufficientActionPoints);
+    }
+    let mut cost_tags = unit.turn_tags.clone();
+    let action_cost = program.get_ap_cost(0, &mut cost_tags);
+    if !program.has_action_cost(action_cost, &unit.turn_tags) {
+        return Err(ActionError::InsufficientActionPoints);
+    }
     Ok(ValidatedMove {
         agent,
         destination,
@@ -457,6 +469,9 @@ pub fn reachable_cells(
         .movement_registry
         .get(&unit.movement_ability)
         .ok_or_else(|| format!("Unknown movement ability: {:?}", unit.movement_ability))?;
+    let can_pay_resources = |ap: u8| {
+        i32::from(ap) <= unit.action_points && program.can_pay_resources(unit.health, unit.mana)
+    };
     let occupied: std::collections::HashSet<GridCell> = state
         .agents
         .values()
@@ -471,7 +486,7 @@ pub fn reachable_cells(
             if state.grid.bounds.contains(cell)
                 && state.grid.has_unit_clearance(cell)
                 && !occupied.contains(&cell)
-                && i32::from(cost) <= unit.action_points
+                && can_pay_resources(cost)
             {
                 destinations.insert(cell, cost);
             }
@@ -512,7 +527,7 @@ pub fn reachable_cells(
             let mut tags = node.tags.clone();
             let cost = program.get_ap_cost(node.steps, &mut tags);
             let ap = node.ap.saturating_add(cost);
-            if i32::from(ap) > unit.action_points {
+            if !can_pay_resources(ap) {
                 continue;
             }
             let steps = node.steps.saturating_add(1);

@@ -1,4 +1,4 @@
-.PHONY: install clean build wasm-bindgen-tool build-wasm run-web server watch deploy test test-fast test-browser test-browser-sequential test-static test-integration test-rhai nuke-deploy playwright-install playwright-test playwright reproduce-spritestacks export-sprite-actor-manifest export-sprite-actor-poses report-animation-mappings temporal-bake-plan tla-check tla-worker-check tla-ui-check tla-animation-ack-check tla-simulation-bridge-check tla-casualty-boundary-check tla-lock-check debug-fixture-check check check-func-length check-loc
+.PHONY: install clean build wasm-bindgen-tool build-wasm run-web server watch deploy test test-fast test-browser test-browser-sequential test-static test-integration test-rhai test-perception nuke-deploy playwright-install playwright-test playwright reproduce-spritestacks export-sprite-actor-manifest export-sprite-actor-poses report-animation-mappings temporal-bake-plan tla-check tla-worker-check tla-ui-check tla-animation-ack-check tla-simulation-bridge-check tla-casualty-boundary-check tla-lock-check debug-fixture-check check check-func-length check-loc
 
 TEST_LOG := .make-test.log
 # Keep the default feedback loop bounded. Browser and model tests should be
@@ -254,25 +254,33 @@ test:
 	echo "=== selftest ==="; $(MAKE) --no-print-directory selftest || status=1;\
 	echo "=== test-proxy ==="; $(MAKE) --no-print-directory test-proxy || status=1;\
 	echo "=== cargo-test ==="; $(MAKE) --no-print-directory test-integration || status=1;\
+	echo "=== test-perception ==="; $(MAKE) --no-print-directory test-perception || status=1;\
 	echo "Test output written above; aggregated status $$status";\
 	exit $$status
 
 # Independently invocable layers keep the aggregate timeout from hiding which
 # verification class is slow or failing.
-test-fast: tla-check check debug-fixture-check
+test-fast: tla-check check debug-fixture-check test-perception
+
+# Small deterministic contract tests for the shared NPC perceived-state and
+# resource-cost seam. Keep this in the normal loops before widening coverage.
+test-perception:
+	cargo test -p pystral_runtime perceived_state_is_authoritative_snapshot_for_planning
+	cargo test -p pystral_games --lib ability_task::tests
 
 test-browser: test-browser-sequential
 
-# The runtime owns a shared WASM/WebGL lifecycle and the browser tests exercise
-# that lifecycle heavily.  Serial coverage is the deterministic default;
-# callers can still opt into parallel stress with PLAYWRIGHT_WORKERS=N.
-PLAYWRIGHT_WORKERS ?= 1
+# Each Playwright worker owns an isolated browser context and page. Keep the
+# protocol-sensitive TRPG and worker-heartbeat specs serialized, while
+# allowing independent root-level UI/render specs to overlap. Two workers are
+# conservative on WebGL/WASM hosts; callers can tune this with
+# PLAYWRIGHT_WORKERS=N.
+PLAYWRIGHT_WORKERS ?= 2
+PLAYWRIGHT_PARALLEL_SPECS := $(filter-out tests/playwright/worker_heartbeat.spec.js,$(wildcard tests/playwright/*.spec.js))
 test-browser-sequential:
 	$(MAKE) --no-print-directory build-wasm
-	npx playwright test --workers=$(PLAYWRIGHT_WORKERS) \
-		--grep-invert "should show action buttons|move preview exposes accessible status and returns to the top-level menu|ability descriptors open legal targets and restore focus through the menu path|committed abilities report target count and restore the originating ability focus|Wait ends the player turn through the action protocol"
-	npx playwright test --workers=1 \
-		--grep "should show action buttons|move preview exposes accessible status and returns to the top-level menu|ability descriptors open legal targets and restore focus through the menu path|committed abilities report target count and restore the originating ability focus|Wait ends the player turn through the action protocol"
+	npx playwright test --workers=$(PLAYWRIGHT_WORKERS) $(PLAYWRIGHT_PARALLEL_SPECS)
+	npx playwright test --workers=1 tests/playwright/trpg tests/playwright/worker_heartbeat.spec.js
 
 test-static: check debug-fixture-check
 
