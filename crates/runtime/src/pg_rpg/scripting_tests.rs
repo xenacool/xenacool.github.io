@@ -47,6 +47,51 @@ fn maximum_turn_count_setter_accepts_unlimited_and_explicit_values() {
 }
 
 #[test]
+fn presentation_config_is_fluent_and_validated_at_install() {
+    let mut engine = Engine::new();
+    register_all(&mut engine);
+    let mut scope = rhai::Scope::new();
+    scope.push("history", HistoryManager::new());
+    engine
+        .eval_with_scope::<()>(
+            &mut scope,
+            r#"
+            history.spawn_entity(0, "world", hex(0, 0), []);
+            let config = new_presentation_config();
+            config.reachable_color = [0.1, 0.2, 0.3];
+            config.marker_scale = 1.5;
+            config.animation_crossfade_ms = 80;
+            config.reduced_motion_policy = "crossfade";
+            install_presentation_config(history, config);
+        "#,
+        )
+        .unwrap();
+    let history = scope.get_value::<HistoryManager>("history").unwrap();
+    assert_eq!(
+        history.current_state.entities[0]
+            .properties
+            .get("presentation_waypoint_reachable_color"),
+        Some(&PropertyValue::Color([0.1, 0.2, 0.3]))
+    );
+    assert_eq!(
+        history.current_state.entities[0]
+            .properties
+            .get("presentation_animation_crossfade_ms"),
+        Some(&PropertyValue::Float(80.0))
+    );
+
+    let result = engine.eval_with_scope::<()>(
+        &mut scope,
+        r#"
+        let config = new_presentation_config();
+        config.reachable_color = [2.0, 0.0, 0.0];
+        install_presentation_config(history, config);
+    "#,
+    );
+    assert!(result.is_err());
+}
+
+#[test]
 fn script_job_schema_can_construct_a_complete_caveman_record() {
     let mut engine = Engine::new();
     register_all(&mut engine);

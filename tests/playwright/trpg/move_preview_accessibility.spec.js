@@ -38,8 +38,9 @@ test('move preview exposes accessible status and returns to the top-level menu',
   await expect(status).toContainText('Focus a job and press Enter to open its abilities.');
 
   await confirm.click({ force: true });
-  await expect(status).toContainText(/Move preview: selected/);
-  await expect(status).toContainText(/reachable destinations/);
+  await expect(status).toContainText(
+    /Move preview: selected q -?\d+, r -?\d+, layer \d+; cost: \d+ AP; \d+ reachable destinations/,
+  );
 
   await back.click({ force: true });
   await expect(status).toContainText('Focus a job and press Enter to open its abilities.');

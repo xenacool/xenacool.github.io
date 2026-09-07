@@ -51,7 +51,8 @@ test('tactical compass anchors to the lowest tile and exposes six directions', a
 test('waypoint preview shares marker geometry and cleans up replaced paths', async ({ page }) => {
   await page.goto('/game.html');
   await page.waitForFunction(() => window.__pystralThreeAtlasProfile?.().ready);
-  await page.evaluate(() => window.dispatchEvent(new CustomEvent('pystral-render-frame', { detail: {
+  const first = await page.evaluate(() => {
+    window.dispatchEvent(new CustomEvent('pystral-render-frame', { detail: {
     entities: [], cameras: [], map: null, materials: {}, camera_pose: null,
     presentation: {
       reachable_color: [0.1, 0.2, 0.3], path_color: [0.3, 0.6, 0.9],
@@ -64,21 +65,24 @@ test('waypoint preview shares marker geometry and cleans up replaced paths', asy
       path: [{ q: 1, r: 0, layer: 0, world_position: [1, 0, 0] }],
       selected_destination: { q: 2, r: -1, layer: 0, world_position: [2, 0, -1] },
     },
-  } })));
-  const first = await page.evaluate(() => ({
-    count: window.__pystralThreeNativeWaypointMarkers.size,
-    reachable: window.__pystralThreeNativeWaypointMarkers.get('reachable:1:0:0')?.children[0]?.material?.opacity,
-  }));
+    } }));
+    return {
+      count: window.__pystralThreeNativeWaypointMarkers.size,
+      reachable: window.__pystralThreeNativeWaypointMarkers.get('reachable:1:0:0')?.children[0]?.material?.opacity,
+    };
+  });
   expect(first.count).toBe(3);
   expect(first.reachable).toBeCloseTo(0.25);
 
-  await page.evaluate(() => window.dispatchEvent(new CustomEvent('pystral-render-frame', { detail: {
+  const second = await page.evaluate(() => {
+    window.dispatchEvent(new CustomEvent('pystral-render-frame', { detail: {
     entities: [], cameras: [], map: null, materials: {}, camera_pose: null,
     waypoint_preview: {
       unit_id: 7, reachable: [], path: [],
       selected_destination: { q: 3, r: -2, layer: 0, world_position: [3, 0, -2] },
     },
-  } })));
-  const second = await page.evaluate(() => [...window.__pystralThreeNativeWaypointMarkers.keys()]);
+    } }));
+    return [...window.__pystralThreeNativeWaypointMarkers.keys()];
+  });
   expect(second).toEqual(['selected:3:-2:0']);
 });

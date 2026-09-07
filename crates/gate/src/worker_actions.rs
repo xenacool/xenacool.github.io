@@ -1,4 +1,6 @@
 use super::*;
+mod preview_navigation;
+use preview_navigation::{preview_path, select_radial_destination, select_rotated_destination};
 impl UnifiedWorker {
     pub(crate) fn handle_animation_ack(&mut self, sequence_number: u64, cx: &mut Context<'_>) {
         self.highest_animation_ack = self.highest_animation_ack.max(sequence_number);
@@ -546,47 +548,29 @@ impl UnifiedWorker {
         let Some(preview) = self.transient_state.preview.as_mut() else {
             return;
         };
-        let Some(current) = preview
-            .selected_destination
-            .as_ref()
-            .or(preview.source.as_ref())
-        else {
+        let Some(source) = preview.source.as_ref() else {
             return;
         };
-        let (dq, dr) = match direction {
-            "up" => (0, -1),
-            "down" => (0, 1),
-            "left" => (-1, 0),
-            "right" => (1, 0),
+        let Some(current) = preview.selected_destination.as_ref().or(Some(source)) else {
+            return;
+        };
+        let next = match direction {
+            "left" | "right" => select_rotated_destination(
+                source,
+                current,
+                &preview.reachable,
+                direction == "right",
+            ),
+            "up" | "down" => {
+                select_radial_destination(source, current, &preview.reachable, direction == "up")
+            }
             "layer-up" | "layer-down" => {
                 self.select_preview_layer(direction);
                 return;
             }
-            _ => return,
+            _ => None,
         };
-        let mut candidates = preview
-            .reachable
-            .iter()
-            .filter(|candidate| {
-                let delta_q = candidate.hex.x - current.hex.x;
-                let delta_r = candidate.hex.y - current.hex.y;
-                delta_q * dq + delta_r * dr > 0
-            })
-            .cloned()
-            .collect::<Vec<_>>();
-        candidates.sort_by_key(|candidate| {
-            let distance = current.hex.distance_to(candidate.hex);
-            let delta_q = candidate.hex.x - current.hex.x;
-            let delta_r = candidate.hex.y - current.hex.y;
-            (
-                distance,
-                -(delta_q * dq + delta_r * dr),
-                candidate.layer,
-                candidate.hex.x,
-                candidate.hex.y,
-            )
-        });
-        if let Some(next) = candidates.into_iter().next() {
+        if let Some(next) = next {
             preview.selected_destination = Some(next);
             preview.path = preview_path(
                 preview.source.as_ref().expect("preview source"),
@@ -652,30 +636,4 @@ impl UnifiedWorker {
             .with_loader(true)
             .spawn("/worker.js")
     }
-}
-
-fn preview_path(source: &AvailableMove, destination: Option<&AvailableMove>) -> Vec<AvailableMove> {
-    let Some(destination) = destination else {
-        return Vec::new();
-    };
-    let mut path = source
-        .hex
-        .line_to(destination.hex)
-        .into_iter()
-        .map(|hex| AvailableMove {
-            hex,
-            layer: source.layer,
-            ap_cost: 0,
-        })
-        .collect::<Vec<_>>();
-    if source.layer != destination.layer {
-        path.push(AvailableMove {
-            hex: destination.hex,
-            layer: destination.layer,
-            ap_cost: destination.ap_cost,
-        });
-    } else if let Some(last) = path.last_mut() {
-        last.ap_cost = destination.ap_cost;
-    }
-    path
 }

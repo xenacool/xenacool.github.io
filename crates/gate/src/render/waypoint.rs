@@ -28,6 +28,8 @@ pub struct RenderPresentationConfig {
     pub path_opacity: f32,
     pub selected_opacity: f32,
     pub marker_scale: f32,
+    pub animation_crossfade_ms: f32,
+    pub reduced_motion_policy: String,
 }
 
 impl Default for RenderPresentationConfig {
@@ -40,6 +42,8 @@ impl Default for RenderPresentationConfig {
             path_opacity: 0.62,
             selected_opacity: 0.95,
             marker_scale: 1.0,
+            animation_crossfade_ms: 120.0,
+            reduced_motion_policy: "snap".to_string(),
         }
     }
 }
@@ -56,6 +60,10 @@ pub fn presentation_config(state: &WorldState) -> RenderPresentationConfig {
     let float = |name, fallback| match world.properties.get(name) {
         Some(PropertyValue::Float(value)) if value.is_finite() => *value,
         _ => fallback,
+    };
+    let string = |name, fallback: &str| match world.properties.get(name) {
+        Some(PropertyValue::String(value)) => value.clone(),
+        _ => fallback.to_string(),
     };
     RenderPresentationConfig {
         reachable_color: color(
@@ -80,6 +88,15 @@ pub fn presentation_config(state: &WorldState) -> RenderPresentationConfig {
         )
         .clamp(0.0, 1.0),
         marker_scale: float("presentation_waypoint_marker_scale", defaults.marker_scale).max(0.01),
+        animation_crossfade_ms: float(
+            "presentation_animation_crossfade_ms",
+            defaults.animation_crossfade_ms,
+        )
+        .max(0.0),
+        reduced_motion_policy: string(
+            "presentation_reduced_motion_policy",
+            &defaults.reduced_motion_policy,
+        ),
     }
 }
 
