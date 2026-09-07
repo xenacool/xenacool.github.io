@@ -2,8 +2,9 @@ mod context;
 pub mod loop_handler;
 mod state;
 pub mod utils;
+mod waypoint;
 pub use crate::render::state::PlaybackState;
-
+pub use waypoint::{RenderPresentationConfig, RenderWaypointFrame, RenderWaypointPreviewFrame, presentation_config, waypoint_preview};
 use pystral_core::history::HistoryManager;
 use pystral_core::log::WorldState;
 use serde::Serialize;
@@ -13,7 +14,6 @@ use std::rc::{Rc, Weak};
 use wasm_bindgen::JsCast;
 use wasm_bindgen::prelude::*;
 use web_sys::{WebGlProgram, WebGlRenderingContext as GL, WebGlShader};
-
 use crate::render::context::RenderContext;
 use crate::render::loop_handler::LoopHandler;
 
@@ -54,7 +54,6 @@ extern "C" {
 
     #[wasm_bindgen(js_namespace = window)]
     pub fn publish_render_frame(json: &str);
-
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq)]
@@ -66,22 +65,21 @@ pub struct RenderFrame {
     pub map: Option<RenderMapFrame>,
     pub materials: BTreeMap<String, RenderMaterialFrame>,
     pub camera_pose: Option<RenderCameraPoseFrame>,
+    pub waypoint_preview: Option<RenderWaypointPreviewFrame>,
+    pub presentation: RenderPresentationConfig,
 }
-
 #[derive(Debug, Clone, Serialize, PartialEq)]
 pub struct RenderCameraPoseFrame {
     /// Column-major matrices matching glam and WebGL uniform conventions.
     pub view: [f32; 16],
     pub projection: [f32; 16],
 }
-
 #[derive(Debug, Clone, Serialize, PartialEq)]
 pub struct RenderMapFrame {
     pub orientation: String,
     pub hex_size: [f32; 2],
     pub tiles: Vec<RenderTileFrame>,
 }
-
 #[derive(Debug, Clone, Serialize, PartialEq)]
 pub struct RenderTileFrame {
     pub q: i32,
@@ -91,7 +89,6 @@ pub struct RenderTileFrame {
     pub height: f32,
     pub material: String,
 }
-
 #[derive(Debug, Clone, Serialize, PartialEq)]
 pub struct RenderMaterialFrame {
     pub color: [f32; 3],
@@ -99,7 +96,6 @@ pub struct RenderMaterialFrame {
     pub metalness: f32,
     pub emissive: f32,
 }
-
 #[derive(Debug, Clone, Serialize, PartialEq)]
 pub struct RenderIndicatorFrame {
     pub kind: String,
@@ -346,6 +342,7 @@ impl RenderFrame {
         } else {
             BTreeMap::new()
         };
+        let presentation = presentation_config(state);
         Self {
             version: 1,
             tick,
@@ -354,6 +351,8 @@ impl RenderFrame {
             map,
             materials,
             camera_pose,
+            waypoint_preview: None,
+            presentation,
         }
     }
 }

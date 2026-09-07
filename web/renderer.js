@@ -107,7 +107,9 @@ export function createNativePresentation(canvas) {
     let atlasTexture = null;
     const nativeMeshes = new Map();
     const teamMarkers = new Map();
+    const waypointMarkers = new Map();
     window.__pystralThreeNativeMarkers = teamMarkers;
+    window.__pystralThreeNativeWaypointMarkers = waypointMarkers;
     const teamMarkerGeometry = new THREE.RingGeometry(0.32, 0.40, 16);
     const facingMarkerGeometry = new THREE.ConeGeometry(0.16, 0.42, 3);
     window.__pystralThreeTeamMarkerGeometry = teamMarkerGeometry;
@@ -313,6 +315,7 @@ export function createNativePresentation(canvas) {
             delete window.__pystralThreeNativeCamera;
             delete window.__pystralThreeNativeMeshes;
             delete window.__pystralThreeNativeMarkers;
+            delete window.__pystralThreeNativeWaypointMarkers;
             delete window.__pystralThreeActorMask;
             delete window.__pystralThreeMaskProfile;
             delete window.__pystralThreeTeamMarkerGeometry;
@@ -332,6 +335,10 @@ export function createNativePresentation(canvas) {
                 mesh.material.dispose();
             });
             teamMarkers.forEach((marker) => {
+                scene.remove(marker);
+                marker.traverse((child) => child.material?.dispose());
+            });
+            waypointMarkers.forEach((marker) => {
                 scene.remove(marker);
                 marker.traverse((child) => child.material?.dispose());
             });
@@ -371,6 +378,7 @@ function applyNativeFrame(frame) {
     if (!atlas || !texture) return;
     const meshes = window.__pystralThreeNativeMeshes;
     const teamMarkers = window.__pystralThreeNativeMarkers;
+    const waypointMarkers = window.__pystralThreeNativeWaypointMarkers;
     const teamMarkerGeometry = window.__pystralThreeTeamMarkerGeometry;
     const facingMarkerGeometry = window.__pystralThreeFacingMarkerGeometry;
     const actorMask = window.__pystralThreeActorMask;
@@ -529,6 +537,57 @@ function applyNativeFrame(frame) {
         seenMarkers.add(id);
     });
     teamMarkers.forEach((marker, id) => { if (!seenMarkers.has(id)) { scene.remove(marker); marker.traverse((child) => child.material?.dispose()); teamMarkers.delete(id); } });
+    const seenWaypointMarkers = new Set();
+    const presentation = frame.presentation || {};
+    const syncWaypoint = (kind, waypoint, color, opacity, order) => {
+        if (!waypoint?.world_position) return;
+        const key = `${kind}:${waypoint.q}:${waypoint.r}:${waypoint.layer}`;
+        let marker = waypointMarkers.get(key);
+        if (!marker) {
+            marker = new THREE.Group();
+            const ring = new THREE.Mesh(teamMarkerGeometry, new THREE.MeshBasicMaterial({
+                color: new THREE.Color(...color), transparent: true, opacity,
+                blending: THREE.AdditiveBlending, depthTest: false, depthWrite: false,
+                side: THREE.DoubleSide,
+            }));
+            ring.rotation.x = -Math.PI / 2;
+            marker.add(ring);
+            scene.add(marker);
+            waypointMarkers.set(key, marker);
+        }
+        marker.position.fromArray(waypoint.world_position);
+        marker.position.y += 0.12;
+        marker.scale.setScalar((Number(presentation.marker_scale) || 1) * (kind === 'selected' ? 1.25 : 0.9));
+        marker.traverse((child) => {
+            if (child.material) {
+                child.material.color.setRGB(...color);
+                child.material.opacity = opacity;
+            }
+        });
+        marker.renderOrder = 900000 + order;
+        seenWaypointMarkers.add(key);
+    };
+    const preview = frame.waypoint_preview;
+    (preview?.reachable || []).forEach((waypoint, index) => syncWaypoint(
+        'reachable', waypoint, presentation.reachable_color || [0.25, 0.65, 1],
+        Number(presentation.reachable_opacity ?? 0.28), index,
+    ));
+    (preview?.path || []).forEach((waypoint, index) => syncWaypoint(
+        'path', waypoint, presentation.path_color || [0.35, 0.9, 1],
+        Number(presentation.path_opacity ?? 0.62), 10000 + index,
+    ));
+    if (preview?.selected_destination) syncWaypoint(
+        'selected', preview.selected_destination,
+        presentation.selected_color || [1, 0.9, 0.25],
+        Number(presentation.selected_opacity ?? 0.95), 20000,
+    );
+    waypointMarkers.forEach((marker, key) => {
+        if (!seenWaypointMarkers.has(key)) {
+            scene.remove(marker);
+            marker.traverse((child) => child.material?.dispose());
+            waypointMarkers.delete(key);
+        }
+    });
     meshes.forEach((mesh, id) => {
         if (!seen.has(id)) {
             scene.remove(mesh);

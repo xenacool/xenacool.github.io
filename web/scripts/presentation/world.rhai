@@ -56,6 +56,18 @@ history.set(world_id, "cam_offset_y", 0.0);
 history.set(world_id, "cam_offset_z", 0.0);
 history.set(world_id, "material", "grass");
 
+// Global presentation singleton for the current campaign runtime. These
+// values are authored in Rhai so projects can tune tactical readability
+// without changing the Three.js compositor. Future Rhai campaign work should
+// allow a level-local override layered over this global configuration.
+history.set(world_id, "presentation_waypoint_reachable_color", [0.25, 0.65, 1.0]);
+history.set(world_id, "presentation_waypoint_path_color", [0.35, 0.9, 1.0]);
+history.set(world_id, "presentation_waypoint_selected_color", [1.0, 0.9, 0.25]);
+history.set(world_id, "presentation_waypoint_reachable_opacity", 0.28);
+history.set(world_id, "presentation_waypoint_path_opacity", 0.62);
+history.set(world_id, "presentation_waypoint_selected_opacity", 0.95);
+history.set(world_id, "presentation_waypoint_marker_scale", 1.0);
+
 // Visible procedural rock props. Their geometry comes from the Rhai-defined
 // Rock spritestack in assets/primitives.rhai.
 let rock_hexes = [

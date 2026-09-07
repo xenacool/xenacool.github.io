@@ -127,13 +127,18 @@ impl LoopHandler {
                 view: view.to_cols_array(),
                 projection: projection.to_cols_array(),
             });
-        let frame = RenderFrame::from_world_state_with_camera_positions_and_animation(
+        let mut frame = RenderFrame::from_world_state_with_camera_positions_and_animation(
             state,
             self.render_tick,
             camera_pose,
             positions,
             animation_times,
         );
+        frame.waypoint_preview = self
+            .transient_state
+            .preview
+            .as_ref()
+            .map(|preview| crate::render::waypoint_preview(state, preview));
         self.render_tick = self.render_tick.saturating_add(1);
         if let Ok(json) = serde_json::to_string(&frame) {
             crate::render::publish_render_frame(&json);
