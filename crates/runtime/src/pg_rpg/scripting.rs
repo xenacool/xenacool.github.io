@@ -358,6 +358,7 @@ fn register_physics(engine: &mut Engine) {
 fn register_history_methods(engine: &mut Engine) {
     // Register HistoryManager methods
     engine.register_type_with_name::<HistoryManager>("History");
+    crate::pg_rpg::presentation::register_rhai(engine);
     engine
         .register_type_with_name::<TransitionConfig>("Transition")
         .register_fn(

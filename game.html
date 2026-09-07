@@ -1107,6 +1107,7 @@
         if (!window.previewActive && !state.action_pending && !state.wait_pending) {
             window.previewLocation = '';
             window.previewReachableCount = 0;
+            window.previewApCost = 0;
         }
         if (!actions) {
             menu.style.display = state.game_completed ? 'block' : 'none';
@@ -1195,14 +1196,21 @@
         }
 
         const preview = state.preview;
+        const formatMovePreview = (location, apCost, detail) =>
+            `Move preview: selected ${location}; cost: ${apCost} AP; ${detail}`;
         if (preview) {
             const selected = preview.selected_destination || preview.source;
             const location = selected
                 ? `q ${selected.hex.x}, r ${selected.hex.y}, layer ${selected.layer}`
                 : 'source cell';
-            const previewStatus = `Move preview: selected ${location}; ${preview.reachable.length} reachable destinations. Use directional controls to change selection.`;
+            const previewStatus = formatMovePreview(
+                location,
+                selected?.ap_cost ?? 0,
+                `${preview.reachable.length} reachable destinations. Use directional controls to change selection.`,
+            );
             window.previewLocation = location;
             window.previewReachableCount = preview.reachable.length;
+            window.previewApCost = selected?.ap_cost ?? 0;
             status.textContent = window.pendingActionFeedback
                 ? `${window.pendingActionFeedback} ${previewStatus}`
                 : previewStatus;
@@ -1214,7 +1222,7 @@
             status.textContent = targetStatus;
         } else {
             const refreshStatus = window.previewLocation
-                ? ` Move preview: selected ${window.previewLocation}; reachability refreshed.`
+                ? ` ${formatMovePreview(window.previewLocation, window.previewApCost || 0, 'reachability refreshed.')}`
                 : '';
                 status.textContent = state.wait_pending
                 ? 'End Turn committed; awaiting action acknowledgment.'
@@ -1249,7 +1257,7 @@
         window.pendingActionFeedback = normalized;
         const status = document.getElementById('action-menu-status');
         const fallback = window.previewLocation
-            ? ` Move preview: selected ${window.previewLocation}; ${window.previewReachableCount} reachable destinations.`
+            ? ` Move preview: selected ${window.previewLocation}; cost: ${window.previewApCost || 0} AP; ${window.previewReachableCount} reachable destinations.`
             : ' Choose primary job, secondary job, Move, or Wait.';
         const currentPreview = status.textContent.includes('Move preview: selected')
             ? ` ${status.textContent}`
