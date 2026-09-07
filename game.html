@@ -592,7 +592,7 @@
 <div id="diagnostics-stack" aria-label="Diagnostics surfaces"></div>
 <section id="action-log-panel" class="hud-context-panel hud-scroll-region" aria-label="Action log" style="position: absolute; left: 16px; bottom: 16px; width: min(420px, calc(100vw - 32px)); max-height: 24vh; padding: 8px; box-sizing: border-box; border: 1px solid rgba(255,255,255,0.35); border-radius: 6px; background: rgba(8, 14, 28, 0.86); color: white; font: 12px monospace;">
     <strong>Action log</strong>
-    <ol id="action-log" style="margin: 5px 0 0; padding-left: 22px;"></ol>
+    <ol id="action-log" style="margin: 5px 0 0; padding-left: 22px; overflow-y: auto; max-height: 20vh;"></ol>
 </section>
 <section id="diagnostics-panel" aria-label="Diagnostics" style="position: absolute; top: 10px; right: 10px; width: 340px; max-height: 70vh; overflow-y: auto; background: rgba(0,0,0,0.78); font-size: 11px; padding: 8px; color: #ffcc00; font-family: monospace; z-index: 110;">
     <strong>UI log</strong>
@@ -952,21 +952,20 @@
             if (event.Log) return event.Log.msg;
             if (event.TurnStarted) return `Unit ${event.TurnStarted.unit_id} turn started`;
             if (event.TurnCompleted) return `Unit ${event.TurnCompleted.unit_id} turn completed`;
-            if (event.DespawnEntity) return `Unit ${event.DespawnEntity.id} removed from the battlefield`;
             if (event.GameCompleted) {
                 const outcome = event.GameCompleted.outcome || {};
                 const name = typeof outcome === 'string' ? outcome : Object.keys(outcome)[0] || 'Draw';
                 const team = outcome.winning_team ?? event.GameCompleted.winning_team;
                 return `${name}${team ? ` — Team ${team} wins` : ''}`;
             }
-            if (event.MoveSprite) return `Unit ${event.MoveSprite.id} moved`;
             return null;
         };
-        log.replaceChildren(...events.map(format).filter(Boolean).slice(-32).map((message) => {
+        log.replaceChildren(...events.map(format).filter(Boolean).map((message) => {
             const item = document.createElement('li');
             item.textContent = message;
             return item;
         }));
+        log.scrollTop = log.scrollHeight;
     };
 
     window.__pystralHistoryExportSource = null;

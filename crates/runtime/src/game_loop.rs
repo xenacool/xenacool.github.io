@@ -94,6 +94,12 @@ impl Runtime {
             return RuntimeResponse::Error("Simulation not started".to_string());
         };
         let simulation_before_request = sim.clone();
+        let ability_name = sim
+            .state
+            .ability_registry
+            .get(&pystral_games::AbilityId(ability_id as u32))
+            .map(|definition| definition.name.clone())
+            .unwrap_or_else(|| format!("ability {ability_id}"));
         let projectile_route = match target {
             RuntimeAbilityTarget::Unit { unit_id: target_id } => sim
                 .state
@@ -200,10 +206,15 @@ impl Runtime {
             });
         }
         history.push_and_apply(Event::Log {
-            msg: format!(
-                "Unit {unit_id} used ability {ability_id} on {} target(s)",
-                affected.len()
-            ),
+            msg: match target {
+                RuntimeAbilityTarget::Unit { unit_id: target_id } => {
+                    format!("Unit {unit_id} used {ability_name} on unit {target_id}")
+                }
+                RuntimeAbilityTarget::Cell { .. } => format!(
+                    "Unit {unit_id} used {ability_name} on {} target(s)",
+                    affected.len()
+                ),
+            },
         });
         for event in projectile_events {
             history.push_and_apply(event);
@@ -331,6 +342,14 @@ impl Runtime {
             return RuntimeResponse::Error("Simulation not started".into());
         };
         let start_idx = history.log.len();
+        history.push_and_apply(Event::Log {
+            msg: format!(
+                "Unit {unit_id} moved to q {}, r {}, layer {}",
+                validated.destination.hex.x,
+                validated.destination.hex.y,
+                validated.destination.layer
+            ),
+        });
         history.push_and_apply(Event::MoveSprite {
             id: validated.agent.0 as u64,
             destination: validated.destination.hex,
