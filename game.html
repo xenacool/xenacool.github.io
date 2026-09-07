@@ -1303,7 +1303,7 @@
     window.__pystralWorkerLatestInputSeq = 0;
     window.__pystralWorkerStatus = 'Unknown';
     const formatFpsBucket = (bucket) => bucket.frames
-        ? `${bucket.fps.toFixed(1)} fps (${bucket.frames}f, ${bucket.averageRenderMs.toFixed(2)}ms render)`
+        ? `${bucket.fps.toFixed(1)} fps (${bucket.frames}f, ${bucket.averageRenderMs.toFixed(2)}ms render, p95 ${bucket.p95FrameIntervalMs.toFixed(1)}ms, ${bucket.droppedFrames} dropped)`
         : 'no samples';
     window.addEventListener('pystral-three-fps', (event) => {
         const fps = event.detail;

@@ -140,6 +140,8 @@ export function createNativePresentation(canvas) {
         totalRenderMs: 0,
         lastFrameAt: 0,
         lastFrameIntervalMs: 0,
+        droppedFrames: 0,
+        frameIntervalsMs: [],
         frameSamples: 0,
         positionSamples: 0,
         nativeAtlasReady: false,
@@ -155,6 +157,7 @@ export function createNativePresentation(canvas) {
     let cameraMotionPending = false;
     let cameraMotionUntil = 0;
     let lastTelemetryEventAt = 0;
+    let lastFpsBucketKey = null;
     window.__pystralThreeProfile = () => ({ ...profile });
     window.__pystralThreeFpsProfile = () => snapshotFps(profile);
     window.__pystralThreeAtlasProfile = () => ({
@@ -260,13 +263,6 @@ export function createNativePresentation(canvas) {
         const rotating = cameraMotionPending || frameStart < cameraMotionUntil;
         cameraMotionPending = false;
         const phase = phaseForStatus(window.__pystralWorkerStatus);
-        if (phase) {
-            const bucket = profile.fps[phase][rotating ? 'rotating' : 'static'];
-            bucket.frames += 1;
-            if (bucket.lastFrameAt > 0) bucket.elapsedMs += frameStart - bucket.lastFrameAt;
-            bucket.renderMs += performance.now() - frameStart;
-            bucket.lastFrameAt = frameStart;
-        }
         renderer.render(scene, camera);
         if (actorMask) {
             renderer.render(actorMask.quadScene, actorMask.quadCamera);
@@ -286,8 +282,25 @@ export function createNativePresentation(canvas) {
                 nativeGpu: profile.nativeGpu,
             };
         }
+        const renderMs = performance.now() - frameStart;
+        if (phase) {
+            const motion = rotating ? 'rotating' : 'static';
+            const bucketKey = `${phase}/${motion}`;
+            const bucket = profile.fps[phase][motion];
+            if (bucketKey !== lastFpsBucketKey) bucket.lastFrameAt = 0;
+            recordFpsSample(bucket, frameStart, renderMs, profile.targetFps);
+            lastFpsBucketKey = bucketKey;
+        }
+        if (frameIntervalMs > 0) {
+            const expectedMs = 1000 / profile.targetFps;
+            profile.frameIntervalsMs.push(frameIntervalMs);
+            if (profile.frameIntervalsMs.length > 240) profile.frameIntervalsMs.shift();
+            if (frameIntervalMs > expectedMs * 1.5) {
+                profile.droppedFrames += Math.max(1, Math.round(frameIntervalMs / expectedMs) - 1);
+            }
+        }
         profile.frames += 1;
-        profile.totalRenderMs += performance.now() - frameStart;
+        profile.totalRenderMs += renderMs;
         if (frameStart - lastTelemetryEventAt >= 500) {
             lastTelemetryEventAt = frameStart;
             window.dispatchEvent(new CustomEvent('pystral-three-fps', {
@@ -747,7 +760,32 @@ function compassLabelCanvas(label) {
 }
 
 function createFpsBucket() {
-    return { frames: 0, elapsedMs: 0, renderMs: 0, lastFrameAt: 0 };
+    return {
+        frames: 0,
+        elapsedMs: 0,
+        renderMs: 0,
+        lastFrameAt: 0,
+        maxFrameIntervalMs: 0,
+        droppedFrames: 0,
+        frameIntervalsMs: [],
+    };
+}
+
+function recordFpsSample(bucket, frameStart, renderMs, targetFps) {
+    bucket.frames += 1;
+    if (bucket.lastFrameAt > 0) {
+        const intervalMs = frameStart - bucket.lastFrameAt;
+        const expectedMs = 1000 / targetFps;
+        bucket.elapsedMs += intervalMs;
+        bucket.maxFrameIntervalMs = Math.max(bucket.maxFrameIntervalMs, intervalMs);
+        bucket.frameIntervalsMs.push(intervalMs);
+        if (bucket.frameIntervalsMs.length > 120) bucket.frameIntervalsMs.shift();
+        if (intervalMs > expectedMs * 1.5) {
+            bucket.droppedFrames += Math.max(1, Math.round(intervalMs / expectedMs) - 1);
+        }
+    }
+    bucket.renderMs += renderMs;
+    bucket.lastFrameAt = frameStart;
 }
 
 function phaseForStatus(status) {
@@ -777,9 +815,18 @@ function snapshotFps(profile) {
                 elapsedMs: bucket.elapsedMs,
                 fps: bucket.elapsedMs > 0 ? bucket.frames * 1000 / bucket.elapsedMs : 0,
                 averageRenderMs: bucket.frames > 0 ? bucket.renderMs / bucket.frames : 0,
+                p95FrameIntervalMs: percentile(bucket.frameIntervalsMs, 0.95),
+                maxFrameIntervalMs: bucket.maxFrameIntervalMs,
+                droppedFrames: bucket.droppedFrames,
                 lastFrameAt: bucket.lastFrameAt,
             };
         }
     }
     return result;
+}
+
+function percentile(values, fraction) {
+    if (!values.length) return 0;
+    const sorted = [...values].sort((a, b) => a - b);
+    return sorted[Math.min(sorted.length - 1, Math.ceil(sorted.length * fraction) - 1)];
 }

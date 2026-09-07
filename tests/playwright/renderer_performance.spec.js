@@ -231,7 +231,15 @@ test.describe('Three.js compositor performance contract', () => {
       for (const motion of ['static', 'rotating']) {
         expect(fps[phase][motion].frames, `${phase}/${motion}`).toBeGreaterThan(0);
         expect(fps[phase][motion].fps, `${phase}/${motion}`).toBeGreaterThan(0);
+        expect(fps[phase][motion].p95FrameIntervalMs, `${phase}/${motion} p95`)
+          .toBeGreaterThan(0);
+        expect(fps[phase][motion].maxFrameIntervalMs, `${phase}/${motion} max`)
+          .toBeGreaterThanOrEqual(fps[phase][motion].p95FrameIntervalMs);
+        expect(fps[phase][motion].droppedFrames, `${phase}/${motion} dropped`)
+          .toBeGreaterThanOrEqual(0);
       }
     }
+    expect(result.profile.frameIntervalsMs.length).toBeGreaterThan(0);
+    expect(result.profile.droppedFrames).toBeGreaterThanOrEqual(0);
   });
 });
