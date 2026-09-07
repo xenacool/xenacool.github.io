@@ -3,6 +3,7 @@
 // visible WebGL2 canvas.
 import * as THREE from './vendor/three.module.min.js';
 import { createMaskResources } from './actor_mask.js';
+import { samplePose } from './sprite_actor.js';
 
 const SPRITESTACK_Y_AXIS = new THREE.Vector3(0, 1, 0);
 const SPRITESTACK_X_AXIS = new THREE.Vector3(1, 0, 0);
@@ -108,6 +109,8 @@ export function createNativePresentation(canvas) {
     const nativeMeshes = new Map();
     const teamMarkers = new Map();
     const waypointMarkers = new Map();
+    let poseCatalog = new Map();
+    window.__pystralThreePoseProfile = () => ({ ready: poseCatalog.size > 0 });
     window.__pystralThreeNativeMarkers = teamMarkers;
     window.__pystralThreeNativeWaypointMarkers = waypointMarkers;
     const teamMarkerGeometry = new THREE.RingGeometry(0.32, 0.40, 16);
@@ -318,11 +321,16 @@ export function createNativePresentation(canvas) {
             // deliberately does not replay or mutate the authoritative frame.
             window.__pystralThreeActorCatalog = catalog instanceof Map ? catalog : new Map();
         },
+        setPoseCatalog(catalog) {
+            poseCatalog = catalog instanceof Map ? catalog : new Map();
+            if (window.__pystralThreeFrame) applyNativeFrame(window.__pystralThreeFrame);
+        },
         dispose() {
             active = false;
             window.removeEventListener('pystral-render-frame', frameListener);
             delete window.__pystralThreeMarkCameraMotion;
             delete window.__pystralThreeAtlasProfile;
+            delete window.__pystralThreePoseProfile;
             delete window.__pystralThreeResolveAtlasRegion;
             delete window.__pystralThreeNativeScene;
             delete window.__pystralThreeNativeCamera;
@@ -555,6 +563,9 @@ function applyNativeFrame(frame) {
             mesh.userData.animationState = entity.animation_state || 'idle';
             mesh.userData.animationTimeMs = Number(entity.animation_time_ms || 0);
             mesh.userData.animationFrame = entity.animation_frame ?? null;
+            mesh.userData.poseSample = rig && animationClip
+                ? samplePose(poseCatalog, rig, animationClip, entity.animation_time_ms)
+                : null;
             mesh.userData.entityKind = entity.kind;
             if (actorMask) syncMaskMesh(actorMask, mesh, key, texture);
             seen.add(key);

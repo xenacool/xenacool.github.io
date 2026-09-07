@@ -5,5 +5,7 @@ test('render frame carries explicit pose identity without state inference', asyn
   const source = await page.evaluate(async () => (await fetch('/web/renderer.js')).text());
   expect(source).toContain('entity.rig || null');
   expect(source).toContain('entity.animation_clip || null');
+  expect(source).toContain('samplePose(poseCatalog, rig, animationClip, entity.animation_time_ms)');
+  expect(source).toContain('setPoseCatalog(catalog)');
   expect(source).not.toContain('poseClip = entity.animation_state');
 });
