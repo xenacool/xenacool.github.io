@@ -29,6 +29,10 @@ pub struct LoopHandler {
     pub last_action_rejection: Option<(u64, ActionError)>,
     manual_history_index: Option<usize>,
     render_tick: u64,
+    profile_last_tick_at: f64,
+    profile_samples: u64,
+    profile_total_ms: f64,
+    profile_max_ms: f64,
 }
 
 impl LoopHandler {
@@ -49,10 +53,19 @@ impl LoopHandler {
             last_action_rejection: None,
             manual_history_index: None,
             render_tick: 0,
+            profile_last_tick_at: 0.0,
+            profile_samples: 0,
+            profile_total_ms: 0.0,
+            profile_max_ms: 0.0,
         }
     }
 
     pub fn tick(&mut self) {
+        let tick_started_at = web_sys::window()
+            .expect("No global window found")
+            .performance()
+            .expect("Performance object not found")
+            .now();
         let now = web_sys::window()
             .expect("No global window found")
             .performance()
@@ -113,6 +126,37 @@ impl LoopHandler {
 
         // Sync Debug Panels
         self.sync_debug_panels(&state);
+        self.publish_profile(tick_started_at);
+    }
+
+    fn publish_profile(&mut self, tick_started_at: f64) {
+        let now = web_sys::window()
+            .expect("No global window found")
+            .performance()
+            .expect("Performance object not found")
+            .now();
+        let duration_ms = now - tick_started_at;
+        self.profile_samples += 1;
+        self.profile_total_ms += duration_ms;
+        self.profile_max_ms = self.profile_max_ms.max(duration_ms);
+        let profile = serde_json::json!({
+            "tick": self.render_tick,
+            "samples": self.profile_samples,
+            "tick_ms": duration_ms,
+            "average_tick_ms": self.profile_total_ms / self.profile_samples as f64,
+            "max_tick_ms": self.profile_max_ms,
+            "interval_ms": if self.profile_last_tick_at > 0.0 {
+                now - self.profile_last_tick_at
+            } else {
+                0.0
+            },
+        });
+        self.profile_last_tick_at = now;
+        if self.profile_samples == 1 || self.profile_samples.is_multiple_of(30) {
+            if let Ok(json) = serde_json::to_string(&profile) {
+                crate::render::publish_render_worker_profile(&json);
+            }
+        }
     }
 
     fn publish_render_frame(

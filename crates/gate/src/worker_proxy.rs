@@ -110,11 +110,16 @@ impl UnifiedWorker {
             continuation,
             unit_states,
             snapshot_fingerprint,
+            timing,
             ..
         } = envelope.msg;
         self.push_debug_trace(format!(
             "unified worker received simulation response request seq {} continuation {:?}",
             response_request_seq, continuation
+        ));
+        self.push_debug_trace(format!(
+            "simulation profile request_ms={:.3} runtime_ms={:.3}",
+            timing.request_ms, timing.runtime_ms
         ));
         self.continuation = continuation;
         self.unit_states = unit_states;

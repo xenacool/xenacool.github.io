@@ -227,6 +227,9 @@ fn start_worker_plumbing(
             }
             match output {
                 SimulationOutput::Response(response) => {
+                    if let Ok(profile) = serde_json::to_string(&response.msg.timing) {
+                        publish_simulation_profile(&profile);
+                    }
                     record_debug_trace(format!(
                         "simulation bridge received response request seq {} continuation {:?}",
                         response.msg.request_seq, response.msg.continuation
@@ -410,6 +413,9 @@ extern "C" {
 
     #[wasm_bindgen(js_namespace = window)]
     fn update_worker_heartbeat(latest_seq: u64, latest_input_seq: u64, status: String);
+
+    #[wasm_bindgen(js_namespace = window)]
+    fn publish_simulation_profile(json: &str);
 
     #[wasm_bindgen(js_namespace = window)]
     fn set_loading_state(state: &str, message: &str, progress: u32);

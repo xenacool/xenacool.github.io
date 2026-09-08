@@ -12,6 +12,7 @@ test.describe('Three.js compositor performance contract', () => {
     await page.waitForFunction(() => window.app !== undefined, { timeout: 15000 });
     await page.waitForFunction(() => document.body.dataset.renderer === 'native', { timeout: 15000 });
     await page.waitForFunction(() => window.__pystralThreeAtlasProfile?.().ready, { timeout: 15000 });
+    await page.waitForFunction(() => window.__pystralRenderWorkerProfile?.samples > 0, { timeout: 15000 });
     await page.waitForTimeout(2000);
 
     const result = await page.evaluate(() => {
@@ -32,6 +33,9 @@ test.describe('Three.js compositor performance contract', () => {
     expect(result.profile.totalRenderMs / result.profile.frames).toBeLessThan(20);
     expect(result.profile.nativeAtlasReady).toBe(true);
     expect(result.profile.nativeAtlasRegions).toBeGreaterThan(0);
+    const renderWorkerProfile = await page.evaluate(() => window.__pystralRenderWorkerProfile);
+    expect(renderWorkerProfile.samples).toBeGreaterThan(0);
+    expect(renderWorkerProfile.average_tick_ms).toBeGreaterThanOrEqual(0);
     const atlasRegion = await page.evaluate(() =>
       window.__pystralThreeResolveAtlasRegion?.('FrostGolem', 0));
     expect(atlasRegion).toMatchObject({ width: 32, height: 32 });

@@ -1286,6 +1286,22 @@
     // is intentionally separate from the transport watermark, which only
     // acknowledges main->worker input delivery.
     window.__pystralWorkerLatestSeq = 0;
+    window.__pystralSimulationProfile = null;
+    window.publish_simulation_profile = (json) => {
+        try {
+            window.__pystralSimulationProfile = JSON.parse(json);
+        } catch (_) {
+            window.__pystralSimulationProfile = null;
+        }
+    };
+    window.__pystralRenderWorkerProfile = null;
+    window.publish_render_worker_profile = (json) => {
+        try {
+            window.__pystralRenderWorkerProfile = JSON.parse(json);
+        } catch (_) {
+            window.__pystralRenderWorkerProfile = null;
+        }
+    };
     window.update_worker_heartbeat = (latestSeq, latestInputSeq, status) => {
         const seq = Number(latestSeq);
         window.__pystralWorkerLatestSeq = Math.max(window.__pystralWorkerLatestSeq, seq);

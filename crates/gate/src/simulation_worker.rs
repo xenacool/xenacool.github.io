@@ -32,6 +32,18 @@ pub struct SimulationResponse {
     pub continuation: RuntimeContinuation,
     pub unit_states: Vec<UnitStateInfo>,
     pub snapshot_fingerprint: Option<u64>,
+    pub timing: SimulationTiming,
+}
+
+#[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
+pub struct SimulationTiming {
+    pub request_ms: f64,
+    pub runtime_ms: f64,
+    pub response_ms: f64,
+}
+
+fn now_ms() -> f64 {
+    js_sys::Date::now()
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
@@ -139,7 +151,9 @@ impl Future for SimulationWorker {
                     self.active_request_seq = Some(envelope.seq);
                     self.push_heartbeat();
                     let _ = self.flush_outbox(cx);
+                    let request_started_at = now_ms();
                     let (response, logs) = self.runtime.process_request(envelope.msg);
+                    let runtime_ms = now_ms() - request_started_at;
                     self.active_request_seq = None;
                     let continuation = self.runtime.continuation();
                     let unit_states = self.runtime.unit_states();
@@ -151,6 +165,11 @@ impl Future for SimulationWorker {
                         continuation,
                         unit_states,
                         snapshot_fingerprint,
+                        timing: SimulationTiming {
+                            request_ms: now_ms() - request_started_at,
+                            runtime_ms,
+                            response_ms: 0.0,
+                        },
                     };
                     self.cached_response = Some(response.clone());
                     self.queue_response(envelope.seq, response);
