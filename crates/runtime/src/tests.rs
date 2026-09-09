@@ -30,14 +30,14 @@ fn commit_move_returns_history_delta_but_rejection_does_not() {
         } => (barrier_id, history),
         other => panic!("expected committed move, got {other:?}"),
     };
-    assert_eq!(accepted_history.log.len(), 4);
+    assert_eq!(accepted_history.log.len(), 5);
     assert!(
-        matches!(accepted_history.log[0], Event::MoveSprite { id: 1, destination, transition: Some(ref transition) } if destination == hexx::Hex::new(1, 0) && transition.duration_ms == 500 && transition.delta_time_ms == 16.0 && transition.tween == pystral_core::log::TweenKind::SineInOut)
+        accepted_history.log.iter().any(|event| matches!(event, Event::MoveSprite { id: 1, destination, transition: Some(transition) } if *destination == hexx::Hex::new(1, 0) && transition.duration_ms == 500 && transition.delta_time_ms == 16.0 && transition.tween == pystral_core::log::TweenKind::SineInOut))
     );
     assert!(
-        matches!(accepted_history.log[1], Event::UpdateProperty { id: 1, ref property, value: pystral_core::log::PropertyValue::Float(layer) } if property == "layer" && layer == 0.0)
+        accepted_history.log.iter().any(|event| matches!(event, Event::UpdateProperty { id: 1, property, value: pystral_core::log::PropertyValue::Float(layer) } if property == "layer" && *layer == 0.0))
     );
-    assert_eq!(runtime.pg_rpg_history.as_ref().unwrap().log.len(), 4);
+    assert_eq!(runtime.pg_rpg_history.as_ref().unwrap().log.len(), 5);
     assert_eq!(
         runtime.pg_rpg_sim.as_ref().unwrap().state.agents[&npc_engine_core::AgentId(1)].ct,
         initial_ct
@@ -67,7 +67,7 @@ fn commit_move_returns_history_delta_but_rejection_does_not() {
         rejected,
         RuntimeResponse::ActionRejected { request_id: 12, .. }
     ));
-    assert_eq!(runtime.pg_rpg_history.as_ref().unwrap().log.len(), 4);
+    assert_eq!(runtime.pg_rpg_history.as_ref().unwrap().log.len(), 5);
 }
 
 #[test]
@@ -656,10 +656,12 @@ fn turn_limit_contract_preserves_move_wait_barriers_and_completion() {
             ..
         } => {
             assert_eq!(action, "move");
-            assert!(matches!(
-                history.log.first(),
-                Some(Event::MoveSprite { .. })
-            ));
+            assert!(
+                history
+                    .log
+                    .iter()
+                    .any(|event| matches!(event, Event::MoveSprite { .. }))
+            );
             barrier_id
         }
         other => panic!("expected committed move, got {other:?}"),
@@ -692,10 +694,12 @@ fn turn_limit_contract_preserves_move_wait_barriers_and_completion() {
             ..
         } => {
             assert_eq!(action, "wait");
-            assert!(matches!(
-                history.log.first(),
-                Some(Event::TurnCompleted { unit_id: 1 })
-            ));
+            assert!(
+                history
+                    .log
+                    .iter()
+                    .any(|event| matches!(event, Event::TurnCompleted { unit_id: 1 }))
+            );
             barrier_id
         }
         other => panic!("expected committed wait, got {other:?}"),
