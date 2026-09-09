@@ -1,6 +1,7 @@
 const { test, expect } = require('@playwright/test');
 const {
   loadWithFixture,
+  protocolClock,
   sendAcceptedAction,
   waitForAnimationBarrier,
   waitForPlayerBoundary,
@@ -94,8 +95,9 @@ async function playFireball(page) {
   }
   const targetKey = await target.getAttribute('data-menu-key');
   await sendAccepted(page, `menu-target:${targetKey.split(':')[1]}`);
+  const beforeCommit = await protocolClock(page);
   await sendAccepted(page, 'confirm');
-  await waitForAnimationBarrier(page);
+  await waitForAnimationBarrier(page, { after: beforeCommit });
   return { played: true };
 }
 
