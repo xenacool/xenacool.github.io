@@ -12,7 +12,6 @@ use crate::{
 use futures::{SinkExt, StreamExt};
 use gloo_worker::reactor::{Reactor, ReactorScope};
 use pystral_core::history::HistoryManager;
-use pystral_core::log::AvailableMove;
 use pystral_runtime::{RuntimeContinuation, RuntimeRequest};
 use std::collections::VecDeque;
 use std::future::Future;
@@ -83,6 +82,10 @@ pub struct UnifiedWorker {
     simulation_retry_heartbeats: u8,
     simulation_retry_attempts: u8,
     simulation_steps: u32,
+    telemetry_sample: u64,
+    transport_drops: u64,
+    input_count: u64,
+    outbox_max_depth: usize,
 }
 
 fn transient_state_from_history(
@@ -179,6 +182,10 @@ impl Reactor for UnifiedWorker {
             simulation_retry_heartbeats: 0,
             simulation_retry_attempts: 0,
             simulation_steps: 0,
+            telemetry_sample: 0,
+            transport_drops: 0,
+            input_count: 0,
+            outbox_max_depth: 0,
         }
     }
 }
@@ -197,6 +204,7 @@ impl Future for UnifiedWorker {
                     let _ = self.scope.start_send_unpin(msg);
                 }
                 Poll::Ready(Err(_)) => {
+                    self.transport_drops += 1;
                     self.outbox.pop_front();
                 }
                 Poll::Pending => {
@@ -213,6 +221,7 @@ impl Future for UnifiedWorker {
                 break;
             };
             processed_inputs += 1;
+            self.input_count += 1;
             received_any = true;
             match input {
                 ReliableInput::Msg(envelope) => {
@@ -307,6 +316,7 @@ impl Future for UnifiedWorker {
                     let ack_seq = self.last_received_seq;
                     self.outbox.push_back(ReliableOutput::Watermark(ack_seq));
                     self.push_heartbeat();
+                    self.publish_telemetry_if_due();
                 }
                 ReliableInput::Watermark(_seq) => {
                     // Handle ACK
@@ -343,6 +353,30 @@ impl UnifiedWorker {
             }));
     }
 
+    fn publish_telemetry_if_due(&mut self) {
+        self.telemetry_sample += 1;
+        if !self.telemetry_sample.is_multiple_of(30) {
+            return;
+        }
+        self.outbox_max_depth = self.outbox_max_depth.max(self.outbox.len());
+        self.outbox
+            .push_back(ReliableOutput::Msg(Box::new(Envelope {
+                seq: self.next_output_seq,
+                msg: WorkerOutput::Telemetry(Box::new(crate::WorkerTelemetry {
+                    worker: "unified".to_string(),
+                    sample: self.telemetry_sample,
+                    outbox_depth: self.outbox.len(),
+                    outbox_max_depth: self.outbox_max_depth,
+                    transport_drops: self.transport_drops,
+                    input_count: self.input_count,
+                    last_input_seq: self.last_received_seq,
+                    last_output_seq: self.next_output_seq.saturating_sub(1),
+                    active_request_seq: self.pending_simulation.as_ref().map(|(seq, _)| *seq),
+                })),
+            })));
+        self.next_output_seq += 1;
+    }
+
     fn status(&self) -> WorkerStatus {
         let waiting_for_simulation_ack = self
             .pending_simulation
@@ -364,6 +398,7 @@ impl UnifiedWorker {
                     let _ = self.scope.start_send_unpin(msg);
                 }
                 Poll::Ready(Err(_)) => {
+                    self.transport_drops += 1;
                     self.outbox.pop_front();
                 }
                 Poll::Pending => break,

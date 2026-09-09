@@ -146,6 +146,7 @@ export function createNativePresentation(canvas) {
         droppedFrames: 0,
         frameIntervalsMs: [],
         frameSamples: 0,
+        appliedFrameSamples: 0,
         positionSamples: 0,
         nativeAtlasReady: false,
         nativeAtlasRegions: 0,
@@ -191,6 +192,7 @@ export function createNativePresentation(canvas) {
         // gameplay or animation decisions.
         const frame = event.detail;
         profile.frameSamples += 1;
+        profile.appliedFrameSamples += 1;
         if (Array.isArray(frame.entities) && frame.entities.length > 0
             && frame.entities.every((entity) => Array.isArray(entity.world_position)
                 && entity.world_position.length === 3)) {
@@ -214,6 +216,7 @@ export function createNativePresentation(canvas) {
             materials: window.__pystralThreeStaticMaterials || {},
         };
         applyNativeFrame(window.__pystralThreeFrame);
+        window.__pystralRenderFramePending = false;
     };
     window.addEventListener('pystral-render-frame', frameListener);
     fetch('./web/atlas.json')

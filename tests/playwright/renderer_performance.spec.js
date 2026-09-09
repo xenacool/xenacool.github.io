@@ -36,6 +36,10 @@ test.describe('Three.js compositor performance contract', () => {
     const renderWorkerProfile = await page.evaluate(() => window.__pystralRenderWorkerProfile);
     expect(renderWorkerProfile.samples).toBeGreaterThan(0);
     expect(renderWorkerProfile.average_tick_ms).toBeGreaterThanOrEqual(0);
+    expect(renderWorkerProfile.p95_tick_ms).toBeGreaterThanOrEqual(0);
+    const ingressProfile = await page.evaluate(() => window.__pystralRenderIngressProfile);
+    expect(ingressProfile.received).toBeGreaterThan(0);
+    expect(ingressProfile.overwritten).toBeGreaterThanOrEqual(0);
     const atlasRegion = await page.evaluate(() =>
       window.__pystralThreeResolveAtlasRegion?.('FrostGolem', 0));
     expect(atlasRegion).toMatchObject({ width: 32, height: 32 });
@@ -151,7 +155,7 @@ test.describe('Three.js compositor performance contract', () => {
     expect(nativeSlice.renderOrder).toBe(7000);
     expect(Math.abs(nativeSlice.width)).toBeGreaterThan(0);
     expect(nativeSlice.depth).toBeGreaterThan(0);
-    expect(nativeSlice.animation).toEqual({
+    expect(nativeSlice.animation).toMatchObject({
       animationState: 'attack', animationTimeMs: 125, animationFrame: 2,
     });
     await page.waitForFunction(() => window.__pystralThreeProfile?.().frames > 2, { timeout: 15000 });

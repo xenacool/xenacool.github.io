@@ -33,6 +33,7 @@ pub struct LoopHandler {
     profile_samples: u64,
     profile_total_ms: f64,
     profile_max_ms: f64,
+    profile_tick_samples: Vec<f64>,
 }
 
 impl LoopHandler {
@@ -57,6 +58,7 @@ impl LoopHandler {
             profile_samples: 0,
             profile_total_ms: 0.0,
             profile_max_ms: 0.0,
+            profile_tick_samples: Vec::new(),
         }
     }
 
@@ -139,12 +141,22 @@ impl LoopHandler {
         self.profile_samples += 1;
         self.profile_total_ms += duration_ms;
         self.profile_max_ms = self.profile_max_ms.max(duration_ms);
+        self.profile_tick_samples.push(duration_ms);
+        if self.profile_tick_samples.len() > 120 {
+            self.profile_tick_samples.remove(0);
+        }
+        let mut sorted_samples = self.profile_tick_samples.clone();
+        sorted_samples.sort_by(f64::total_cmp);
+        let p95_index = ((sorted_samples.len() as f64 * 0.95).ceil() as usize)
+            .saturating_sub(1)
+            .min(sorted_samples.len().saturating_sub(1));
         let profile = serde_json::json!({
             "tick": self.render_tick,
             "samples": self.profile_samples,
             "tick_ms": duration_ms,
             "average_tick_ms": self.profile_total_ms / self.profile_samples as f64,
             "max_tick_ms": self.profile_max_ms,
+            "p95_tick_ms": sorted_samples[p95_index],
             "interval_ms": if self.profile_last_tick_at > 0.0 {
                 now - self.profile_last_tick_at
             } else {

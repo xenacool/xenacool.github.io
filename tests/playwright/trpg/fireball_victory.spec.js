@@ -117,4 +117,13 @@ test('deterministic pg_rpg Fireball reaches victory after one lethal cast', asyn
   await expect(page.locator('#action-menu')).toHaveAttribute('data-game-completed', 'true');
   await expect(page.locator('#action-log')).toContainText(/Unit 1 used Fireball on unit \d+/);
   await expect(page.locator('#action-log')).toContainText('Victory');
+  const performance = await page.evaluate(() => ({
+    simulation: window.__pystralSimulationAggregate,
+    latestSimulation: window.__pystralSimulationProfile,
+    unified: window.__pystralWorkerTelemetry?.unified,
+    render: window.__pystralRenderWorkerProfile,
+    ingress: window.__pystralRenderIngressProfile,
+  }));
+  console.log('FIREBALL_PERFORMANCE', JSON.stringify(performance));
+  expect(performance.simulation.samples).toBeGreaterThan(0);
 });

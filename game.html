@@ -609,6 +609,7 @@
     </div>
     <div id="diagnostics-download-status" aria-live="polite" style="margin-top: 5px; color: #aaa;"></div>
     <pre id="renderer-fps" aria-label="Renderer FPS" style="margin: 8px 0 0; color: #9fe3ff; white-space: pre-wrap;">Renderer FPS: waiting for runtime status.</pre>
+    <pre id="worker-performance" aria-label="Worker performance" style="margin: 8px 0 0; color: #b8f5c0; white-space: pre-wrap;">Worker performance: waiting for samples.</pre>
 </section>
 </div>
 <script type="module">
@@ -636,11 +637,25 @@
     // Render-frame ingress. Three.js consumes this presentation-only payload;
     // Rust remains authoritative for simulation and resolved presentation data.
     window.__pystralFrame = null;
+    window.__pystralRenderIngressProfile = {
+        received: 0,
+        overwritten: 0,
+        lastTick: -1,
+    };
+    window.__pystralRenderFramePending = false;
     window.publish_render_frame = (json) => {
         try {
             const frame = JSON.parse(json);
             if (frame?.version !== 1 || !Array.isArray(frame.entities)) return;
+            const profile = window.__pystralRenderIngressProfile;
+            profile.received += 1;
+            if (window.__pystralRenderFramePending
+                && window.__pystralFrame && frame.tick > window.__pystralFrame.tick) {
+                profile.overwritten += 1;
+            }
+            profile.lastTick = frame.tick;
             window.__pystralFrame = frame;
+            window.__pystralRenderFramePending = true;
             window.dispatchEvent(new CustomEvent('pystral-render-frame', { detail: frame }));
         } catch (error) {
             console.error('Invalid render frame:', error);
@@ -1287,11 +1302,37 @@
     // acknowledges main->worker input delivery.
     window.__pystralWorkerLatestSeq = 0;
     window.__pystralSimulationProfile = null;
+    window.__pystralSimulationAggregate = {
+        samples: 0,
+        totalRuntimeMs: 0,
+        maxRuntimeMs: 0,
+        recentRuntimeMs: [],
+    };
     window.publish_simulation_profile = (json) => {
         try {
-            window.__pystralSimulationProfile = JSON.parse(json);
+            const profile = JSON.parse(json);
+            window.__pystralSimulationProfile = profile;
+            const aggregate = window.__pystralSimulationAggregate;
+            aggregate.samples += 1;
+            aggregate.totalRuntimeMs += Number(profile.runtime_ms) || 0;
+            aggregate.maxRuntimeMs = Math.max(aggregate.maxRuntimeMs, Number(profile.runtime_ms) || 0);
+            aggregate.recentRuntimeMs.push(Number(profile.runtime_ms) || 0);
+            if (aggregate.recentRuntimeMs.length > 120) aggregate.recentRuntimeMs.shift();
+            const sorted = [...aggregate.recentRuntimeMs].sort((a, b) => a - b);
+            aggregate.p95RuntimeMs = sorted[Math.max(0, Math.ceil(sorted.length * 0.95) - 1)];
+            aggregate.averageRuntimeMs = aggregate.totalRuntimeMs / aggregate.samples;
         } catch (_) {
             window.__pystralSimulationProfile = null;
+        }
+    };
+    window.__pystralWorkerTelemetry = {};
+    window.publish_worker_telemetry = (json) => {
+        try {
+            const telemetry = JSON.parse(json);
+            if (!telemetry?.worker) return;
+            window.__pystralWorkerTelemetry[telemetry.worker] = telemetry;
+        } catch (_) {
+            // Diagnostics must never interfere with gameplay.
         }
     };
     window.__pystralRenderWorkerProfile = null;
@@ -1324,6 +1365,29 @@
     const formatFpsBucket = (bucket) => bucket.frames
         ? `${bucket.fps.toFixed(1)} fps (${bucket.frames}f, ${bucket.averageRenderMs.toFixed(2)}ms render, p95 ${bucket.p95FrameIntervalMs.toFixed(1)}ms, ${bucket.droppedFrames} dropped)`
         : 'no samples';
+    const formatMs = (value) => Number.isFinite(Number(value)) ? `${Number(value).toFixed(2)}ms` : 'n/a';
+    const updateWorkerPerformance = () => {
+        const simulation = window.__pystralSimulationAggregate;
+        const latestSimulation = window.__pystralSimulationProfile;
+        const unified = window.__pystralWorkerTelemetry.unified;
+        const render = window.__pystralRenderWorkerProfile;
+        const ingress = window.__pystralRenderIngressProfile;
+        const simulationLine = simulation?.samples
+            ? `simulation: ${simulation.samples} samples · avg ${formatMs(simulation.averageRuntimeMs)} · p95 ${formatMs(simulation.p95RuntimeMs)} · max ${formatMs(simulation.maxRuntimeMs)} · queue ${formatMs(latestSimulation?.queue_wait_ms)} · response ${formatMs(latestSimulation?.response_ms)}`
+            : 'simulation: waiting for samples';
+        const unifiedLine = unified
+            ? `unified: outbox ${unified.outbox_depth}/${unified.outbox_max_depth} · transport drops ${unified.transport_drops} · input ${unified.last_input_seq} · output ${unified.last_output_seq}`
+            : 'unified: waiting for samples';
+        const renderLine = render
+            ? `render loop: ${render.samples} samples · avg ${formatMs(render.average_tick_ms)} · p95 ${formatMs(render.p95_tick_ms)} · max ${formatMs(render.max_tick_ms)} · interval ${formatMs(render.interval_ms)}`
+            : 'render loop: waiting for samples';
+        const ingressLine = ingress
+            ? `render ingress: received ${ingress.received} · latest-frame overwrites ${ingress.overwritten}`
+            : 'render ingress: waiting for samples';
+        document.getElementById('worker-performance').textContent = [
+            'Worker performance', simulationLine, unifiedLine, renderLine, ingressLine,
+        ].join('\n');
+    };
     window.addEventListener('pystral-three-fps', (event) => {
         const fps = event.detail;
         document.getElementById('renderer-fps').textContent = [
@@ -1333,7 +1397,9 @@
             `acquiescent static: ${formatFpsBucket(fps.acquiescent.static)}`,
             `acquiescent rotating: ${formatFpsBucket(fps.acquiescent.rotating)}`,
         ].join('\n');
+        updateWorkerPerformance();
     });
+    window.setInterval(updateWorkerPerformance, 500);
     window.setInterval(() => {
         const receivedAt = window.__pystralHeartbeatReceivedAt;
         if (!receivedAt) return;

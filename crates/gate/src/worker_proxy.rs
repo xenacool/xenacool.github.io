@@ -84,6 +84,7 @@ impl UnifiedWorker {
         self.simulation_retry_attempts = 0;
         self.push_output(WorkerOutput::SimulationRequest(SimulationEnvelope {
             seq,
+            enqueued_at_ms: js_sys::Date::now(),
             msg: request,
         }));
     }

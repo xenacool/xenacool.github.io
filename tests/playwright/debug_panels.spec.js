@@ -19,6 +19,7 @@ test.describe('Debug Panels BDD', () => {
       await expect(page.locator('#entity-viewer')).toBeVisible();
       await expect(page.locator('#history-viewer')).toBeVisible();
       await expect(page.locator('#heartbeat-panel')).toBeVisible();
+      await expect(page.locator('#worker-performance')).toContainText('Worker performance');
     });
 
     await test.step('When the collision Debug checkbox is checked', async () => {

@@ -15,6 +15,8 @@ const MAX_REQUESTS_PER_POLL: usize = 8;
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct SimulationEnvelope<T> {
     pub seq: u64,
+    #[serde(default)]
+    pub enqueued_at_ms: f64,
     pub msg: T,
 }
 
@@ -37,9 +39,16 @@ pub struct SimulationResponse {
 
 #[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
 pub struct SimulationTiming {
+    pub causal_seq: u64,
+    pub queue_wait_ms: f64,
     pub request_ms: f64,
     pub runtime_ms: f64,
     pub response_ms: f64,
+    pub outbox_depth: usize,
+    pub outbox_max_depth: usize,
+    pub stale_inputs: u64,
+    pub replayed_inputs: u64,
+    pub transport_drops: u64,
 }
 
 fn now_ms() -> f64 {
@@ -62,6 +71,10 @@ pub struct SimulationWorker {
     last_progress_seq: u64,
     active_request_seq: Option<u64>,
     cached_response: Option<SimulationResponse>,
+    outbox_max_depth: usize,
+    stale_inputs: u64,
+    replayed_inputs: u64,
+    transport_drops: u64,
 }
 
 pub(crate) fn accepts_sequence(last_received: u64, incoming: u64) -> bool {
@@ -109,6 +122,10 @@ impl Reactor for SimulationWorker {
             last_progress_seq: 0,
             active_request_seq: None,
             cached_response: None,
+            outbox_max_depth: 0,
+            stale_inputs: 0,
+            replayed_inputs: 0,
+            transport_drops: 0,
         }
     }
 }
@@ -135,12 +152,14 @@ impl Future for SimulationWorker {
                         envelope.seq,
                         self.cached_response.is_some(),
                     ) {
+                        self.replayed_inputs += 1;
                         let response = self.cached_response.clone().expect("cached response");
                         self.queue_response(envelope.seq, response);
                         self.push_heartbeat();
                         continue;
                     }
                     if !accepts_sequence(self.last_received_seq, envelope.seq) {
+                        self.stale_inputs += 1;
                         continue;
                     }
                     self.last_received_seq = envelope.seq;
@@ -166,9 +185,16 @@ impl Future for SimulationWorker {
                         unit_states,
                         snapshot_fingerprint,
                         timing: SimulationTiming {
+                            causal_seq: envelope.seq,
+                            queue_wait_ms: (request_started_at - envelope.enqueued_at_ms).max(0.0),
                             request_ms: now_ms() - request_started_at,
                             runtime_ms,
                             response_ms: 0.0,
+                            outbox_depth: self.outbox.len(),
+                            outbox_max_depth: self.outbox_max_depth,
+                            stale_inputs: self.stale_inputs,
+                            replayed_inputs: self.replayed_inputs,
+                            transport_drops: self.transport_drops,
                         },
                     };
                     self.cached_response = Some(response.clone());
@@ -195,21 +221,28 @@ impl SimulationWorker {
         self.outbox
             .push_back(SimulationOutput::Response(SimulationEnvelope {
                 seq: output_seq,
+                enqueued_at_ms: now_ms(),
                 msg: response,
             }));
         self.next_output_seq += 1;
         self.outbox
             .push_back(SimulationOutput::Watermark(self.last_received_seq));
+        self.outbox_max_depth = self.outbox_max_depth.max(self.outbox.len());
     }
 
     fn flush_outbox(&mut self, cx: &mut Context<'_>) -> bool {
         while self.outbox.front().is_some() {
             match self.scope.poll_ready_unpin(cx) {
                 Poll::Ready(Ok(())) => {
-                    let output = self.outbox.pop_front().expect("outbox is non-empty");
+                    let mut output = self.outbox.pop_front().expect("outbox is non-empty");
+                    if let SimulationOutput::Response(envelope) = &mut output {
+                        envelope.msg.timing.response_ms =
+                            (now_ms() - envelope.enqueued_at_ms).max(0.0);
+                    }
                     let _ = self.scope.start_send_unpin(output);
                 }
                 Poll::Ready(Err(_)) => {
+                    self.transport_drops += 1;
                     self.outbox.pop_front();
                 }
                 Poll::Pending => {
