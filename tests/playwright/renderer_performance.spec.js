@@ -37,6 +37,14 @@ test.describe('Three.js compositor performance contract', () => {
     expect(renderWorkerProfile.samples).toBeGreaterThan(0);
     expect(renderWorkerProfile.average_tick_ms).toBeGreaterThanOrEqual(0);
     expect(renderWorkerProfile.p95_tick_ms).toBeGreaterThanOrEqual(0);
+    expect(renderWorkerProfile.phases_ms).toEqual(expect.objectContaining({
+      commands: expect.any(Number),
+      playback_history: expect.any(Number),
+      state_logic: expect.any(Number),
+      frame_build_publish: expect.any(Number),
+      hud_and_ack: expect.any(Number),
+      debug_panels: expect.any(Number),
+    }));
     const ingressProfile = await page.evaluate(() => window.__pystralRenderIngressProfile);
     expect(ingressProfile.received).toBeGreaterThan(0);
     expect(ingressProfile.overwritten).toBeGreaterThanOrEqual(0);
