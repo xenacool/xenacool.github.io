@@ -35,3 +35,25 @@ test('should show action buttons and log clicks', async ({ page }) => {
   const logText = await logContainer.innerText();
   expect(logText).toContain('Action input: confirm');
 });
+
+test('retains the complete semantic log and follows its newest entry', async ({ page }) => {
+  await page.goto('/game.html');
+  await page.waitForFunction(() => typeof window.update_action_log === 'function');
+
+  await page.evaluate(() => {
+    const events = Array.from({ length: 48 }, (_, index) => ({
+      Log: { msg: `Unit 1 used Fireball on unit ${index + 2}` },
+    }));
+    events.push({ MoveSprite: { id: 1000001 } });
+    events.push({ DespawnEntity: { id: 1000001 } });
+    window.update_action_log(JSON.stringify(events));
+  });
+
+  const log = page.locator('#action-log');
+  await expect(log.locator('li')).toHaveCount(48);
+  await expect(log).toContainText('Unit 1 used Fireball on unit 2');
+  await expect(log).toContainText('Unit 1 used Fireball on unit 49');
+  await expect(log).not.toContainText('1000001');
+  expect(await log.evaluate((element) => element.scrollTop + element.clientHeight
+    >= element.scrollHeight)).toBeTruthy();
+});

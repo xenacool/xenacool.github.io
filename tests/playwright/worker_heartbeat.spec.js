@@ -143,6 +143,26 @@ test.describe('Worker heartbeat diagnostics', () => {
       () => window.__pystralDebugTraces.some(trace => trace.includes('main thread applying transient')),
       { timeout: 8000 },
     );
+    await page.waitForFunction(
+      () => window.__pystralDebugTraces.some(trace => trace.startsWith('simulation profile ')), {
+      timeout: 8000,
+      },
+    );
+    const profile = await page.evaluate(() => {
+      const trace = window.__pystralDebugTraces.find((entry) => entry.startsWith('simulation profile '));
+      const values = trace.match(/request_ms=([\d.]+) runtime_ms=([\d.]+)/);
+      return {
+        request_ms: Number(values[1]),
+        runtime_ms: Number(values[2]),
+        aggregate: window.__pystralSimulationAggregate,
+        latest: window.__pystralSimulationProfile,
+      };
+    });
+    console.log('SIMULATION_PROFILE', JSON.stringify(profile));
+    expect(profile.request_ms).toBeGreaterThanOrEqual(profile.runtime_ms);
+    expect(profile.runtime_ms).toBeGreaterThanOrEqual(0);
+    expect(profile.aggregate.samples).toBeGreaterThan(0);
+    expect(profile.aggregate.averageRuntimeMs).toBeGreaterThanOrEqual(0);
   });
 
   test('copies the UI log and downloads an export-shaped history case', async ({ page }) => {

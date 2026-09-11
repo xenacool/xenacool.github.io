@@ -447,6 +447,12 @@ impl Runtime {
             return RuntimeResponse::Error("Simulation not started".into());
         };
         let start_idx = history.log.len();
+        history.push_and_apply(Event::Log {
+            msg: format!(
+                "NPC unit {unit_id} moved to q {}, r {}, layer {}",
+                destination.hex.x, destination.hex.y, destination.layer
+            ),
+        });
         history.push_and_apply(Event::MoveSprite {
             id: unit_id,
             destination: destination.hex,

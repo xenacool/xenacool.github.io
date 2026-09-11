@@ -12,6 +12,7 @@ test.describe('Three.js compositor performance contract', () => {
     await page.waitForFunction(() => window.app !== undefined, { timeout: 15000 });
     await page.waitForFunction(() => document.body.dataset.renderer === 'native', { timeout: 15000 });
     await page.waitForFunction(() => window.__pystralThreeAtlasProfile?.().ready, { timeout: 15000 });
+    await page.waitForFunction(() => window.__pystralRenderWorkerProfile?.samples > 0, { timeout: 15000 });
     await page.waitForTimeout(2000);
 
     const result = await page.evaluate(() => {
@@ -32,6 +33,21 @@ test.describe('Three.js compositor performance contract', () => {
     expect(result.profile.totalRenderMs / result.profile.frames).toBeLessThan(20);
     expect(result.profile.nativeAtlasReady).toBe(true);
     expect(result.profile.nativeAtlasRegions).toBeGreaterThan(0);
+    const renderWorkerProfile = await page.evaluate(() => window.__pystralRenderWorkerProfile);
+    expect(renderWorkerProfile.samples).toBeGreaterThan(0);
+    expect(renderWorkerProfile.average_tick_ms).toBeGreaterThanOrEqual(0);
+    expect(renderWorkerProfile.p95_tick_ms).toBeGreaterThanOrEqual(0);
+    expect(renderWorkerProfile.phases_ms).toEqual(expect.objectContaining({
+      commands: expect.any(Number),
+      playback_history: expect.any(Number),
+      state_logic: expect.any(Number),
+      frame_build_publish: expect.any(Number),
+      hud_and_ack: expect.any(Number),
+      debug_panels: expect.any(Number),
+    }));
+    const ingressProfile = await page.evaluate(() => window.__pystralRenderIngressProfile);
+    expect(ingressProfile.received).toBeGreaterThan(0);
+    expect(ingressProfile.overwritten).toBeGreaterThanOrEqual(0);
     const atlasRegion = await page.evaluate(() =>
       window.__pystralThreeResolveAtlasRegion?.('FrostGolem', 0));
     expect(atlasRegion).toMatchObject({ width: 32, height: 32 });
@@ -147,7 +163,7 @@ test.describe('Three.js compositor performance contract', () => {
     expect(nativeSlice.renderOrder).toBe(7000);
     expect(Math.abs(nativeSlice.width)).toBeGreaterThan(0);
     expect(nativeSlice.depth).toBeGreaterThan(0);
-    expect(nativeSlice.animation).toEqual({
+    expect(nativeSlice.animation).toMatchObject({
       animationState: 'attack', animationTimeMs: 125, animationFrame: 2,
     });
     await page.waitForFunction(() => window.__pystralThreeProfile?.().frames > 2, { timeout: 15000 });
@@ -231,7 +247,15 @@ test.describe('Three.js compositor performance contract', () => {
       for (const motion of ['static', 'rotating']) {
         expect(fps[phase][motion].frames, `${phase}/${motion}`).toBeGreaterThan(0);
         expect(fps[phase][motion].fps, `${phase}/${motion}`).toBeGreaterThan(0);
+        expect(fps[phase][motion].p95FrameIntervalMs, `${phase}/${motion} p95`)
+          .toBeGreaterThan(0);
+        expect(fps[phase][motion].maxFrameIntervalMs, `${phase}/${motion} max`)
+          .toBeGreaterThanOrEqual(fps[phase][motion].p95FrameIntervalMs);
+        expect(fps[phase][motion].droppedFrames, `${phase}/${motion} dropped`)
+          .toBeGreaterThanOrEqual(0);
       }
     }
+    expect(result.profile.frameIntervalsMs.length).toBeGreaterThan(0);
+    expect(result.profile.droppedFrames).toBeGreaterThanOrEqual(0);
   });
 });

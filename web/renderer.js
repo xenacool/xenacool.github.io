@@ -3,6 +3,7 @@
 // visible WebGL2 canvas.
 import * as THREE from './vendor/three.module.min.js';
 import { createMaskResources } from './actor_mask.js';
+import { samplePose } from './sprite_actor.js';
 
 const SPRITESTACK_Y_AXIS = new THREE.Vector3(0, 1, 0);
 const SPRITESTACK_X_AXIS = new THREE.Vector3(1, 0, 0);
@@ -108,6 +109,8 @@ export function createNativePresentation(canvas) {
     const nativeMeshes = new Map();
     const teamMarkers = new Map();
     const waypointMarkers = new Map();
+    let poseCatalog = new Map();
+    window.__pystralThreePoseProfile = () => ({ ready: poseCatalog.size > 0 });
     window.__pystralThreeNativeMarkers = teamMarkers;
     window.__pystralThreeNativeWaypointMarkers = waypointMarkers;
     const teamMarkerGeometry = new THREE.RingGeometry(0.32, 0.40, 16);
@@ -140,7 +143,10 @@ export function createNativePresentation(canvas) {
         totalRenderMs: 0,
         lastFrameAt: 0,
         lastFrameIntervalMs: 0,
+        droppedFrames: 0,
+        frameIntervalsMs: [],
         frameSamples: 0,
+        appliedFrameSamples: 0,
         positionSamples: 0,
         nativeAtlasReady: false,
         nativeAtlasRegions: 0,
@@ -155,6 +161,7 @@ export function createNativePresentation(canvas) {
     let cameraMotionPending = false;
     let cameraMotionUntil = 0;
     let lastTelemetryEventAt = 0;
+    let lastFpsBucketKey = null;
     window.__pystralThreeProfile = () => ({ ...profile });
     window.__pystralThreeFpsProfile = () => snapshotFps(profile);
     window.__pystralThreeAtlasProfile = () => ({
@@ -185,6 +192,7 @@ export function createNativePresentation(canvas) {
         // gameplay or animation decisions.
         const frame = event.detail;
         profile.frameSamples += 1;
+        profile.appliedFrameSamples += 1;
         if (Array.isArray(frame.entities) && frame.entities.length > 0
             && frame.entities.every((entity) => Array.isArray(entity.world_position)
                 && entity.world_position.length === 3)) {
@@ -208,6 +216,7 @@ export function createNativePresentation(canvas) {
             materials: window.__pystralThreeStaticMaterials || {},
         };
         applyNativeFrame(window.__pystralThreeFrame);
+        window.__pystralRenderFramePending = false;
     };
     window.addEventListener('pystral-render-frame', frameListener);
     fetch('./web/atlas.json')
@@ -260,13 +269,6 @@ export function createNativePresentation(canvas) {
         const rotating = cameraMotionPending || frameStart < cameraMotionUntil;
         cameraMotionPending = false;
         const phase = phaseForStatus(window.__pystralWorkerStatus);
-        if (phase) {
-            const bucket = profile.fps[phase][rotating ? 'rotating' : 'static'];
-            bucket.frames += 1;
-            if (bucket.lastFrameAt > 0) bucket.elapsedMs += frameStart - bucket.lastFrameAt;
-            bucket.renderMs += performance.now() - frameStart;
-            bucket.lastFrameAt = frameStart;
-        }
         renderer.render(scene, camera);
         if (actorMask) {
             renderer.render(actorMask.quadScene, actorMask.quadCamera);
@@ -286,8 +288,25 @@ export function createNativePresentation(canvas) {
                 nativeGpu: profile.nativeGpu,
             };
         }
+        const renderMs = performance.now() - frameStart;
+        if (phase) {
+            const motion = rotating ? 'rotating' : 'static';
+            const bucketKey = `${phase}/${motion}`;
+            const bucket = profile.fps[phase][motion];
+            if (bucketKey !== lastFpsBucketKey) bucket.lastFrameAt = 0;
+            recordFpsSample(bucket, frameStart, renderMs, profile.targetFps);
+            lastFpsBucketKey = bucketKey;
+        }
+        if (frameIntervalMs > 0) {
+            const expectedMs = 1000 / profile.targetFps;
+            profile.frameIntervalsMs.push(frameIntervalMs);
+            if (profile.frameIntervalsMs.length > 240) profile.frameIntervalsMs.shift();
+            if (frameIntervalMs > expectedMs * 1.5) {
+                profile.droppedFrames += Math.max(1, Math.round(frameIntervalMs / expectedMs) - 1);
+            }
+        }
         profile.frames += 1;
-        profile.totalRenderMs += performance.now() - frameStart;
+        profile.totalRenderMs += renderMs;
         if (frameStart - lastTelemetryEventAt >= 500) {
             lastTelemetryEventAt = frameStart;
             window.dispatchEvent(new CustomEvent('pystral-three-fps', {
@@ -305,11 +324,16 @@ export function createNativePresentation(canvas) {
             // deliberately does not replay or mutate the authoritative frame.
             window.__pystralThreeActorCatalog = catalog instanceof Map ? catalog : new Map();
         },
+        setPoseCatalog(catalog) {
+            poseCatalog = catalog instanceof Map ? catalog : new Map();
+            if (window.__pystralThreeFrame) applyNativeFrame(window.__pystralThreeFrame);
+        },
         dispose() {
             active = false;
             window.removeEventListener('pystral-render-frame', frameListener);
             delete window.__pystralThreeMarkCameraMotion;
             delete window.__pystralThreeAtlasProfile;
+            delete window.__pystralThreePoseProfile;
             delete window.__pystralThreeResolveAtlasRegion;
             delete window.__pystralThreeNativeScene;
             delete window.__pystralThreeNativeCamera;
@@ -542,6 +566,9 @@ function applyNativeFrame(frame) {
             mesh.userData.animationState = entity.animation_state || 'idle';
             mesh.userData.animationTimeMs = Number(entity.animation_time_ms || 0);
             mesh.userData.animationFrame = entity.animation_frame ?? null;
+            mesh.userData.poseSample = rig && animationClip
+                ? samplePose(poseCatalog, rig, animationClip, entity.animation_time_ms)
+                : null;
             mesh.userData.entityKind = entity.kind;
             if (actorMask) syncMaskMesh(actorMask, mesh, key, texture);
             seen.add(key);
@@ -747,7 +774,32 @@ function compassLabelCanvas(label) {
 }
 
 function createFpsBucket() {
-    return { frames: 0, elapsedMs: 0, renderMs: 0, lastFrameAt: 0 };
+    return {
+        frames: 0,
+        elapsedMs: 0,
+        renderMs: 0,
+        lastFrameAt: 0,
+        maxFrameIntervalMs: 0,
+        droppedFrames: 0,
+        frameIntervalsMs: [],
+    };
+}
+
+function recordFpsSample(bucket, frameStart, renderMs, targetFps) {
+    bucket.frames += 1;
+    if (bucket.lastFrameAt > 0) {
+        const intervalMs = frameStart - bucket.lastFrameAt;
+        const expectedMs = 1000 / targetFps;
+        bucket.elapsedMs += intervalMs;
+        bucket.maxFrameIntervalMs = Math.max(bucket.maxFrameIntervalMs, intervalMs);
+        bucket.frameIntervalsMs.push(intervalMs);
+        if (bucket.frameIntervalsMs.length > 120) bucket.frameIntervalsMs.shift();
+        if (intervalMs > expectedMs * 1.5) {
+            bucket.droppedFrames += Math.max(1, Math.round(intervalMs / expectedMs) - 1);
+        }
+    }
+    bucket.renderMs += renderMs;
+    bucket.lastFrameAt = frameStart;
 }
 
 function phaseForStatus(status) {
@@ -777,9 +829,18 @@ function snapshotFps(profile) {
                 elapsedMs: bucket.elapsedMs,
                 fps: bucket.elapsedMs > 0 ? bucket.frames * 1000 / bucket.elapsedMs : 0,
                 averageRenderMs: bucket.frames > 0 ? bucket.renderMs / bucket.frames : 0,
+                p95FrameIntervalMs: percentile(bucket.frameIntervalsMs, 0.95),
+                maxFrameIntervalMs: bucket.maxFrameIntervalMs,
+                droppedFrames: bucket.droppedFrames,
                 lastFrameAt: bucket.lastFrameAt,
             };
         }
     }
     return result;
+}
+
+function percentile(values, fraction) {
+    if (!values.length) return 0;
+    const sorted = [...values].sort((a, b) => a - b);
+    return sorted[Math.min(sorted.length - 1, Math.ceil(sorted.length * fraction) - 1)];
 }

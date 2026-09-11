@@ -85,7 +85,7 @@ test('committed abilities report target count and restore the originating abilit
   const beforeCommit = await protocolClock(page);
   await page.getByRole('button', { name: 'Action', exact: true }).click({ force: true });
 
-  await waitForAnimationBarrier(page);
+  await waitForAnimationBarrier(page, { after: beforeCommit });
   await expect(status).toContainText(/ability \(\d+ target(s)?\) committed/i);
   await waitForHistoryToSettle(page, beforeCommit);
   await expect(ability).toBeFocused();
@@ -137,7 +137,7 @@ test('cell-area abilities expose cell centers and report affected targets', asyn
   const beforeCommit = await protocolClock(page);
   await page.getByRole('button', { name: 'Action', exact: true }).click({ force: true });
 
-  await waitForAnimationBarrier(page);
+  await waitForAnimationBarrier(page, { after: beforeCommit });
   await expect(status).toContainText(/ability \(\d+ target(s)?\) committed/i);
   await waitForHistoryToSettle(page, beforeCommit);
   await expect(areaAbility).toBeFocused();
@@ -201,7 +201,7 @@ test('committed movement waits for its animation barrier', async ({ page }) => {
   const before = await protocolClock(page);
   await action.click({ force: true });
 
-  await waitForAnimationBarrier(page, { timeout: 15000 });
+  await waitForAnimationBarrier(page, { timeout: 15000, after: before });
   await expect(status).toContainText(/Move committed/);
   await waitForHistoryToSettle(page, before);
   await expect(status).toContainText(/Move preview: selected/);

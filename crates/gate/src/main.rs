@@ -227,6 +227,9 @@ fn start_worker_plumbing(
             }
             match output {
                 SimulationOutput::Response(response) => {
+                    if let Ok(profile) = serde_json::to_string(&response.msg.timing) {
+                        publish_simulation_profile(&profile);
+                    }
                     record_debug_trace(format!(
                         "simulation bridge received response request seq {} continuation {:?}",
                         response.msg.request_seq, response.msg.continuation
@@ -316,6 +319,11 @@ fn start_worker_plumbing(
                         let _ = app_tx_clone.send(AppCommand::UpdateTransientState(state));
                     }
                     WorkerOutput::DebugTrace { message } => record_debug_trace(message),
+                    WorkerOutput::Telemetry(telemetry) => {
+                        if let Ok(json) = serde_json::to_string(&telemetry) {
+                            publish_worker_telemetry(&json);
+                        }
+                    }
                     WorkerOutput::ActionRejected { request_id, reason } => {
                         update_action_feedback(&action_rejection_feedback(&reason));
                         let _ =
@@ -410,6 +418,12 @@ extern "C" {
 
     #[wasm_bindgen(js_namespace = window)]
     fn update_worker_heartbeat(latest_seq: u64, latest_input_seq: u64, status: String);
+
+    #[wasm_bindgen(js_namespace = window)]
+    fn publish_simulation_profile(json: &str);
+
+    #[wasm_bindgen(js_namespace = window)]
+    fn publish_worker_telemetry(json: &str);
 
     #[wasm_bindgen(js_namespace = window)]
     fn set_loading_state(state: &str, message: &str, progress: u32);

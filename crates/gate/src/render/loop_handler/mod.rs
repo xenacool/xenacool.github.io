@@ -29,6 +29,11 @@ pub struct LoopHandler {
     pub last_action_rejection: Option<(u64, ActionError)>,
     manual_history_index: Option<usize>,
     render_tick: u64,
+    profile_last_tick_at: f64,
+    profile_samples: u64,
+    profile_total_ms: f64,
+    profile_max_ms: f64,
+    profile_tick_samples: Vec<f64>,
 }
 
 impl LoopHandler {
@@ -49,26 +54,50 @@ impl LoopHandler {
             last_action_rejection: None,
             manual_history_index: None,
             render_tick: 0,
+            profile_last_tick_at: 0.0,
+            profile_samples: 0,
+            profile_total_ms: 0.0,
+            profile_max_ms: 0.0,
+            profile_tick_samples: Vec::new(),
         }
     }
 
     pub fn tick(&mut self) {
+        let tick_started_at = web_sys::window()
+            .expect("No global window found")
+            .performance()
+            .expect("Performance object not found")
+            .now();
         let now = web_sys::window()
             .expect("No global window found")
             .performance()
             .expect("Performance object not found")
             .now();
 
+        let phase_started_at = |performance: &web_sys::Performance| performance.now();
+        let performance = web_sys::window()
+            .expect("No global window found")
+            .performance()
+            .expect("Performance object not found");
+        let mut phase_ms = [0.0; 7];
+
         // 0. Process Commands
+        let phase_at = phase_started_at(&performance);
         self.process_commands();
+        phase_ms[0] = performance.now() - phase_at;
 
         // 1. Playback & History Update
+        let phase_at = phase_started_at(&performance);
         let (is_playing_anims, debug_mode, delta) = self.update_playback_and_history(now);
+        phase_ms[1] = performance.now() - phase_at;
 
         // 2. Get State & Update Logic
+        let phase_at = phase_started_at(&performance);
         let state = self.get_current_state(now, is_playing_anims);
         self.sync_camera_selection(&state);
+        phase_ms[2] = performance.now() - phase_at;
         // 3. Canvas & Viewport
+        let phase_at = phase_started_at(&performance);
         let (width, height) = viewport_size();
 
         // Publish the resolved pose after camera tween advancement. A native
@@ -99,8 +128,10 @@ impl LoopHandler {
             Some(&positions),
             Some(&animation_times),
         );
+        phase_ms[3] = performance.now() - phase_at;
 
         // 4. HUD state and animation-barrier acknowledgement.
+        let phase_at = phase_started_at(&performance);
         // Update Nav Buttons based on current camera neighbors
         self.sync_nav_buttons(&state);
 
@@ -110,9 +141,63 @@ impl LoopHandler {
         // Acknowledging the visible barrier is latency-sensitive. Do this
         // before optional diagnostics serialization, which may be large.
         self.handle_sequence_number_acks(now);
+        phase_ms[4] = performance.now() - phase_at;
 
         // Sync Debug Panels
+        let phase_at = phase_started_at(&performance);
         self.sync_debug_panels(&state);
+        phase_ms[5] = performance.now() - phase_at;
+        phase_ms[6] = performance.now() - tick_started_at;
+        self.publish_profile(tick_started_at, phase_ms);
+    }
+
+    fn publish_profile(&mut self, tick_started_at: f64, phase_ms: [f64; 7]) {
+        let now = web_sys::window()
+            .expect("No global window found")
+            .performance()
+            .expect("Performance object not found")
+            .now();
+        let duration_ms = now - tick_started_at;
+        self.profile_samples += 1;
+        self.profile_total_ms += duration_ms;
+        self.profile_max_ms = self.profile_max_ms.max(duration_ms);
+        self.profile_tick_samples.push(duration_ms);
+        if self.profile_tick_samples.len() > 120 {
+            self.profile_tick_samples.remove(0);
+        }
+        let mut sorted_samples = self.profile_tick_samples.clone();
+        sorted_samples.sort_by(f64::total_cmp);
+        let p95_index = ((sorted_samples.len() as f64 * 0.95).ceil() as usize)
+            .saturating_sub(1)
+            .min(sorted_samples.len().saturating_sub(1));
+        let profile = serde_json::json!({
+            "tick": self.render_tick,
+            "samples": self.profile_samples,
+            "tick_ms": duration_ms,
+            "average_tick_ms": self.profile_total_ms / self.profile_samples as f64,
+            "max_tick_ms": self.profile_max_ms,
+            "p95_tick_ms": sorted_samples[p95_index],
+            "interval_ms": if self.profile_last_tick_at > 0.0 {
+                now - self.profile_last_tick_at
+            } else {
+                0.0
+            },
+            "phases_ms": {
+                "commands": phase_ms[0],
+                "playback_history": phase_ms[1],
+                "state_logic": phase_ms[2],
+                "frame_build_publish": phase_ms[3],
+                "hud_and_ack": phase_ms[4],
+                "debug_panels": phase_ms[5],
+                "measured_total": phase_ms[6]
+            },
+        });
+        self.profile_last_tick_at = now;
+        if self.profile_samples == 1 || self.profile_samples.is_multiple_of(30) {
+            if let Ok(json) = serde_json::to_string(&profile) {
+                crate::render::publish_render_worker_profile(&json);
+            }
+        }
     }
 
     fn publish_render_frame(

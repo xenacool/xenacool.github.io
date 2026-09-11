@@ -150,6 +150,20 @@ pub enum WorkerOutput {
         request_id: u64,
         reason: ActionError,
     },
+    Telemetry(Box<WorkerTelemetry>),
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
+pub struct WorkerTelemetry {
+    pub worker: String,
+    pub sample: u64,
+    pub outbox_depth: usize,
+    pub outbox_max_depth: usize,
+    pub transport_drops: u64,
+    pub input_count: u64,
+    pub last_input_seq: u64,
+    pub last_output_seq: u64,
+    pub active_request_seq: Option<u64>,
 }
 
 pub enum AppCommand {

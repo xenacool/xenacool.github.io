@@ -89,7 +89,7 @@ test('Rhai Necromancer raises, harvests, and spends Fresh Soul on Soul Drain', a
   const finalState = await page.evaluate(() => window.__pystralLastTransientState);
   const enemy = finalState.unit_states.find(({ unit_id }) => unit_id === 3).state;
   expect(enemy.health).toBeLessThan(140);
-  await expect(page.locator('#action-log')).toContainText('used ability');
+  await expect(page.locator('#action-log')).toContainText('used Soul Drain on unit 3');
 
   const projectileLifecycle = await page.evaluate(() => {
     const events = window.__pystralActionLogEvents;

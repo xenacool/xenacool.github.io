@@ -16,7 +16,6 @@ use wasm_bindgen::prelude::*;
 use web_sys::{WebGlProgram, WebGlRenderingContext as GL, WebGlShader};
 use crate::render::context::RenderContext;
 use crate::render::loop_handler::LoopHandler;
-
 #[wasm_bindgen]
 extern "C" {
     #[wasm_bindgen(js_namespace = window)]
@@ -54,8 +53,10 @@ extern "C" {
 
     #[wasm_bindgen(js_namespace = window)]
     pub fn publish_render_frame(json: &str);
-}
 
+    #[wasm_bindgen(js_namespace = window)]
+    pub fn publish_render_worker_profile(json: &str);
+}
 #[derive(Debug, Clone, Serialize, PartialEq)]
 pub struct RenderFrame {
     pub version: u8,

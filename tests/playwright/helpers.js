@@ -79,11 +79,11 @@ async function sendAcceptedAction(page, input, { timeout = 8000 } = {}) {
   }), { actionInput: input, actionTimeout: timeout });
 }
 
-async function waitForAnimationBarrier(page, { timeout = 15000 } = {}) {
+async function waitForAnimationBarrier(page, { timeout = 15000, after = null } = {}) {
   const menu = page.locator('#action-menu');
   await menu.waitFor({ state: 'visible', timeout });
   await menu.waitFor({ state: 'attached', timeout });
-  const baseline = await protocolClock(page);
+  const baseline = after || await protocolClock(page);
   await page.waitForFunction(({ baseline }) => {
     const currentMenu = document.getElementById('action-menu');
     const animation = currentMenu?.dataset.animationPending;

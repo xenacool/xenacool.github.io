@@ -1,6 +1,7 @@
 const { test, expect } = require('@playwright/test');
 const {
   loadWithFixture,
+  protocolClock,
   sendAcceptedAction,
   waitForAnimationBarrier,
   waitForPlayerBoundary,
@@ -94,8 +95,9 @@ async function playFireball(page) {
   }
   const targetKey = await target.getAttribute('data-menu-key');
   await sendAccepted(page, `menu-target:${targetKey.split(':')[1]}`);
+  const beforeCommit = await protocolClock(page);
   await sendAccepted(page, 'confirm');
-  await waitForAnimationBarrier(page);
+  await waitForAnimationBarrier(page, { after: beforeCommit });
   return { played: true };
 }
 
@@ -115,5 +117,15 @@ test('deterministic pg_rpg Fireball reaches victory after one lethal cast', asyn
   await expect(page.locator('#action-menu-status')).toHaveText('Game completed.');
   await expect(page.locator('#game-completed')).toContainText('Victory');
   await expect(page.locator('#action-menu')).toHaveAttribute('data-game-completed', 'true');
+  await expect(page.locator('#action-log')).toContainText(/Unit 1 used Fireball on unit \d+/);
   await expect(page.locator('#action-log')).toContainText('Victory');
+  const performance = await page.evaluate(() => ({
+    simulation: window.__pystralSimulationAggregate,
+    latestSimulation: window.__pystralSimulationProfile,
+    unified: window.__pystralWorkerTelemetry?.unified,
+    render: window.__pystralRenderWorkerProfile,
+    ingress: window.__pystralRenderIngressProfile,
+  }));
+  console.log('FIREBALL_PERFORMANCE', JSON.stringify(performance));
+  expect(performance.simulation.samples).toBeGreaterThan(0);
 });
