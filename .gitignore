@@ -25,6 +25,4 @@ __pycache__/
 /spec/*_TTrace_*.tla
 *.class
 web/sdfsheet.png
-web/sprite_actor_manifest.json
-web/sprite_actor_poses.json
 web/favicon.ico

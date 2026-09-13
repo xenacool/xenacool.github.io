@@ -1,7 +1,6 @@
-// Procedural primitive assets shared by the multifile pg_rpg scenario. Pixel
-// generation is intentionally script-owned; Rust only accepts the generic
-// RGBA/normal spritestack payload and serializes it for the renderer.
-let atlas = load_atlas(atlas_json);
+// Procedural effect primitives only. Character and equipment presentation is
+// loaded directly from GLB models by the browser; these slices are retained
+// for inexpensive arrows, rocks, and spell-orb effects.
 let collection = new_asset_collection();
 
 fn byte(color, index) {

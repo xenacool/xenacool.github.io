@@ -1,4 +1,4 @@
-.PHONY: install clean build wasm-bindgen-tool build-wasm run-web server watch deploy test test-fast test-browser test-browser-sequential test-static test-integration test-rhai test-perception nuke-deploy playwright-install playwright-test playwright reproduce-spritestacks export-sprite-actor-manifest export-sprite-actor-poses report-animation-mappings temporal-bake-plan tla-check tla-worker-check tla-ui-check tla-animation-ack-check tla-simulation-bridge-check tla-casualty-boundary-check tla-lock-check debug-fixture-check check check-func-length check-loc
+.PHONY: install clean build wasm-bindgen-tool build-wasm run-web server watch deploy test test-fast test-browser test-browser-sequential test-static test-integration test-rhai test-perception nuke-deploy playwright-install playwright-test tla-check tla-worker-check tla-ui-check tla-animation-ack-check tla-simulation-bridge-check tla-casualty-boundary-check tla-lock-check debug-fixture-check check check-func-length check-loc
 
 TEST_LOG := .make-test.log
 # Keep the default feedback loop bounded. Browser and model tests should be
@@ -117,10 +117,7 @@ LOC_LIMIT := 750
 # `make clean` must never remove source assets, the separate assets checkout,
 # or tracked authored web data.
 GENERATED_WEB_ASSETS := \
-	web/atlas.json \
-	web/spritesheet.png \
 	web/sdfsheet.png \
-	web/sprite_actor_manifest.json \
 	web/pystral_gate.js \
 	web/pystral_gate_bg.wasm
 
@@ -205,9 +202,6 @@ build: check
 	cargo build --package pystral_compiler
 
 build-wasm: check wasm-bindgen-tool
-	@if [ ! -f "web/atlas.json" ] || [ ! -f "web/spritesheet.png" ]; then \
-		touch crates/compiler/build.rs; \
-	fi
 	cargo build --target wasm32-unknown-unknown
 	mkdir -p web
 	$(WASM_BINDGEN) --target web --out-dir web --no-typescript target/wasm32-unknown-unknown/debug/pystral_gate.wasm
@@ -305,66 +299,6 @@ server:
 watch:
 	cargo watch -x build-wasm
 
-reproduce-spritestacks:
-	@set -e; \
-	npm --prefix assets/spracker run dev -- --host 127.0.0.1 > /tmp/pystral-spracker.log 2>&1 & \
-	server_pid=$$!; \
-	trap 'kill $$server_pid 2>/dev/null || true' EXIT INT TERM; \
-	for attempt in $$(seq 1 60); do \
-		if curl --silent --fail http://127.0.0.1:5173/ >/dev/null; then break; fi; \
-		sleep 1; \
-		if [ $$attempt -eq 60 ]; then \
-			cat /tmp/pystral-spracker.log; \
-			exit 1; \
-		fi; \
-	done; \
-	node --experimental-strip-types scripts/reproduce_spritestacks.ts
-
-export-sprite-actor-manifest: install
-	@set -e; \
-	npm --prefix assets/spracker run dev -- --host 127.0.0.1 > /tmp/pystral-spracker.log 2>&1 & \
-	server_pid=$$!; \
-	trap 'kill $$server_pid 2>/dev/null || true' EXIT INT TERM; \
-	for attempt in $$(seq 1 60); do \
-		if curl --silent --fail http://127.0.0.1:5173/ >/dev/null; then break; fi; \
-		sleep 1; \
-		if [ $$attempt -eq 60 ]; then cat /tmp/pystral-spracker.log; exit 1; fi; \
-	done; \
-	node --experimental-strip-types scripts/export_sprite_actor_manifest.ts; \
-	bytes=$$(wc -c < web/sprite_actor_manifest.json); \
-	if [ "$$bytes" -gt 700000 ]; then \
-		echo "sprite actor manifest is too large ($$bytes bytes; limit 700000)" >&2; exit 1; \
-	fi
-
-export-sprite-actor-poses: install
-	@set -e; npm --prefix assets/spracker run dev -- --host 127.0.0.1 > /tmp/pystral-spracker.log 2>&1 & \
-	server_pid=$$!; trap 'kill $$server_pid 2>/dev/null || true' EXIT INT TERM; \
-	for attempt in $$(seq 1 60); do curl --silent --fail http://127.0.0.1:5173/ >/dev/null && break; sleep 1; done; \
-	node --experimental-strip-types scripts/export_sprite_actor_poses.ts
-
-# One-time metadata export through the local Spracker page. The runtime only
-# consumes web/animation_catalog.json and has no Spracker dependency.
-export-animation-catalog:
-	@set -e; \
-	npm --prefix assets/spracker run dev -- --host 127.0.0.1 > /tmp/pystral-spracker.log 2>&1 & \
-	server_pid=$$!; \
-	trap 'kill $$server_pid 2>/dev/null || true' EXIT INT TERM; \
-	for attempt in $$(seq 1 60); do \
-		if curl --silent --fail http://127.0.0.1:5173/ >/dev/null; then break; fi; \
-		sleep 1; \
-		if [ $$attempt -eq 60 ]; then cat /tmp/pystral-spracker.log; exit 1; fi; \
-	done; \
-	node --experimental-strip-types scripts/export_animation_catalog.ts
-
-# Dry-run the runtime state to source-clip mapping before temporal baking.
-report-animation-mappings:
-	node --experimental-strip-types scripts/report_animation_mappings.ts
-
-# Validate the temporal manifest and report generated-layer cost without
-# starting Spracker or mutating the separate assets repository.
-temporal-bake-plan:
-	node --experimental-strip-types scripts/temporal_bake_plan.ts
-
 deploy:
 	git checkout deploy || git checkout -b deploy
 	git merge main --no-edit
@@ -372,13 +306,11 @@ deploy:
 	$(MAKE) build-wasm
 	grep -v "web/pystral_gate.js" .gitignore > .gitignore.tmp && mv .gitignore.tmp .gitignore
 	grep -v "web/pystral_gate_bg.wasm" .gitignore > .gitignore.tmp && mv .gitignore.tmp .gitignore
-	grep -v "web/spritesheet.png" .gitignore > .gitignore.tmp && mv .gitignore.tmp .gitignore
-	grep -v "web/atlas.json" .gitignore > .gitignore.tmp && mv .gitignore.tmp .gitignore
 	$(WASM_BINDGEN) --target web --out-dir web --no-typescript target/wasm32-unknown-unknown/debug/pystral_gate.wasm
 	# Keep every static entry point and its worker in the Pages artifact. All
 	# asset URLs are document-relative, so this works at / locally and at a
 	# repository subpath on github.io.
-	git add index.html game.html editor.html rhai_worker.js web/enable-threads.js web/pystral_gate.js web/pystral_gate_bg.wasm web/spritesheet.png web/atlas.json .gitignore
+	git add index.html game.html editor.html rhai_worker.js web/enable-threads.js web/pystral_gate.js web/pystral_gate_bg.wasm web/assets/models web/glb_manifest.json .gitignore
 	git commit -m "Update web release artifacts"
 	git checkout main
 

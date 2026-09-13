@@ -3,8 +3,7 @@ const { test, expect } = require('@playwright/test');
 test('authoritative facing indicator is visible above the actor scene', async ({ page }) => {
   page.on('pageerror', (error) => console.log('pageerror', error.message));
   await page.goto('/game.html');
-  await page.waitForFunction(() => window.__pystralThreeAtlasProfile?.().ready);
-  await page.waitForFunction(() => window.__pystralThreeNativeAtlasTexture);
+  await page.waitForFunction(() => window.__pystralThreeGlbManifest?.models);
   const marker = await page.evaluate(() => {
     window.dispatchEvent(new CustomEvent('pystral-render-frame', { detail: {
       entities: [{
@@ -17,7 +16,7 @@ test('authoritative facing indicator is visible above the actor scene', async ({
       }],
       cameras: [], map: null, materials: {}, camera_pose: null,
     } }));
-    const group = window.__pystralThreeNativeScene.children.find((child) => child.type === 'Group');
+    const group = window.__pystralThreeNativeMarkers.get('77');
     return {
       children: group?.children.length || 0,
       renderOrder: group?.renderOrder || 0,
@@ -35,7 +34,7 @@ test('authoritative facing indicator is visible above the actor scene', async ({
 
 test('tactical compass anchors to the lowest tile and exposes six directions', async ({ page }) => {
   await page.goto('/game.html');
-  await page.waitForFunction(() => window.__pystralThreeAtlasProfile?.().ready);
+  await page.waitForFunction(() => window.__pystralThreeGlbManifest?.models);
   await page.evaluate(() => window.dispatchEvent(new CustomEvent('pystral-render-frame', { detail: {
     entities: [], cameras: [], materials: {}, camera_pose: null,
     map: { orientation: 'flat', hex_size: [1, 1], tiles: [{ q: 2, r: -1, layer: 0, bottom: 0, height: 1, material: 'grass' }] },
@@ -50,7 +49,7 @@ test('tactical compass anchors to the lowest tile and exposes six directions', a
 
 test('waypoint preview shares marker geometry and cleans up replaced paths', async ({ page }) => {
   await page.goto('/game.html');
-  await page.waitForFunction(() => window.__pystralThreeAtlasProfile?.().ready);
+  await page.waitForFunction(() => window.__pystralThreeGlbManifest?.models);
   const first = await page.evaluate(() => {
     window.dispatchEvent(new CustomEvent('pystral-render-frame', { detail: {
     entities: [], cameras: [], map: null, materials: {}, camera_pose: null,

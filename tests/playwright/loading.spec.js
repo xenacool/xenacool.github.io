@@ -1,7 +1,7 @@
 const { test, expect } = require('@playwright/test');
 
 test('game exposes an accessible loading state before controls become usable', async ({ page }) => {
-  await page.route('**/web/atlas.json', async (route) => {
+  await page.route('**/web/glb_manifest.json', async (route) => {
     await new Promise((resolve) => setTimeout(resolve, 500));
     await route.continue();
   });
@@ -10,7 +10,7 @@ test('game exposes an accessible loading state before controls become usable', a
   const loading = page.getByRole('heading', { name: 'Loading game' });
   await expect(loading).toBeVisible();
   await expect(page.locator('#action-controls')).not.toBeVisible();
-  await expect(page.getByRole('progressbar', { name: 'Game loading progress' })).toHaveAttribute('aria-valuenow', '25');
+  await expect(page.getByRole('progressbar', { name: 'Game loading progress' })).toHaveAttribute('aria-valuenow', '30');
 
   await expect(loading).toBeHidden({ timeout: 15000 });
   await expect(page.locator('#action-controls')).toBeVisible();
@@ -19,12 +19,10 @@ test('game exposes an accessible loading state before controls become usable', a
 
 test('loading failure names the failed asset and retry recovers', async ({ page }) => {
   let attempts = 0;
-  await page.route('**/web/atlas.json', async (route) => {
+  await page.route('**/web/glb_manifest.json', async (route) => {
     attempts += 1;
-    // The renderer and Rust loader both request atlas.json during one
-    // startup attempt. Fail both consumers so the test observes the
-    // authoritative loader error rather than racing the renderer's optional
-    // atlas lookup.
+    // The Rust startup loader requests the GLB manifest authoritatively;
+    // the renderer also consumes it for model caching.
     if (attempts <= 2) {
       await route.abort('failed');
       return;
@@ -34,7 +32,7 @@ test('loading failure names the failed asset and retry recovers', async ({ page 
 
   await page.goto('/game.html');
   await expect(page.getByRole('alert')).toContainText('Asset loading failed');
-  await expect(page.getByRole('alert')).toContainText('web/atlas.json');
+  await expect(page.getByRole('alert')).toContainText('web/glb_manifest.json');
   const retry = page.getByRole('button', { name: 'Retry' });
   await expect(retry).toBeVisible();
   await retry.click();
@@ -45,7 +43,7 @@ test('loading failure names the failed asset and retry recovers', async ({ page 
 
 test('repeated retry replaces the attempt without duplicating controls or reloading', async ({ page }) => {
   let attempts = 0;
-  await page.route('**/web/atlas.json', async (route) => {
+  await page.route('**/web/glb_manifest.json', async (route) => {
     attempts += 1;
     if (attempts < 3) {
       await route.abort('failed');

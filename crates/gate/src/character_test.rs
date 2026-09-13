@@ -1,8 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use pystral_compiler::assets::AssetCollection;
     use pystral_core::history::HistoryManager;
-    use pystral_core::log::PropertyValue;
     use pystral_runtime::pg_rpg::generate_pg_rpg_log;
 
     #[test]
@@ -38,55 +36,23 @@ mod tests {
                 })
                 .collect();
 
-            if !characters.is_empty() && state.asset_collections.contains_key("primitives") {
+            if !characters.is_empty() {
                 found_characters = true;
 
-                // Check asset collection
-                let collection_data = state
-                    .asset_collections
-                    .get("primitives")
-                    .expect("primitives asset collection should be defined");
-
-                let collection = AssetCollection::from_binary(collection_data);
-
                 for char_entity in characters {
-                    let asset_prop = match char_entity.properties.get("asset") {
-                        Some(p) => p,
-                        None => {
-                            found_characters = false; // Not fully initialized yet
-                            break;
-                        }
-                    };
-
-                    if let PropertyValue::String(asset_name) = asset_prop {
-                        assert!(
-                            collection.spritestacks.contains_key(asset_name),
-                            "Asset {} not found in primitives collection for character {}",
-                            asset_name,
-                            char_entity.kind
-                        );
-
-                        let stack = &collection.spritestacks[asset_name];
-                        assert!(
-                            !stack.slices.is_empty(),
-                            "Asset {} for character {} has no slices",
-                            asset_name,
-                            char_entity.kind
-                        );
-
-                        println!(
-                            "Character {} (kind: {}) has asset {} with {} slices",
-                            char_entity.id,
-                            char_entity.kind,
-                            asset_name,
-                            stack.slices.len()
-                        );
-                    } else {
-                        panic!(
-                            "Asset property is not a string for character {}",
-                            char_entity.kind
-                        );
+                    if !char_entity.properties.contains_key("asset") {
+                        found_characters = false;
+                        break;
                     }
+                    assert_eq!(
+                        char_entity.properties.get("asset").and_then(|value| match value {
+                            pystral_core::log::PropertyValue::String(name) => Some(name),
+                            pystral_core::log::PropertyValue::AssetRef(name) => Some(name),
+                            _ => None,
+                        }),
+                        Some(&char_entity.kind),
+                        "character asset must be a direct GLB manifest key"
+                    );
                 }
 
                 if found_characters {

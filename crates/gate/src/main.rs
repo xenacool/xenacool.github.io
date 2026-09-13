@@ -167,16 +167,16 @@ fn request_initial_pg_rpg_log(
 ) {
     wasm_bindgen_futures::spawn_local(async move {
         match fetch_assets(&active, &abort_controller).await {
-            Ok((bundle, atlas_json, spritesheet_rgba, width)) => {
+            Ok(bundle) => {
                 if !active.get() {
                     return;
                 }
                 let _ = worker_tx.unbounded_send(WorkerInput::RuntimeRequest(
                     RuntimeRequest::GeneratePgRpgLog {
                         bundle,
-                        atlas_json,
-                        spritesheet_rgba,
-                        spritesheet_width: width,
+                        atlas_json: String::new(),
+                        spritesheet_rgba: Vec::new(),
+                        spritesheet_width: 0,
                     },
                 ));
             }
@@ -435,76 +435,13 @@ extern "C" {
 async fn fetch_assets(
     active: &Rc<Cell<bool>>,
     abort_controller: &web_sys::AbortController,
-) -> Result<(ScenarioBundle, String, Vec<u8>, u32), JsValue> {
+) -> Result<ScenarioBundle, JsValue> {
     let window = web_sys::window().expect("No global window found");
 
-    let resp_atlas = wasm_bindgen_futures::JsFuture::from(fetch_request(
-        &window,
-        "web/atlas.json",
-        abort_controller,
-    )?)
-    .await
-    .map_err(|error| JsValue::from_str(&format!("web/atlas.json: {error:?}")))?;
-    let resp_atlas: web_sys::Response = resp_atlas.dyn_into()?;
-    if !resp_atlas.ok() {
-        return Err(format!(
-            "Failed to fetch atlas: {} {}",
-            resp_atlas.status(),
-            resp_atlas.status_text()
-        )
-        .into());
-    }
-    let atlas_json = wasm_bindgen_futures::JsFuture::from(resp_atlas.text()?)
-        .await?
-        .as_string()
-        .unwrap();
-    if active.get() {
-        set_loading_state("loading", "Loaded web/atlas.json.", 30);
-    }
-
-    let resp_img = wasm_bindgen_futures::JsFuture::from(fetch_request(
-        &window,
-        "web/spritesheet.png",
-        abort_controller,
-    )?)
-    .await
-    .map_err(|error| JsValue::from_str(&format!("web/spritesheet.png: {error:?}")))?;
-    let resp_img: web_sys::Response = resp_img.dyn_into()?;
-    if !resp_img.ok() {
-        return Err(format!(
-            "Failed to fetch spritesheet: {} {}",
-            resp_img.status(),
-            resp_img.status_text()
-        )
-        .into());
-    }
-    let blob = wasm_bindgen_futures::JsFuture::from(resp_img.blob()?).await?;
-    let blob: web_sys::Blob = blob.dyn_into()?;
-
-    let bitmap_promise = window.create_image_bitmap_with_blob(&blob)?;
-    let bitmap = wasm_bindgen_futures::JsFuture::from(bitmap_promise).await?;
-    let bitmap: web_sys::ImageBitmap = bitmap.dyn_into()?;
-
-    let width = bitmap.width();
-    let height = bitmap.height();
-
-    let document = window.document().expect("No document found");
-    let canvas = document
-        .create_element("canvas")?
-        .dyn_into::<web_sys::HtmlCanvasElement>()?;
-    canvas.set_width(width);
-    canvas.set_height(height);
-    let ctx = canvas
-        .get_context("2d")?
-        .unwrap()
-        .dyn_into::<web_sys::CanvasRenderingContext2d>()?;
-    ctx.draw_image_with_image_bitmap(&bitmap, 0.0, 0.0)?;
-
-    let image_data = ctx.get_image_data(0, 0, width as i32, height as i32)?;
-    let pixels = image_data.data().to_vec();
-    if active.get() {
-        set_loading_state("loading", "Decoded web/spritesheet.png.", 40);
-    }
+    let _ = window;
+    if active.get() { set_loading_state("loading", "Loading direct GLB presentation.", 30); }
+    fetch_text("web/glb_manifest.json", abort_controller).await
+        .map_err(|error| JsValue::from_str(&format!("web/glb_manifest.json: {error:?}")))?;
 
     let script_manifest = fetch_manifest("web/scripts/manifest.json", abort_controller).await?;
     if active.get() {
@@ -572,7 +509,7 @@ async fn fetch_assets(
         completed_files += 1;
         report_file(&web_path, completed_files);
     }
-    Ok((bundle, atlas_json, pixels, width))
+    Ok(bundle)
 }
 
 async fn fetch_manifest(
