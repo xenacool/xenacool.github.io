@@ -1,11 +1,5 @@
-// Tactical scenario and runtime-owned simulation configuration.
-// 0.036 keeps a roughly 10% margin inside the unit pointy-hex footprint while
-// keeping the captured slice aspect ratio intact in the native renderer.
-let scaling = 0.036;
-collection.add_atlas_spritestack("Skeleton_Minion", scaling, atlas, spritesheet_rgba, spritesheet_width);
-collection.add_atlas_spritestack("Necromancer", scaling, atlas, spritesheet_rgba, spritesheet_width);
-collection.add_atlas_spritestack("Caveman", scaling, atlas, spritesheet_rgba, spritesheet_width);
-collection.add_atlas_spritestack("Mage", scaling, atlas, spritesheet_rgba, spritesheet_width);
+// Tactical scenario and runtime-owned simulation configuration. Character
+// models are GLBs and are resolved by the browser from glb_manifest.json.
 history.define_asset_collection("primitives", collection);
 
 let mcts = new_mcts_config();

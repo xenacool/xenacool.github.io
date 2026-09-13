@@ -14,7 +14,10 @@ for id in agents {
     let cell = sim.get_agent_cell(id);
     history.spawn_entity(id, kind, cell.hex, character_init_properties());
     history.set(id, "asset", kind);
-    history.set(id, "scale", 0.6);
+    // Native GLB jobs are normalized to the two-hex actor contract. Keep the
+    // authored transform at one so their rendered height remains exactly two
+    // hex units; individual units can still override scale when desired.
+    history.set(id, "scale", 1.0);
     history.set(id, "layer", cell.layer);
     history.set(id, "rotation_z", 0.0);
     history.set(id, "rotation_y", 0.0);
@@ -118,10 +121,13 @@ history.configure_transition(cam1, default_transition);
 history.configure_transition(cam2, default_transition);
 history.configure_transition(cam3, default_transition);
 history.configure_transition(cam4, default_transition);
-history.setup_camera_props(cam1, 0.0, 20.0, 12.0, 0.0, 0.0, 0.0);
-history.setup_camera_props(cam2, 1.570795, 25.0, 15.0, 0.0, 0.0, 0.0);
-history.setup_camera_props(cam3, 3.14159, 20.0, 12.0, 0.0, 0.0, 0.0);
-history.setup_camera_props(cam4, 4.712385, 25.0, 15.0, 0.0, 0.0, 0.0);
+// The authored defaults frame the complete 13x13 tactical board, including
+// the five-unit wall, at the standard viewport aspect ratio. Individual
+// cameras remain freely overrideable through these same Rhai properties.
+history.setup_camera_props(cam1, 0.0, 32.0, 30.0, 0.0, 2.5, 0.0);
+history.setup_camera_props(cam2, 1.570795, 36.0, 34.0, 0.0, 2.5, 0.0);
+history.setup_camera_props(cam3, 3.14159, 32.0, 30.0, 0.0, 2.5, 0.0);
+history.setup_camera_props(cam4, 4.712385, 36.0, 34.0, 0.0, 2.5, 0.0);
 history.set(cam1, "neighbor_right", cam2);
 history.set(cam2, "neighbor_right", cam3);
 history.set(cam3, "neighbor_right", cam4);

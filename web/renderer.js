@@ -2,18 +2,8 @@
 // Rust publishes authoritative simulation presentation data; Three.js owns the
 // visible WebGL2 canvas.
 import * as THREE from './vendor/three.module.min.js';
-import { createMaskResources } from './actor_mask.js';
-import { samplePose } from './sprite_actor.js';
+import { loadModel, syncGlbEntities } from './glb_actor.js';
 
-const SPRITESTACK_Y_AXIS = new THREE.Vector3(0, 1, 0);
-const SPRITESTACK_X_AXIS = new THREE.Vector3(1, 0, 0);
-const SPRITESTACK_Z_AXIS = new THREE.Vector3(0, 0, 1);
-const SPRITESTACK_HORIZONTAL_SLICE = new THREE.Quaternion()
-    .setFromAxisAngle(SPRITESTACK_X_AXIS, -Math.PI / 2);
-// Frame application is synchronous, so these scratch quaternions can be
-// reused across slices without sharing mutable state with the scene.
-const SPRITESTACK_FACING = new THREE.Quaternion();
-const SPRITESTACK_AUTHORED_ROTATION = new THREE.Quaternion();
 const HEX_DIRECTION_OFFSET = Math.PI / 6;
 const FACING_ANGLES = Object.freeze({
     north: HEX_DIRECTION_OFFSET,
@@ -60,23 +50,6 @@ export function presentationOffset(entity, reducedMotion = false) {
 }
 
 
-export function resolveAtlasRegion(atlas, asset, sliceIndex) {
-    const regions = atlas?.spritestacks?.[asset];
-    if (!Array.isArray(regions) || regions.length === 0) return null;
-    const index = Math.max(0, Math.min(regions.length - 1, Number(sliceIndex) || 0));
-    const region = regions[index];
-    return {
-        x: region.x,
-        y: region.y,
-        width: region.w,
-        height: region.h,
-        u0: region.x / atlas.width,
-        v0: 1 - (region.y + region.h) / atlas.height,
-        u1: (region.x + region.w) / atlas.width,
-        v1: 1 - region.y / atlas.height,
-    };
-}
-
 export function createNativePresentation(canvas) {
     window.__pystralThreeStaticMap = null;
     window.__pystralThreeStaticMaterials = null;
@@ -103,14 +76,17 @@ export function createNativePresentation(canvas) {
     keyLight.shadow.camera.far = 40;
     scene.add(keyLight);
     const camera = new THREE.Camera();
-    const actorMask = createMaskResources(THREE);
+    const actorMask = null;
     window.__pystralThreeActorMask = actorMask;
-    let atlasTexture = null;
+    let glbManifest = null;
     const nativeMeshes = new Map();
+    window.__pystralThreeNativeActorContracts = new Map();
+    window.__pystralThreeGlbLoadedModels = new Map();
     const teamMarkers = new Map();
     const waypointMarkers = new Map();
-    let poseCatalog = new Map();
-    window.__pystralThreePoseProfile = () => ({ ready: poseCatalog.size > 0 });
+    const mixers = new Map();
+    window.__pystralThreeMixers = mixers;
+    window.__pystralThreePoseProfile = () => ({ ready: glbManifest !== null });
     window.__pystralThreeNativeMarkers = teamMarkers;
     window.__pystralThreeNativeWaypointMarkers = waypointMarkers;
     const teamMarkerGeometry = new THREE.RingGeometry(0.32, 0.40, 16);
@@ -122,18 +98,6 @@ export function createNativePresentation(canvas) {
         window.__pystralThreeNativeMeshes = nativeMeshes;
     window.__pystralThreeNativeProfile = { entities: 0, mapTiles: 0 };
     window.__pystralThreeMaskEnabled = true;
-        atlasTexture = new THREE.TextureLoader().load('./web/spritesheet.png', () => {
-            // Publish only after atlas metadata is ready so frame consumers
-            // never observe a half-initialized native presentation.
-            if (window.__pystralThreeAtlas) {
-                window.__pystralThreeNativeAtlasTexture = atlasTexture;
-                if (window.__pystralThreeFrame) applyNativeFrame(window.__pystralThreeFrame);
-            }
-        });
-        atlasTexture.minFilter = THREE.NearestFilter;
-        atlasTexture.magFilter = THREE.NearestFilter;
-        atlasTexture.generateMipmaps = false;
-
     const profile = {
         // 60 Hz is the highest stable target across supported WebGL2 browsers;
         // requestAnimationFrame naturally adapts down on slower displays.
@@ -148,8 +112,8 @@ export function createNativePresentation(canvas) {
         frameSamples: 0,
         appliedFrameSamples: 0,
         positionSamples: 0,
-        nativeAtlasReady: false,
-        nativeAtlasRegions: 0,
+        nativeGlbReady: false,
+        nativeGlbModels: 0,
         nativeMeshCount: 0,
         nativeGpu: { drawCalls: 0, triangles: 0, textures: 0, glErrors: 0 },
         fps: {
@@ -164,12 +128,7 @@ export function createNativePresentation(canvas) {
     let lastFpsBucketKey = null;
     window.__pystralThreeProfile = () => ({ ...profile });
     window.__pystralThreeFpsProfile = () => snapshotFps(profile);
-    window.__pystralThreeAtlasProfile = () => ({
-        ready: profile.nativeAtlasReady,
-        regions: profile.nativeAtlasRegions,
-    });
-    window.__pystralThreeResolveAtlasRegion = (asset, sliceIndex) =>
-        resolveAtlasRegion(window.__pystralThreeAtlas, asset, sliceIndex);
+    window.__pystralThreeGlbProfile = () => ({ ready: profile.nativeGlbReady, models: profile.nativeGlbModels });
     // The camera controller can mark a requested transition immediately;
     // frame ingress also marks changes observed in authoritative camera data.
     window.__pystralThreeMarkCameraMotion = () => {
@@ -219,24 +178,26 @@ export function createNativePresentation(canvas) {
         window.__pystralRenderFramePending = false;
     };
     window.addEventListener('pystral-render-frame', frameListener);
-    fetch('./web/atlas.json')
+    fetch('./web/glb_manifest.json')
         .then((response) => response.ok ? response.json() : Promise.reject(response.status))
-        .then((atlas) => {
-            window.__pystralThreeAtlas = atlas;
-            profile.nativeAtlasReady = true;
-            profile.nativeAtlasRegions = Object.values(atlas.spritestacks || {})
-                .reduce((total, regions) => total + regions.length, 0);
-            window.dispatchEvent(new CustomEvent('pystral-three-atlas-ready'));
-            if (atlasTexture?.image && !window.__pystralThreeNativeAtlasTexture) {
-                window.__pystralThreeNativeAtlasTexture = atlasTexture;
-            }
-            // A frame may have arrived while the texture was loading. Replay
-            // the retained contract now that both atlas inputs are available.
-            if (window.__pystralThreeNativeAtlasTexture && window.__pystralThreeFrame) {
-                applyNativeFrame(window.__pystralThreeFrame);
-            }
+        .then((manifest) => {
+            glbManifest = manifest;
+            window.__pystralThreeGlbManifest = manifest;
+            // Use the same production loader for deterministic asset checks
+            // without coupling them to the lifetime of an entity in a live
+            // authoritative frame.
+            window.__pystralThreeLoadGlbModels = (assets) => Promise.all(
+                [...new Set(assets || [])].map((asset) => loadModel(manifest, asset).then((model) => {
+                    window.__pystralThreeGlbLoadedModels.set(asset, model);
+                    return model;
+                }))
+            );
+            profile.nativeGlbReady = true;
+            profile.nativeGlbModels = Object.keys(manifest.models || {}).length;
+            window.dispatchEvent(new CustomEvent('pystral-three-glb-ready'));
+            if (window.__pystralThreeFrame) applyNativeFrame(window.__pystralThreeFrame);
         })
-        .catch((error) => console.warn('Native atlas lookup unavailable:', error));
+        .catch((error) => console.warn('Native GLB manifest unavailable:', error));
     let active = true;
     const render = () => {
         if (!active) return;
@@ -325,35 +286,34 @@ export function createNativePresentation(canvas) {
             window.__pystralThreeActorCatalog = catalog instanceof Map ? catalog : new Map();
         },
         setPoseCatalog(catalog) {
-            poseCatalog = catalog instanceof Map ? catalog : new Map();
             if (window.__pystralThreeFrame) applyNativeFrame(window.__pystralThreeFrame);
         },
         dispose() {
             active = false;
             window.removeEventListener('pystral-render-frame', frameListener);
             delete window.__pystralThreeMarkCameraMotion;
-            delete window.__pystralThreeAtlasProfile;
+            delete window.__pystralThreeGlbProfile;
             delete window.__pystralThreePoseProfile;
-            delete window.__pystralThreeResolveAtlasRegion;
             delete window.__pystralThreeNativeScene;
             delete window.__pystralThreeNativeCamera;
             delete window.__pystralThreeNativeMeshes;
+            delete window.__pystralThreeNativeActorContracts;
+            delete window.__pystralThreeGlbLoadedModels;
             delete window.__pystralThreeNativeMarkers;
             delete window.__pystralThreeNativeWaypointMarkers;
             delete window.__pystralThreeActorMask;
             delete window.__pystralThreeMaskProfile;
             delete window.__pystralThreeTeamMarkerGeometry;
             delete window.__pystralThreeFacingMarkerGeometry;
-            delete window.__pystralThreeNativeAtlasTexture;
+            delete window.__pystralThreeGlbManifest;
+            delete window.__pystralThreeLoadGlbModels;
             delete window.__pystralThreeActorCatalog;
-            atlasTexture?.dispose();
             actorMaskMeshes.forEach((mesh) => mesh.material.dispose());
             actorMaskMeshes.clear();
             actorMask?.dispose();
             window.__pystralThreeNativeHexGeometry?.dispose();
-            nativeMeshes.forEach((mesh) => {
-                mesh.geometry.dispose();
-                mesh.material.dispose();
+            nativeMeshes.forEach((record) => {
+                scene.remove(record.group);
             });
             (window.__pystralThreeNativeTileMeshes || new Map()).forEach((mesh) => {
                 mesh.material.dispose();
@@ -440,6 +400,63 @@ function syncNativeWaypoints(frame) {
     });
 }
 
+function syncNativeIndicators(frame) {
+    const markers = window.__pystralThreeNativeMarkers;
+    const ringGeometry = window.__pystralThreeTeamMarkerGeometry;
+    const facingGeometry = window.__pystralThreeFacingMarkerGeometry;
+    const scene = window.__pystralThreeNativeScene;
+    if (!markers || !ringGeometry || !facingGeometry || !scene) return;
+    const seen = new Set();
+    (frame.entities || []).forEach((entity) => {
+        const indicator = entity.indicator;
+        if (!indicator || !entity.world_position) return;
+        if (indicator.kind === 'facing' && (!entity.asset || !isActorEntity(entity))) return;
+        const id = String(entity.id);
+        const color = Array.isArray(indicator.color)
+            ? new THREE.Color(...indicator.color) : new THREE.Color(indicator.color || 0xffffff);
+        const state = String(indicator.state || 'committed');
+        let marker = markers.get(id);
+        if (!marker) {
+            marker = new THREE.Group();
+            const ring = new THREE.Mesh(ringGeometry, new THREE.MeshBasicMaterial({
+                color, transparent: true, opacity: state === 'hover' ? 0.45 : 0.85,
+                blending: THREE.AdditiveBlending, depthTest: false, depthWrite: false,
+                side: THREE.DoubleSide,
+            }));
+            ring.rotation.x = -Math.PI / 2;
+            marker.add(ring);
+            if (indicator.kind === 'facing') {
+                const arrow = new THREE.Mesh(facingGeometry, ring.material.clone());
+                arrow.rotation.x = -Math.PI / 2;
+                arrow.position.z = -0.46;
+                marker.add(arrow);
+            }
+            scene.add(marker);
+            markers.set(id, marker);
+        }
+        marker.traverse((child) => {
+            if (child.material) {
+                child.material.color.copy(color);
+                child.material.opacity = state === 'hover' ? 0.45 : 0.85;
+            }
+        });
+        marker.position.fromArray(entity.world_position);
+        marker.position.y += 0.16;
+        marker.scale.setScalar((Number(entity.scale) || 1) * 1.15);
+        const direction = FACING_ANGLES[String(indicator.direction || '').toLowerCase()];
+        if (direction !== undefined) marker.rotation.y = -direction;
+        marker.renderOrder = Number(entity.render_order || 0) * 1000 + 100000;
+        seen.add(id);
+    });
+    markers.forEach((marker, id) => {
+        if (!seen.has(id)) {
+            scene.remove(marker);
+            marker.traverse((child) => child.material?.dispose());
+            markers.delete(id);
+        }
+    });
+}
+
 function applyNativeFrame(frame) {
     const scene = window.__pystralThreeNativeScene;
     const camera = window.__pystralThreeNativeCamera;
@@ -453,9 +470,24 @@ function applyNativeFrame(frame) {
     }
     applyNativeMap(frame, scene);
     syncNativeWaypoints(frame);
-    const atlas = window.__pystralThreeAtlas;
-    const texture = window.__pystralThreeNativeAtlasTexture;
-    if (!atlas || !texture) return;
+    syncNativeIndicators(frame);
+    const manifest = window.__pystralThreeGlbManifest;
+    if (manifest) {
+        syncGlbEntities(frame, scene, manifest, window.__pystralThreeNativeMeshes,
+            window.__pystralThreeMixers || new Map(),
+            (message) => console.warn(message), camera);
+        window.__pystralThreeNativeProfile = {
+            ...(window.__pystralThreeNativeProfile || {}),
+            entities: (frame.entities || []).filter((entity) => entity.world_position).length,
+            mapTiles: frame.map?.tiles?.length || 0,
+            nativeMeshCount: window.__pystralThreeNativeMeshes?.size || 0,
+        };
+        return;
+    }
+    // Frames may arrive before the manifest. The manifest-ready callback
+    // replays the retained frame, so no fallback scene is required.
+    return;
+    /* legacy atlas renderer removed */
     const meshes = window.__pystralThreeNativeMeshes;
     const teamMarkers = window.__pystralThreeNativeMarkers;
     const teamMarkerGeometry = window.__pystralThreeTeamMarkerGeometry;
@@ -534,9 +566,8 @@ function applyNativeFrame(frame) {
             mesh.position.x += motion[0] * scale;
             mesh.position.y += motion[1] * scale;
             mesh.position.z += motion[2] * scale;
-            // Spracker layers are horizontal X/Z planes stacked from the
-            // world anchor upward along Y. The asset metadata is the single
-            // source of truth for footprint and stack span.
+            // Kept only in the unreachable compatibility block below while
+            // old recordings are retired; live presentation uses GLB groups.
             const effectiveSpacing = spacing > 0 && sliceCount > 1
                 ? Math.min(spacing, stackSpan / (sliceCount - 1))
                 : 0;
@@ -708,10 +739,17 @@ function applyNativeMap(frame, scene) {
             scene.add(mesh);
             tileMeshes.set(key, mesh);
         }
-        const height = tile.height || 1;
+        // Zero-height tiles are valid markers/voids. Keep the JS geometry
+        // contract identical to Rust's `bottom + height` terrain contract;
+        // only a missing or non-finite height receives the compatibility
+        // default.
+        const parsedHeight = Number(tile.height);
+        const height = Number.isFinite(parsedHeight) ? parsedHeight : 1;
+        const parsedBottom = Number(tile.bottom);
+        const bottom = Number.isFinite(parsedBottom) ? parsedBottom : 0;
         // ColumnMeshBuilder emits columns from y=0 to y=height. The Three.js
         // cylinder is centered, so place its midpoint at bottom + height/2.
-        mesh.position.set(x, (tile.bottom || 0) + height / 2, z);
+        mesh.position.set(x, bottom + height / 2, z);
         mesh.scale.y = height;
         mesh.renderOrder = Number(tile.layer || 0);
         seen.add(key);
@@ -734,7 +772,9 @@ function updateCompass(map, pointy, sizeX, sizeZ, scene, camera) {
     const lowest = (map.tiles || []).reduce((best, tile) =>
         !best || Number(tile.bottom || 0) < Number(best.bottom || 0) ? tile : best, null);
     if (!lowest) return;
-    const compassY = Number(lowest.bottom || 0) + Number(lowest.height || 1) + 0.02;
+    const bottom = Number.isFinite(Number(lowest.bottom)) ? Number(lowest.bottom) : 0;
+    const height = Number.isFinite(Number(lowest.height)) ? Number(lowest.height) : 1;
+    const compassY = bottom + height + 0.02;
     const [anchorX, anchorZ] = hexCenter(lowest.q, lowest.r, pointy, sizeX, sizeZ);
     const anchor = [anchorX, compassY, anchorZ];
     let compass = window.__pystralThreeCompass;
