@@ -94,22 +94,22 @@ impl LoopHandler {
                     })
                     .unwrap_or(0);
                 if let Some(tween) = ctx.movement_tweens.get_mut(id) {
+                    tween.path.extend(tween.to_hex.line_to(*destination).skip(1));
                     tween.to_hex = *destination;
                     tween.to_layer = from_layer;
                     tween.duration_ms += f64::from(transition.duration_ms);
-                    tween.tweeners = None;
                 } else {
                     ctx.movement_tweens.insert(
                         *id,
                         MovementTween {
                             from_hex,
                             to_hex: *destination,
+                            path: from_hex.line_to(*destination).collect(),
                             from_layer,
                             to_layer: from_layer,
                             start_time_ms: now,
                             duration_ms: f64::from(transition.duration_ms),
                             transition: transition.clone(),
-                            tweeners: None,
                         },
                     );
                 }

@@ -2,7 +2,6 @@ use crate::render::context::RenderContext;
 use crate::render::utils::{EntityExt, RenderResultExt};
 use pystral_core::log::{EntityState, PropertyValue, WorldState};
 use std::collections::HashMap;
-use tween::{SineInOut, Tweener};
 
 fn tile_top_height(map: &pystral_core::domain::HexMap, hex: hexx::Hex, layer: i32) -> f32 {
     map.tiles
@@ -64,22 +63,14 @@ pub fn resolved_entity_world_positions(
             );
             let mut transition = None;
             if let Some(tween) = ctx.movement_tweens.get_mut(&entity.id) {
-                let start = layout.hex_to_world_pos(tween.from_hex);
-                let end = layout.hex_to_world_pos(tween.to_hex);
-                let values = tween.tweeners.get_or_insert_with(|| {
-                    std::array::from_fn(|axis| {
-                        Tweener::new_at(
-                            [start.x, 0.0, start.y][axis],
-                            [end.x, 0.0, end.y][axis],
-                            tween.duration_ms,
-                            SineInOut,
-                            0.0,
-                        )
-                    })
-                });
                 let elapsed = (now - tween.start_time_ms).max(0.0);
-                position.x = values[0].move_to(elapsed);
-                position.y = values[2].move_to(elapsed);
+                if let Some((from, to, progress)) = tween.segment_at(elapsed) {
+                    let start = layout.hex_to_world_pos(from);
+                    let end = layout.hex_to_world_pos(to);
+                    let eased = progress * progress * (3.0 - 2.0 * progress);
+                    position.x = start.x + (end.x - start.x) * eased;
+                    position.y = start.y + (end.y - start.y) * eased;
+                }
                 let progress = (elapsed / tween.duration_ms.max(1.0)).clamp(0.0, 1.0) as f32;
                 terrain = if progress < 0.5 {
                     (tween.from_hex, tween.from_layer)

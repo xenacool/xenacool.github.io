@@ -55,7 +55,7 @@ impl Runtime {
         if let Some(clip) = clip {
             history.push_and_apply(Event::UpdateProperty {
                 id: unit_id,
-                property: "animation_clip".to_string(),
+                property: "animation_cue_clip".to_string(),
                 value: pystral_core::log::PropertyValue::String(clip.to_string()),
             });
             history.push_and_apply(Event::UpdateProperty {

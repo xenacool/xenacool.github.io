@@ -222,14 +222,16 @@ impl LoopHandler {
             animation_times,
         );
         for entity in &mut frame.entities {
-            let moving = self
-                .ctx
-                .movement_tweens
-                .get(&entity.id)
-                .is_some_and(|tween| now - tween.start_time_ms < tween.duration_ms);
-            if moving && entity.animation_cue.is_none() {
+            if let Some(tween) = self.ctx.movement_tweens.get(&entity.id).filter(|tween| {
+                now - tween.start_time_ms < tween.duration_ms
+            }) {
                 entity.animation_state = "walk".to_string();
                 entity.animation_clip = entity.walk_animation_clip.clone();
+                if let Some((from, to, _)) = tween.segment_at(now - tween.start_time_ms)
+                    && let Some(facing) = pystral_games::Facing::from_step(from, to)
+                {
+                    entity.facing = facing.as_property().to_string();
+                }
             }
         }
         frame.waypoint_preview = self

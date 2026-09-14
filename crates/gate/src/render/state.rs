@@ -37,12 +37,25 @@ impl Default for PlaybackState {
 pub struct MovementTween {
     pub from_hex: Hex,
     pub to_hex: Hex,
+    pub path: Vec<Hex>,
     pub from_layer: i32,
     pub to_layer: i32,
     pub start_time_ms: f64,
     pub duration_ms: f64,
     pub transition: TransitionConfig,
-    pub tweeners: Option<[Tweener<f32, f64, SineInOut>; 3]>,
+}
+
+impl MovementTween {
+    /// Returns the active axial edge and its local progress. A vertical-only
+    /// move has no edge and therefore preserves the existing facing.
+    pub fn segment_at(&self, elapsed_ms: f64) -> Option<(Hex, Hex, f32)> {
+        let segments = self.path.len().saturating_sub(1);
+        if segments == 0 { return None; }
+        let whole = (elapsed_ms / self.duration_ms.max(1.0)).clamp(0.0, 1.0);
+        let scaled = whole * segments as f64;
+        let index = (scaled as usize).min(segments - 1);
+        Some((self.path[index], self.path[index + 1], (scaled - index as f64) as f32))
+    }
 }
 
 pub struct PropertyTween {
@@ -89,7 +102,8 @@ impl CameraTween {
 
 #[cfg(test)]
 mod tests {
-    use super::{CameraTween, sequence_ack_due};
+    use super::{CameraTween, MovementTween, sequence_ack_due};
+    use hexx::Hex;
     use pystral_core::log::{TransitionConfig, TweenKind};
 
     #[test]
@@ -116,5 +130,18 @@ mod tests {
         assert!(!sequence_ack_due(Some((12, 100.0)), 12, 599.0));
         assert!(sequence_ack_due(Some((12, 100.0)), 12, 600.0));
         assert!(sequence_ack_due(Some((11, 100.0)), 12, 101.0));
+    }
+
+    #[test]
+    fn movement_segments_follow_axial_path_in_logical_order() {
+        let tween = MovementTween {
+            from_hex: Hex::ZERO,
+            to_hex: Hex::new(2, -1),
+            path: Hex::ZERO.line_to(Hex::new(2, -1)).collect(),
+            from_layer: 0, to_layer: 0, start_time_ms: 0.0, duration_ms: 600.0,
+            transition: TransitionConfig { duration_ms: 600, delta_time_ms: 16.0, tween: TweenKind::SineInOut },
+        };
+        assert_eq!(tween.segment_at(0.0), Some((Hex::ZERO, Hex::new(1, 0), 0.0)));
+        assert_eq!(tween.segment_at(450.0), Some((Hex::new(1, 0), Hex::new(2, -1), 0.5)));
     }
 }

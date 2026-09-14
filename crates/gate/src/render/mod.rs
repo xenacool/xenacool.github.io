@@ -120,6 +120,7 @@ pub struct RenderEntityFrame {
     pub rig: Option<String>,
     pub animation_clip: Option<String>,
     pub walk_animation_clip: Option<String>,
+    pub animation_cue_clip: Option<String>,
     pub animation_cue: Option<u64>,
     pub animation_barrier: Option<u64>,
     pub animation_time_ms: f32,
@@ -235,6 +236,7 @@ impl RenderFrame {
                     rig: property_string(entity, "rig"),
                     animation_clip: property_string(entity, "animation_clip"),
                     walk_animation_clip: property_string(entity, "walk_animation_clip"),
+                    animation_cue_clip: property_string(entity, "animation_cue_clip"),
                     animation_cue: property_u64(entity, "animation_cue"),
                     animation_barrier: property_u64(entity, "animation_barrier"),
                     animation_time_ms: animation_times

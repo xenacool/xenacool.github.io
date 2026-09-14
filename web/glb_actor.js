@@ -38,10 +38,6 @@ function defaultAnimationKey(entity) {
     return 'general:Idle_A';
 }
 
-function animationKey(entity) {
-    return String(entity.animation_clip || defaultAnimationKey(entity));
-}
-
 // Every shipped job and animation bundle uses the Medium rig. Three resolves
 // track paths against the actor-local SkeletonUtils clone, so cloning a source
 // clip creates a deterministic name-to-name retarget without sharing mutable
@@ -52,9 +48,16 @@ function retargetCompatibleClip(instance, sourceClip, key) {
     return sourceClip.clone();
 }
 
-function isLoopingClip(entity) {
-    return !entity.animation_cue
-        && ['idle', 'walk', 'move'].includes(String(entity.animation_state || 'idle').toLowerCase());
+function animationKey(entity, animation) {
+    const state = String(entity.animation_state || 'idle').toLowerCase();
+    if (state === 'walk' || state === 'move') {
+        return String(entity.walk_animation_clip || defaultAnimationKey(entity));
+    }
+    const cue = entity.animation_cue == null ? null : Number(entity.animation_cue);
+    if (cue !== null && animation?.completedCue !== cue) {
+        return String(entity.animation_cue_clip || entity.animation_clip || defaultAnimationKey(entity));
+    }
+    return String(entity.animation_clip || defaultAnimationKey(entity));
 }
 
 function notifyAnimationCompletion(barrier) {
@@ -213,7 +216,7 @@ export function syncGlbEntities(frame, scene, manifest, meshes, mixers, diagnost
             + Number(entity.rotation_y || 0);
         const animation = mixers.get(key);
         if (animation) {
-            const requested = animationKey(entity);
+            const requested = animationKey(entity, animation);
             const sourceClip = animation.clips.get(requested);
             let clip = animation.retargeted.get(requested);
             if (!clip && sourceClip) {

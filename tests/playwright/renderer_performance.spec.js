@@ -230,6 +230,17 @@ test.describe('Three.js compositor performance contract', () => {
       return window.__pystralThreeMixers.get('950').activeClip?.name;
     }), [frame('movement:Walking_A'), frame('ranged:Ranged_Magic_Spellcasting_Long')]);
     expect(clips).toEqual(['Walking_A', 'Ranged_Magic_Spellcasting_Long']);
+    const walkingAfterCue = await page.evaluate(() => {
+      window.dispatchEvent(new CustomEvent('pystral-render-frame', { detail: {
+        version: 1, tick: 953, cameras: [], map: null, materials: {}, entities: [{
+          id: 950, asset: 'Mage', world_position: [0, 0, 0], scale: 1,
+          animation_clip: 'general:Idle_A', walk_animation_clip: 'movement:Walking_A',
+          animation_cue: 72, animation_cue_clip: 'ranged:Ranged_Magic_Shoot', animation_state: 'walk',
+        }],
+      } }));
+      return window.__pystralThreeMixers.get('950').activeClip?.name;
+    });
+    expect(walkingAfterCue).toBe('Walking_A');
   });
 
   test('releases a one-shot barrier only after its matching animation cue finishes', async ({ page }) => {
@@ -243,7 +254,7 @@ test.describe('Three.js compositor performance contract', () => {
       window.dispatchEvent(new CustomEvent('pystral-render-frame', { detail: {
         version: 1, tick: 951, cameras: [], map: null, materials: {}, entities: [{
           id: 951, asset: 'Mage', world_position: [0, 0, 0], scale: 1,
-          animation_clip: 'ranged:Ranged_Magic_Shoot', animation_cue: 71, animation_barrier: 71,
+          animation_clip: 'general:Idle_A', animation_cue_clip: 'ranged:Ranged_Magic_Shoot', animation_cue: 71, animation_barrier: 71,
         }],
       } }));
     });
@@ -255,7 +266,7 @@ test.describe('Three.js compositor performance contract', () => {
       window.dispatchEvent(new CustomEvent('pystral-render-frame', { detail: {
         version: 1, tick: 952, cameras: [], map: null, materials: {}, entities: [{
           id: 951, asset: 'Mage', world_position: [0, 0, 0], scale: 1,
-          animation_clip: 'ranged:Ranged_Magic_Shoot', animation_cue: 71, animation_barrier: 71,
+          animation_clip: 'general:Idle_A', animation_cue_clip: 'ranged:Ranged_Magic_Shoot', animation_cue: 71, animation_barrier: 71,
         }],
       } }));
     });
