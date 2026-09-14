@@ -243,6 +243,82 @@ test.describe('Three.js compositor performance contract', () => {
     expect(walkingAfterCue).toBe('Walking_A');
   });
 
+  test('idle animation advances between static runtime frames', async ({ page }) => {
+    await page.goto('/game.html');
+    await page.waitForFunction(() => window.__pystralThreeGlbProfile?.().ready);
+    await page.evaluate(() => { window.publish_render_frame = () => {}; });
+    const idleFrame = { version: 1, tick: 954, cameras: [], map: null, materials: {}, entities: [{
+      id: 954, asset: 'Mage', world_position: [0, 0, 0], scale: 1,
+      animation_state: 'idle', animation_clip: 'general:Idle_A', animation_time_ms: 0,
+    }] };
+    await page.evaluate((detail) => window.dispatchEvent(new CustomEvent('pystral-render-frame', { detail })), idleFrame);
+    await page.waitForFunction(() => window.__pystralThreeMixers?.get('954')?.clips?.has('general:Idle_A'));
+    // The GLB load is asynchronous; replay the retained static state just as
+    // the production frame stream does after a model becomes available.
+    await page.evaluate((detail) => window.dispatchEvent(new CustomEvent('pystral-render-frame', { detail })), idleFrame);
+    await page.waitForTimeout(100);
+    const elapsed = await page.evaluate((detail) => {
+      window.dispatchEvent(new CustomEvent('pystral-render-frame', { detail }));
+      return window.__pystralThreeMixers.get('954').activeAction?.time ?? 0;
+    }, idleFrame);
+    expect(elapsed).toBeGreaterThan(0.02);
+  });
+
+  test('walk animation advances while authoritative movement frames are static', async ({ page }) => {
+    await page.goto('/game.html');
+    await page.waitForFunction(() => window.__pystralThreeGlbProfile?.().ready);
+    await page.evaluate(() => { window.publish_render_frame = () => {}; });
+    const walkFrame = { version: 1, tick: 956, cameras: [], map: null, materials: {}, entities: [{
+      id: 957, asset: 'Mage', world_position: [1, 0, 0], scale: 1,
+      animation_state: 'walk', animation_clip: 'general:Idle_A',
+      walk_animation_clip: 'movement:Walking_A', animation_time_ms: 0,
+    }] };
+    await page.evaluate((detail) => window.dispatchEvent(new CustomEvent('pystral-render-frame', { detail })), walkFrame);
+    await page.waitForFunction(() => window.__pystralThreeMixers?.get('957')?.clips?.has('movement:Walking_A'));
+    await page.evaluate((detail) => window.dispatchEvent(new CustomEvent('pystral-render-frame', { detail })), walkFrame);
+    await page.waitForTimeout(100);
+    const walking = await page.evaluate((detail) => {
+      window.dispatchEvent(new CustomEvent('pystral-render-frame', { detail }));
+      const animation = window.__pystralThreeMixers.get('957');
+      return { clip: animation?.activeClip?.name, time: animation?.activeAction?.time ?? 0 };
+    }, walkFrame);
+    expect(walking.clip).toBe('Walking_A');
+    expect(walking.time).toBeGreaterThan(0.02);
+  });
+
+  test('Necromancer and Skeleton looping clips bind to their actor skeletons', async ({ page }) => {
+    await page.goto('/game.html');
+    await page.waitForFunction(() => window.__pystralThreeGlbProfile?.().ready);
+    await page.evaluate(() => { window.publish_render_frame = () => {}; });
+    const frame = { version: 1, tick: 955, cameras: [], map: null, materials: {}, entities: [
+      { id: 955, asset: 'Necromancer', world_position: [0, 0, 0], scale: 1,
+        animation_state: 'idle', animation_clip: 'general:Idle_A' },
+      { id: 956, asset: 'Skeleton_Minion', world_position: [2, 0, 0], scale: 1,
+        animation_state: 'idle', animation_clip: 'special:Skeletons_Idle', walk_animation_clip: 'special:Skeletons_Walking' },
+    ] };
+    await page.evaluate((detail) => window.dispatchEvent(new CustomEvent('pystral-render-frame', { detail })), frame);
+    await page.waitForFunction(() => window.__pystralThreeMixers?.has('955') && window.__pystralThreeMixers?.has('956'));
+    await page.evaluate((detail) => window.dispatchEvent(new CustomEvent('pystral-render-frame', { detail })), frame);
+    await page.waitForTimeout(100);
+    const actors = await page.evaluate((detail) => {
+      window.dispatchEvent(new CustomEvent('pystral-render-frame', { detail }));
+      return [955, 956].map((id) => {
+        const animation = window.__pystralThreeMixers.get(String(id));
+        return {
+          clip: animation?.activeClip?.name,
+          time: animation?.activeAction?.time ?? 0,
+          boneBindings: (animation?.mixer?._bindings || [])
+            .filter((binding) => binding.binding?.targetObject?.isBone).length,
+        };
+      });
+    }, frame);
+    expect(actors).toEqual([
+      expect.objectContaining({ clip: 'Idle_A', boneBindings: expect.any(Number) }),
+      expect.objectContaining({ clip: 'Skeletons_Idle', boneBindings: expect.any(Number) }),
+    ]);
+    expect(actors.every((actor) => actor.time > 0.02 && actor.boneBindings > 0)).toBe(true);
+  });
+
   test('releases a one-shot barrier only after its matching animation cue finishes', async ({ page }) => {
     await page.goto('/game.html');
     await page.waitForFunction(() => window.__pystralThreeGlbProfile?.().ready);
