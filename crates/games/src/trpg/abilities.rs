@@ -112,6 +112,7 @@ pub struct AbilityDef {
     pub delivery: AbilityDelivery,
     pub target_rule: AbilityTargetRule,
     pub projectile_profile: Option<String>,
+    pub presentation_animation: Option<String>,
     pub area_radius: u8,
     pub programs: RPGPrograms,
     pub facing_rule: Option<FacingRelation>,

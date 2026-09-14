@@ -213,6 +213,86 @@ test.describe('Three.js compositor performance contract', () => {
     expect(actor.bounds.min[2]).toBeCloseTo(-actor.bounds.max[2], 3);
   });
 
+  test('binds authored external idle, walk, and ability clips to a job actor', async ({ page }) => {
+    await page.goto('/game.html');
+    await page.waitForFunction(() => window.__pystralThreeGlbProfile?.().ready);
+    // Keep the deterministic fixture alive while its async GLB/bundle loads
+    // settle; production ingress is separately covered by frame tests.
+    await page.evaluate(() => { window.publish_render_frame = () => {}; });
+    const frame = (clip) => ({ version: 1, tick: 950, cameras: [], map: null, materials: {},
+      entities: [{ id: 950, asset: 'Mage', world_position: [0, 0, 0], scale: 1,
+        animation_clip: clip, animation_time_ms: 100 }] });
+    await page.evaluate((detail) => window.dispatchEvent(new CustomEvent('pystral-render-frame', { detail })),
+      frame('general:Idle_A'));
+    await page.waitForFunction(() => window.__pystralThreeMixers?.get('950')?.clips?.has('general:Idle_A'));
+    const clips = await page.evaluate((frames) => frames.map((detail) => {
+      window.dispatchEvent(new CustomEvent('pystral-render-frame', { detail }));
+      return window.__pystralThreeMixers.get('950').activeClip?.name;
+    }), [frame('movement:Walking_A'), frame('ranged:Ranged_Magic_Spellcasting_Long')]);
+    expect(clips).toEqual(['Walking_A', 'Ranged_Magic_Spellcasting_Long']);
+    const walkingAfterCue = await page.evaluate(() => {
+      window.dispatchEvent(new CustomEvent('pystral-render-frame', { detail: {
+        version: 1, tick: 953, cameras: [], map: null, materials: {}, entities: [{
+          id: 950, asset: 'Mage', world_position: [0, 0, 0], scale: 1,
+          animation_clip: 'general:Idle_A', walk_animation_clip: 'movement:Walking_A',
+          animation_cue: 72, animation_cue_clip: 'ranged:Ranged_Magic_Shoot', animation_state: 'walk',
+        }],
+      } }));
+      return window.__pystralThreeMixers.get('950').activeClip?.name;
+    });
+    expect(walkingAfterCue).toBe('Walking_A');
+  });
+
+  test('releases a one-shot barrier only after its matching animation cue finishes', async ({ page }) => {
+    await page.goto('/game.html');
+    await page.waitForFunction(() => window.__pystralThreeGlbProfile?.().ready);
+    await page.waitForTimeout(200);
+    await page.evaluate(() => { window.publish_render_frame = () => {}; window.__animationAcks = []; window.app = {
+      animation_completed: (barrier) => window.__animationAcks.push(Number(barrier)),
+    }; });
+    await page.evaluate(() => {
+      window.dispatchEvent(new CustomEvent('pystral-render-frame', { detail: {
+        version: 1, tick: 951, cameras: [], map: null, materials: {}, entities: [{
+          id: 951, asset: 'Mage', world_position: [0, 0, 0], scale: 1,
+          facing: 'north', rotation_y: 0.25,
+          animation_clip: 'general:Idle_A', animation_cue_clip: 'ranged:Ranged_Magic_Shoot', animation_cue: 71, animation_barrier: 71,
+        }],
+      } }));
+    });
+    await page.waitForFunction(() => window.__pystralThreeMixers?.get('951')?.clips
+      ?.has('ranged:Ranged_Magic_Shoot'));
+    // Loading installs the mixer after the source frame was observed; replay
+    // the same immutable cue rather than relying on a timing race.
+    await page.evaluate(() => {
+      window.dispatchEvent(new CustomEvent('pystral-render-frame', { detail: {
+        version: 1, tick: 952, cameras: [], map: null, materials: {}, entities: [{
+          id: 951, asset: 'Mage', world_position: [0, 0, 0], scale: 1,
+          facing: 'north', rotation_y: 0.25,
+          animation_clip: 'general:Idle_A', animation_cue_clip: 'ranged:Ranged_Magic_Shoot', animation_cue: 71, animation_barrier: 71,
+        }],
+      } }));
+    });
+    const started = await page.evaluate(() => {
+      const animation = window.__pystralThreeMixers?.get('951');
+      return { cue: animation?.activeCue, clip: animation?.activeClip?.name,
+        yaw: window.__pystralThreeNativeMeshes.get('951')?.group.rotation.y,
+        meshes: [...(window.__pystralThreeNativeMeshes?.keys() || [])],
+        diagnostics: document.getElementById('log-output')?.textContent };
+    });
+    expect(started).toEqual(expect.objectContaining({ cue: 71, clip: 'Ranged_Magic_Shoot' }));
+    // `syncGlbEntities` applies logical aim before it selects/starts the cue.
+    expect(started.yaw).toBeCloseTo(-Math.PI / 6 + Math.PI + 0.25, 8);
+    const acks = await page.evaluate(() => {
+      const animation = window.__pystralThreeMixers.get('951');
+      const before = [...window.__animationAcks];
+      window.__pystralThreeAdvanceAnimations(100);
+      return { before, after: [...window.__animationAcks], cue: animation.completedCue };
+    });
+    expect(acks.before).toEqual([]);
+    expect(acks.cue).toBe(71);
+    expect(acks.after).toEqual([71]);
+  });
+
   test('does not attach an obsolete GLB load after an entity asset is replaced', async ({ page }) => {
     await page.route('**/web/assets/models/jobs/Mage.glb', async (route) => {
       await new Promise((resolve) => setTimeout(resolve, 250));

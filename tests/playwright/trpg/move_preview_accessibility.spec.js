@@ -196,6 +196,15 @@ test('committed movement waits for its animation barrier', async ({ page }) => {
   const action = page.getByRole('button', { name: 'Action', exact: true });
 
   await expect(menu).toBeVisible({ timeout: 40000 });
+  await page.evaluate(() => {
+    window.__movementWalkFrames = [];
+    window.addEventListener('pystral-render-frame', (event) => {
+      const walks = (event.detail.entities || [])
+        .filter((entity) => entity.animation_state === 'walk')
+        .map((entity) => entity.id);
+      if (walks.length) window.__movementWalkFrames.push({ tick: event.detail.tick, walks });
+    });
+  });
   await action.click({ force: true });
   await expect(status).toContainText(/Move preview: selected/);
   const before = await protocolClock(page);
@@ -205,6 +214,8 @@ test('committed movement waits for its animation barrier', async ({ page }) => {
   await expect(status).toContainText(/Move committed/);
   await waitForHistoryToSettle(page, before);
   await expect(status).toContainText(/Move preview: selected/);
+  expect(await page.evaluate(() => window.__movementWalkFrames.length))
+    .toBeGreaterThan(0);
 });
 
 test('End Turn opens facing after the implicit wait settles', async ({ page }) => {

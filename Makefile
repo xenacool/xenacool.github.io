@@ -1,4 +1,4 @@
-.PHONY: install clean build wasm-bindgen-tool build-wasm run-web server watch deploy test test-fast test-browser test-browser-sequential test-static test-integration test-rhai test-perception nuke-deploy playwright-install playwright-test tla-check tla-worker-check tla-ui-check tla-animation-ack-check tla-simulation-bridge-check tla-casualty-boundary-check tla-lock-check debug-fixture-check check check-func-length check-loc
+.PHONY: install clean build wasm-bindgen-tool build-wasm run-web server watch deploy test test-fast test-browser test-browser-sequential test-static test-integration test-rhai test-perception nuke-deploy playwright-install playwright-test tla-check tla-worker-check tla-ui-check tla-animation-ack-check tla-simulation-bridge-check tla-casualty-boundary-check tla-lock-check tla-playback-check debug-fixture-check check check-func-length check-loc
 
 TEST_LOG := .make-test.log
 # Keep the default feedback loop bounded. Browser and model tests should be
@@ -54,7 +54,7 @@ tla-check: tla-tools
 		-config spec/GameLoop.cfg \
 		-metadir "$(TLA_BUILD_DIR)/GameLoop" \
 		spec/GameLoop.tla
-	@$(MAKE) --no-print-directory tla-worker-check tla-animation-ack-check tla-simulation-bridge-check tla-casualty-boundary-check tla-lock-check
+	@$(MAKE) --no-print-directory tla-worker-check tla-animation-ack-check tla-simulation-bridge-check tla-casualty-boundary-check tla-lock-check tla-playback-check
 
 tla-casualty-boundary-check: tla-tools
 	@mkdir -p "$(TLA_BUILD_DIR)"
@@ -83,6 +83,13 @@ tla-animation-ack-check: tla-tools
 		-config spec/AnimationAck.cfg \
 		-metadir "$(TLA_BUILD_DIR)/AnimationAck" \
 		spec/AnimationAck.tla
+
+tla-playback-check: tla-tools
+	@mkdir -p "$(TLA_BUILD_DIR)"
+	java -cp "$(TLA_TOOLS_JAR)" tlc2.TLC \
+		-config spec/PlaybackPresentation.cfg \
+		-metadir "$(TLA_BUILD_DIR)/PlaybackPresentation" \
+		spec/PlaybackPresentation.tla
 
 tla-simulation-bridge-check: tla-tools
 	@mkdir -p "$(TLA_BUILD_DIR)"

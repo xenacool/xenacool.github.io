@@ -45,6 +45,11 @@ action state and committed feedback, and `Completed` owns neither. The runtime
 transient renders so presentation updates cannot overwrite an acknowledged
 protocol state with the default menu prompt.
 
+`PlaybackPresentation.tla` models the renderer-local history cursor and
+movement overlays. It exhaustively checks the bounded scrub/pause/restart
+interleavings: a tween belongs only to its playback epoch, a paused cursor has
+no active overlay, and history remains the authoritative cursor.
+
 `WorkerReplication.tla` models the gloo worker/main replication boundary in
 `crates/gate/src/worker.rs` and `crates/gate/src/main.rs`. `Watermark` is the
 main-input acknowledgment; `Heartbeat(latest worker output seq)` is a separate

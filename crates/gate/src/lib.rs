@@ -181,6 +181,7 @@ pub enum AppCommand {
         request_id: u64,
         reason: ActionError,
     },
+    AnimationCompleted(u64),
 }
 
 #[cfg(any(test, debug_assertions))]

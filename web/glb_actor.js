@@ -1,9 +1,11 @@
 import * as THREE from './vendor/three.module.min.js';
 import { GLTFLoader } from './vendor/three/loaders/GLTFLoader.js';
 import { clone as cloneSkinned } from './vendor/three/utils/SkeletonUtils.js';
+import { actorYaw } from './facing.js';
 
 const loader = new GLTFLoader();
 const modelPromises = new Map();
+const animationBundlePromises = new Map();
 
 export async function loadModel(manifest, asset) {
     const entry = manifest?.models?.[asset];
@@ -16,6 +18,62 @@ export async function loadModel(manifest, asset) {
         })));
     }
     return modelPromises.get(asset);
+}
+
+export async function loadAnimationBundle(manifest, bundle) {
+    const entry = manifest?.animation_bundles?.[bundle];
+    if (!entry?.url) throw new Error(`GLB animation bundle is not registered: ${bundle}`);
+    if (!animationBundlePromises.has(bundle)) {
+        animationBundlePromises.set(bundle, loader.loadAsync(entry.url).then((gltf) => ({
+            scene: gltf.scene,
+            clips: gltf.animations || [],
+            rig: entry.rig,
+        })));
+    }
+    return animationBundlePromises.get(bundle);
+}
+
+function defaultAnimationKey(entity) {
+    const state = String(entity.animation_state || 'idle').toLowerCase();
+    if (state === 'walk' || state === 'move') return 'movement:Walking_A';
+    return 'general:Idle_A';
+}
+
+// Every shipped job and animation bundle uses the Medium rig. Three resolves
+// track paths against the actor-local SkeletonUtils clone, so cloning a source
+// clip creates a deterministic name-to-name retarget without sharing mutable
+// AnimationAction state. Some bundles include optional control tracks absent
+// from a particular job; Three intentionally ignores those non-skeleton paths.
+function retargetCompatibleClip(instance, sourceClip, key) {
+    if (!instance || !sourceClip?.tracks?.length) throw new Error(`cannot bind empty clip: ${key}`);
+    return sourceClip.clone();
+}
+
+function animationKey(entity, animation) {
+    const state = String(entity.animation_state || 'idle').toLowerCase();
+    if (state === 'walk' || state === 'move') {
+        return String(entity.walk_animation_clip || defaultAnimationKey(entity));
+    }
+    const cue = entity.animation_cue == null ? null : Number(entity.animation_cue);
+    if (cue !== null && animation?.completedCue !== cue) {
+        return String(entity.animation_cue_clip || entity.animation_clip || defaultAnimationKey(entity));
+    }
+    return String(entity.animation_clip || defaultAnimationKey(entity));
+}
+
+function notifyAnimationCompletion(barrier) {
+    if (!Number.isSafeInteger(Number(barrier))) return;
+    // The browser sends the completion edge only after AnimationMixer reaches
+    // the authored clip end. The gate enforces its monotonic ACK watermark.
+    // wasm-bindgen represents Rust u64 parameters as JavaScript bigint.
+    window.app?.animation_completed(BigInt(barrier));
+}
+
+function finishOneShot(animation, cue, barrier) {
+    if (animation.activeCue !== cue || animation.completedCue === cue) return;
+    animation.completedCue = cue;
+    animation.oneShot = false;
+    notifyAnimationCompletion(barrier);
 }
 
 function disposeModelResources(object) {
@@ -100,7 +158,11 @@ export function syncGlbEntities(frame, scene, manifest, meshes, mixers, diagnost
             scene.add(record.group);
             meshes.set(key, record);
             if (manifest?.models?.[entity.asset]) {
-                loadModel(manifest, entity.asset).then((model) => {
+                Promise.all([
+                    loadModel(manifest, entity.asset),
+                    ...Object.keys(manifest.animation_bundles || {}).map((bundle) =>
+                        loadAnimationBundle(manifest, bundle).then((loaded) => [bundle, loaded])),
+                ]).then(([model, ...bundles]) => {
                     window.__pystralThreeGlbLoadedModels?.set(entity.asset, model);
                     // Object3D.clone(true) leaves SkinnedMesh.skeleton pointing
                     // at the prototype's bones. SkeletonUtils remaps every
@@ -122,8 +184,16 @@ export function syncGlbEntities(frame, scene, manifest, meshes, mixers, diagnost
                         modelHeight: record.modelHeight,
                     });
                     record.group.add(instance);
+                    const clips = new Map();
+                    for (const [bundle, loaded] of bundles) {
+                        if (loaded.rig !== manifest.models[entity.asset].rig) continue;
+                        for (const clip of loaded.clips) {
+                            const clipKey = `${bundle}:${clip.name}`;
+                            clips.set(clipKey, clip);
+                        }
+                    }
                     const mixer = new THREE.AnimationMixer(instance);
-                    mixers.set(key, { mixer, clips: model.animations });
+                    mixers.set(key, { mixer, clips, retargeted: new Map(), instance });
                     record.loaded = true;
                 }).catch((error) => diagnostics(`GLB ${entity.asset}: ${error.message}`));
             } else {
@@ -142,27 +212,55 @@ export function syncGlbEntities(frame, scene, manifest, meshes, mixers, diagnost
         }
         record.group.scale.setScalar(Number(entity.scale || 1));
         record.group.renderOrder = Number(entity.render_order || 0) * 1000;
-        const facing = { north: 0, northeast: 1, southeast: 2, south: 3, southwest: 4, northwest: 5 };
-        record.group.rotation.y = (facing[String(entity.facing || '').toLowerCase()] || 0) * Math.PI / 3
-            + Number(entity.rotation_y || 0);
+        record.group.rotation.y = actorYaw(manifest, entity.asset, entity.facing, entity.rotation_y);
         const animation = mixers.get(key);
         if (animation) {
-            const requested = entity.animation_clip || entity.animation_state || 'idle';
-            const clip = animation.clips.find((candidate) => candidate.name === requested)
-                || animation.clips.find((candidate) => candidate.name.toLowerCase() === requested.toLowerCase());
+            const requested = animationKey(entity, animation);
+            const sourceClip = animation.clips.get(requested);
+            let clip = animation.retargeted.get(requested);
+            if (!clip && sourceClip) {
+                try {
+                    clip = retargetCompatibleClip(animation.instance, sourceClip, requested);
+                    animation.retargeted.set(requested, clip);
+                } catch (error) {
+                    diagnostics(`GLB ${record.asset}: ${error.message}`);
+                }
+            }
             if (clip) {
-                if (animation.activeClip !== clip) {
+                const cue = entity.animation_cue == null ? null : Number(entity.animation_cue);
+                const oneShot = cue !== null;
+                const newCue = oneShot && animation.activeCue !== cue;
+                if (animation.activeClip !== clip || newCue) {
                     const nextAction = animation.mixer.clipAction(clip);
                     if (animation.activeAction) {
                         animation.activeAction.fadeOut(0.12);
-                        nextAction.reset().fadeIn(0.12).play();
+                        nextAction.reset().fadeIn(0.12);
                     } else {
-                        nextAction.reset().play();
+                        nextAction.reset();
                     }
+                    nextAction.setLoop(oneShot ? THREE.LoopOnce : THREE.LoopRepeat, Infinity);
+                    nextAction.clampWhenFinished = oneShot;
+                    nextAction.play();
                     animation.activeClip = clip;
                     animation.activeAction = nextAction;
+                    animation.activeCue = cue;
+                    animation.oneShot = oneShot;
+                    if (oneShot) {
+                        const barrier = Number(entity.animation_barrier);
+                        const completedCue = cue;
+                        animation.activeBarrier = barrier;
+                        const onFinished = (event) => {
+                            if (event.action !== nextAction || animation.activeCue !== completedCue) return;
+                            finishOneShot(animation, completedCue, barrier);
+                        };
+                        mixer.addEventListener('finished', onFinished);
+                    }
                 }
-                animation.mixer.setTime(Math.max(0, Number(entity.animation_time_ms || 0)) / 1000);
+                if (!oneShot) {
+                    animation.mixer.setTime(Math.max(0, Number(entity.animation_time_ms || 0)) / 1000);
+                }
+            } else if (requested) {
+                diagnostics(`GLB ${record.asset}: animation clip is not available: ${requested}`);
             }
         }
     }
@@ -171,6 +269,15 @@ export function syncGlbEntities(frame, scene, manifest, meshes, mixers, diagnost
             scene.remove(record.group);
             disposeRecord(record, mixers, key);
             meshes.delete(key);
+        }
+    }
+}
+
+export function advanceGlbAnimations(mixers, deltaSeconds) {
+    for (const animation of mixers.values()) {
+        animation.mixer.update(Math.max(0, deltaSeconds));
+        if (animation.oneShot && animation.activeAction?.time >= animation.activeClip?.duration) {
+            finishOneShot(animation, animation.activeCue, animation.activeBarrier);
         }
     }
 }

@@ -252,6 +252,7 @@ fn script_ability(
             "Soul Drain" => Some("SoulOrb".into()),
             _ => None,
         },
+        presentation_animation: None,
         area_radius: None,
         scaling: scaling
             .into_iter()

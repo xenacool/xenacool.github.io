@@ -28,3 +28,17 @@ test('every packaged job GLB loads through the native compositor', async ({ page
   })), jobNames[0]);
   await page.waitForFunction(() => window.__pystralThreeNativeMeshes?.get('1000')?.loaded);
 });
+
+test('packaged rig animation bundles expose the idle, walk, and combat clips', async ({ page }) => {
+  await page.goto('/game.html');
+  await page.waitForFunction(() => window.__pystralThreeGlbManifest?.animation_bundles
+    && window.__pystralThreeLoadAnimationBundles);
+  const bundles = await page.evaluate(() => window.__pystralThreeLoadAnimationBundles(
+    Object.keys(window.__pystralThreeGlbManifest.animation_bundles),
+  ).then((loaded) => loaded.map((bundle) => bundle.clips.map((clip) => clip.name))));
+  const clips = new Set(bundles.flat());
+  for (const clip of ['Idle_A', 'Walking_A', 'Melee_1H_Attack_Chop',
+    'Ranged_Magic_Spellcasting_Long', 'Ranged_Magic_Summon']) {
+    expect(clips.has(clip), clip).toBe(true);
+  }
+});

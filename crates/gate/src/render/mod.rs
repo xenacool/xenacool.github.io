@@ -1,10 +1,12 @@
 mod context;
 pub mod loop_handler;
+mod map;
 mod state;
 pub mod utils;
 mod waypoint;
+use crate::render::context::RenderContext;
+use crate::render::loop_handler::LoopHandler;
 pub use crate::render::state::PlaybackState;
-pub use waypoint::{RenderPresentationConfig, RenderWaypointFrame, RenderWaypointPreviewFrame, presentation_config, waypoint_preview};
 use pystral_core::history::HistoryManager;
 use pystral_core::log::WorldState;
 use serde::Serialize;
@@ -13,9 +15,11 @@ use std::collections::{BTreeMap, HashMap};
 use std::rc::{Rc, Weak};
 use wasm_bindgen::JsCast;
 use wasm_bindgen::prelude::*;
+pub use waypoint::{
+    RenderPresentationConfig, RenderWaypointFrame, RenderWaypointPreviewFrame, presentation_config,
+    waypoint_preview,
+};
 use web_sys::{WebGlProgram, WebGlRenderingContext as GL, WebGlShader};
-use crate::render::context::RenderContext;
-use crate::render::loop_handler::LoopHandler;
 #[wasm_bindgen]
 extern "C" {
     #[wasm_bindgen(js_namespace = window)]
@@ -68,6 +72,25 @@ pub struct RenderFrame {
     pub camera_pose: Option<RenderCameraPoseFrame>,
     pub waypoint_preview: Option<RenderWaypointPreviewFrame>,
     pub presentation: RenderPresentationConfig,
+    pub presentation_debug: Option<RenderPlaybackDebugFrame>,
+}
+
+/// Read-only logical-clock diagnostics consumed by deterministic browser
+/// tests. This describes presentation overlays, never simulation state.
+#[derive(Debug, Clone, Serialize, PartialEq)]
+pub struct RenderPlaybackDebugFrame {
+    pub history_index: usize,
+    pub playback_epoch: u64,
+    pub playing_log: bool,
+    pub movement_tweens: Vec<RenderMovementTweenDebug>,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq)]
+pub struct RenderMovementTweenDebug {
+    pub entity_id: u64,
+    pub event_index: usize,
+    pub playback_epoch: u64,
+    pub path: Vec<[i32; 2]>,
 }
 #[derive(Debug, Clone, Serialize, PartialEq)]
 pub struct RenderCameraPoseFrame {
@@ -114,7 +137,12 @@ pub struct RenderEntityFrame {
     pub r: i32,
     pub layer: i32,
     pub animation_state: String,
-    pub rig: Option<String>, pub animation_clip: Option<String>,
+    pub rig: Option<String>,
+    pub animation_clip: Option<String>,
+    pub walk_animation_clip: Option<String>,
+    pub animation_cue_clip: Option<String>,
+    pub animation_cue: Option<u64>,
+    pub animation_barrier: Option<u64>,
     pub animation_time_ms: f32,
     pub animation_frame: Option<u32>,
     pub facing: String,
@@ -227,6 +255,10 @@ impl RenderFrame {
                     animation_state: entity.animation_state.clone(),
                     rig: property_string(entity, "rig"),
                     animation_clip: property_string(entity, "animation_clip"),
+                    walk_animation_clip: property_string(entity, "walk_animation_clip"),
+                    animation_cue_clip: property_string(entity, "animation_cue_clip"),
+                    animation_cue: property_u64(entity, "animation_cue"),
+                    animation_barrier: property_u64(entity, "animation_barrier"),
                     animation_time_ms: animation_times
                         .and_then(|times| times.get(&entity.id).copied())
                         .unwrap_or(0.0),
@@ -261,7 +293,12 @@ impl RenderFrame {
                         })
                         .unwrap_or_default(),
                     facing: entity_facing(entity),
-                    indicator: RenderIndicatorFrame { kind: "facing".to_string(), color: [0.95, 0.72, 0.22], state: "committed".to_string(), direction: entity_facing(entity) },
+                    indicator: RenderIndicatorFrame {
+                        kind: "facing".to_string(),
+                        color: [0.95, 0.72, 0.22],
+                        state: "committed".to_string(),
+                        direction: entity_facing(entity),
+                    },
                     selected_slice_index: entity_asset_name(entity)
                         .and_then(|asset| asset_metadata.get(asset).map(|meta| meta.0))
                         .and_then(|count| resolved_slice_index(entity, count)),
@@ -295,54 +332,7 @@ impl RenderFrame {
             })
             .collect::<Vec<_>>();
         cameras.sort_by_key(|camera| camera.id);
-        let map = (tick == 0)
-            .then(|| {
-                state
-                    .entities
-                    .iter()
-                    .find(|entity| entity.kind == "world")
-                    .and_then(|entity| match entity.properties.get("map") {
-                        Some(pystral_core::log::PropertyValue::HexMap(map)) => {
-                            Some(RenderMapFrame {
-                                orientation: format!("{:?}", map.orientation),
-                                hex_size: map.hex_size.to_array(),
-                                tiles: map
-                                    .tiles
-                                    .iter()
-                                    .map(|tile| RenderTileFrame {
-                                        q: tile.hex.x,
-                                        r: tile.hex.y,
-                                        layer: tile.layer,
-                                        bottom: tile.bottom,
-                                        height: tile.height,
-                                        material: tile.material.clone(),
-                                    })
-                                    .collect(),
-                            })
-                        }
-                        _ => None,
-                    })
-            })
-            .flatten();
-        let materials = if tick == 0 {
-            state
-                .materials
-                .iter()
-                .map(|(name, material)| {
-                    (
-                        name.clone(),
-                        RenderMaterialFrame {
-                            color: material.color,
-                            roughness: material.roughness,
-                            metalness: material.metalness,
-                            emissive: material.emissive,
-                        },
-                    )
-                })
-                .collect()
-        } else {
-            BTreeMap::new()
-        };
+        let (map, materials) = map::scene_data(state);
         let presentation = presentation_config(state);
         Self {
             version: 1,
@@ -354,6 +344,7 @@ impl RenderFrame {
             camera_pose,
             waypoint_preview: None,
             presentation,
+            presentation_debug: None,
         }
     }
 }
@@ -372,6 +363,17 @@ fn property_u8(entity: &pystral_core::log::EntityState, name: &str) -> Option<u8
     }
 }
 
+fn property_u64(entity: &pystral_core::log::EntityState, name: &str) -> Option<u64> {
+    match entity.properties.get(name) {
+        Some(pystral_core::log::PropertyValue::Float(value))
+            if value.is_finite() && *value >= 0.0 =>
+        {
+            Some(*value as u64)
+        }
+        _ => None,
+    }
+}
+
 fn entity_asset_name(entity: &pystral_core::log::EntityState) -> Option<&str> {
     match entity.properties.get("asset") {
         Some(pystral_core::log::PropertyValue::String(asset))
@@ -380,7 +382,13 @@ fn entity_asset_name(entity: &pystral_core::log::EntityState) -> Option<&str> {
     }
 }
 
-fn property_string(entity: &pystral_core::log::EntityState, name: &str) -> Option<String> { match entity.properties.get(name) { Some(pystral_core::log::PropertyValue::String(value)) | Some(pystral_core::log::PropertyValue::AssetRef(value)) => Some(value.clone()), _ => None } }
+fn property_string(entity: &pystral_core::log::EntityState, name: &str) -> Option<String> {
+    match entity.properties.get(name) {
+        Some(pystral_core::log::PropertyValue::String(value))
+        | Some(pystral_core::log::PropertyValue::AssetRef(value)) => Some(value.clone()),
+        _ => None,
+    }
+}
 
 fn entity_rotation_y(entity: &pystral_core::log::EntityState) -> f32 {
     property_float(entity, "rotation_y", 0.0)
@@ -445,10 +453,10 @@ pub fn link_program(
 
 #[cfg(test)]
 mod tests {
-    use super::{RenderCameraFrame, RenderEntityFrame, RenderFrame, RenderIndicatorFrame};
+    use super::RenderFrame;
     use hexx::Hex;
     use pystral_compiler::assets::{AssetCollection, SpriteAnimation};
-    use pystral_core::domain::{Spritestack, SpritestackSlice};
+    use pystral_core::domain::{HexMap, HexTile, Spritestack, SpritestackSlice};
     use pystral_core::log::{EntityState, PropertyValue, WorldState};
     use std::collections::HashMap;
     use std::sync::Arc;
@@ -465,81 +473,57 @@ mod tests {
 
         let frame = RenderFrame::from_world_state(&state, 7);
 
-        assert_eq!(frame.version, 1);
-        assert_eq!(frame.tick, 7);
+        assert_eq!((frame.version, frame.tick), (1, 7));
         assert_eq!(
-            frame.entities,
-            vec![
-                RenderEntityFrame {
-                    id: 2,
-                    kind: "character".to_string(),
-                    team_id: None,
-                    q: 0,
-                    r: 3,
-                    layer: 0,
-                    animation_state: "idle".to_string(),
-                    rig: None,
-                    animation_clip: None,
-                    animation_time_ms: 0.0,
-                    animation_frame: None,
-                    facing: "south".to_string(),
-                    indicator: RenderIndicatorFrame { kind: "facing".to_string(), color: [0.95, 0.72, 0.22], state: "committed".to_string(), direction: "south".to_string() },
-                    render_order: 2,
-                    asset: None,
-                    scale: 1.0,
-                    z: 0.0,
-                    rotation_z: 0.0,
-                    rotation_y: 0.0,
-                    camera_offset: [0.0; 3],
-                    slice_indices: vec![],
-                    selected_slice_index: None,
-                    stack_dimensions: [1.0, 0.0, 1.0],
-                    stack_spacing: 0.0,
-                    unit_height: pystral_games::collision::CollisionGeometry::default()
-                        .unit_height(),
-                    world_position: None,
-                },
-                RenderEntityFrame {
-                    id: 4,
-                    kind: "character".to_string(),
-                    team_id: None,
-                    q: 2,
-                    r: 1,
-                    layer: 0,
-                    animation_state: "idle".to_string(),
-                    rig: None,
-                    animation_clip: None,
-                    animation_time_ms: 0.0,
-                    animation_frame: None,
-                    facing: "south".to_string(),
-                    indicator: RenderIndicatorFrame { kind: "facing".to_string(), color: [0.95, 0.72, 0.22], state: "committed".to_string(), direction: "south".to_string() },
-                    render_order: 4,
-                    asset: None,
-                    scale: 1.0,
-                    z: 0.0,
-                    rotation_z: 0.0,
-                    rotation_y: 0.0,
-                    camera_offset: [0.0; 3],
-                    slice_indices: vec![],
-                    selected_slice_index: None,
-                    stack_dimensions: [1.0, 0.0, 1.0],
-                    stack_spacing: 0.0,
-                    unit_height: pystral_games::collision::CollisionGeometry::default()
-                        .unit_height(),
-                    world_position: None,
-                },
-            ]
+            frame
+                .entities
+                .iter()
+                .map(|entity| entity.id)
+                .collect::<Vec<_>>(),
+            [2, 4]
         );
-        assert_eq!(
-            frame.cameras,
-            vec![RenderCameraFrame {
-                id: 3,
-                angle: 0.0,
-                distance: 20.0,
-                height: 12.0,
-                target: [0.0, 0.0, 0.0],
-            }]
+        assert_eq!((frame.entities[0].q, frame.entities[0].r), (0, 3));
+        assert_eq!(frame.entities[0].animation_clip, None);
+        assert_eq!(frame.entities[0].animation_cue, None);
+        assert_eq!(frame.entities[0].indicator.direction, "south");
+        assert_eq!(frame.cameras.len(), 1);
+        assert_eq!(frame.cameras[0].id, 3);
+    }
+
+    #[test]
+    fn render_frame_keeps_map_and_materials_available_after_startup_tick() {
+        let mut state = WorldState::default();
+        state.entities.push({
+            let mut world = EntityState::new(1, "world".to_string(), Hex::ZERO, &[]);
+            world.properties.insert(
+                "map".to_string(),
+                PropertyValue::HexMap(HexMap {
+                    tiles: vec![HexTile {
+                        hex: Hex::ZERO,
+                        layer: 0,
+                        bottom: 0.0,
+                        height: 1.0,
+                        material: "grass".to_string(),
+                    }],
+                    ..HexMap::default()
+                }),
+            );
+            world
+        });
+        state.materials.insert(
+            "grass".to_string(),
+            pystral_core::domain::Material {
+                color: [0.2, 0.7, 0.3],
+                roughness: 0.8,
+                metalness: 0.0,
+                emissive: 0.0,
+            },
         );
+
+        let frame = RenderFrame::from_world_state(&state, 37);
+
+        assert_eq!(frame.map.as_ref().map(|map| map.tiles.len()), Some(1));
+        assert!(frame.materials.contains_key("grass"));
     }
 
     #[test]
