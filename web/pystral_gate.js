@@ -24,6 +24,12 @@ export class AppHandle {
         wasm.apphandle_action_nav(this.__wbg_ptr, ptr0, len0);
     }
     /**
+     * @param {bigint} barrier_id
+     */
+    animation_completed(barrier_id) {
+        wasm.apphandle_animation_completed(this.__wbg_ptr, barrier_id);
+    }
+    /**
      * @param {string} direction
      */
     camera_nav(direction) {
@@ -553,7 +559,7 @@ function __wbg_get_imports() {
             return ret;
         },
         __wbindgen_cast_0000000000000001: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 3937, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 3939, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen_143046ca695db636___convert__closures_____invoke___wasm_bindgen_143046ca695db636___JsValue__core_cbaba282d5b64c72___result__Result_____wasm_bindgen_143046ca695db636___JsError___true_);
             return ret;
         },
