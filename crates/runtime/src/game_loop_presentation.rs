@@ -1,6 +1,37 @@
 use super::*;
 
 impl Runtime {
+    /// Resolve the visual projectile from the same pre-commit tactical state
+    /// for human and NPC ability paths. Presentation must not depend on
+    /// which controller selected the ability.
+    pub(super) fn ability_projectile_route(
+        simulation: &pg_rpg::simulation::TacticalSimulation,
+        unit_id: u64,
+        ability: pystral_games::AbilityId,
+        target: &RuntimeAbilityTarget,
+    ) -> Option<(String, GridCell, GridCell)> {
+        let RuntimeAbilityTarget::Unit { unit_id: target_id } = target else {
+            return None;
+        };
+        let profile = simulation
+            .state
+            .ability_registry
+            .get(&ability)?
+            .projectile_profile
+            .clone()?;
+        let source = simulation
+            .state
+            .agents
+            .get(&npc_engine_core::AgentId(unit_id as u32))?
+            .position;
+        let target = simulation
+            .state
+            .agents
+            .get(&npc_engine_core::AgentId(*target_id as u32))?
+            .position;
+        Some((profile, source, target))
+    }
+
     pub(super) fn projectile_flight_events(
         &mut self,
         profile: String,

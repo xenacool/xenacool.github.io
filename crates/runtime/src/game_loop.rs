@@ -106,27 +106,12 @@ impl Runtime {
                 )
             })
             .unwrap_or_else(|| (format!("ability {ability_id}"), None));
-        let projectile_route = match target {
-            RuntimeAbilityTarget::Unit { unit_id: target_id } => sim
-                .state
-                .ability_registry
-                .get(&pystral_games::AbilityId(ability_id as u32))
-                .and_then(|ability| ability.projectile_profile.clone())
-                .and_then(|profile| {
-                    Some((
-                        profile,
-                        sim.state
-                            .agents
-                            .get(&npc_engine_core::AgentId(unit_id as u32))?
-                            .position,
-                        sim.state
-                            .agents
-                            .get(&npc_engine_core::AgentId(target_id as u32))?
-                            .position,
-                    ))
-                }),
-            RuntimeAbilityTarget::Cell { .. } => None,
-        };
+        let projectile_route = Self::ability_projectile_route(
+            sim,
+            unit_id,
+            pystral_games::AbilityId(ability_id as u32),
+            &target,
+        );
         // A reaction is a mandatory response in the tactical rules.  The
         // player protocol does not expose reaction choices yet, so consume a
         // pending reaction for this unit before revalidating the ability the

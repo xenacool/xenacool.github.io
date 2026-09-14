@@ -1,5 +1,18 @@
 use super::*;
 
+pub(super) fn playback_events_due(
+    accumulator: f64,
+    step_ms: f64,
+    current: usize,
+    log_len: usize,
+) -> usize {
+    if accumulator >= step_ms && current < log_len {
+        1
+    } else {
+        0
+    }
+}
+
 fn forward_event_range(
     previous_index: Option<usize>,
     current_index: usize,
@@ -36,7 +49,14 @@ impl LoopHandler {
                 };
                 for event_index in event_range {
                     let event = &self.history_manager.log[event_index];
-                    Self::handle_event_tweens_static(&mut self.ctx, event, &previous_state, now);
+                    Self::handle_event_tweens_static(
+                        &mut self.ctx,
+                        event,
+                        &previous_state,
+                        now,
+                        self.playback_state.playback_epoch,
+                        event_index,
+                    );
                     previous_state.apply_event(event);
                 }
                 self.ctx.tween_state = Some(previous_state);
@@ -69,6 +89,8 @@ impl LoopHandler {
         event: &Event,
         previous_state: &WorldState,
         now: f64,
+        playback_epoch: u64,
+        event_index: usize,
     ) {
         if let Event::MoveSprite {
             id,
@@ -94,14 +116,19 @@ impl LoopHandler {
                     })
                     .unwrap_or(0);
                 if let Some(tween) = ctx.movement_tweens.get_mut(id) {
-                    tween.path.extend(tween.to_hex.line_to(*destination).skip(1));
+                    tween
+                        .path
+                        .extend(tween.to_hex.line_to(*destination).skip(1));
                     tween.to_hex = *destination;
                     tween.to_layer = from_layer;
                     tween.duration_ms += f64::from(transition.duration_ms);
+                    tween.event_index = event_index;
                 } else {
                     ctx.movement_tweens.insert(
                         *id,
                         MovementTween {
+                            playback_epoch,
+                            event_index,
                             from_hex,
                             to_hex: *destination,
                             path: from_hex.line_to(*destination).collect(),
@@ -232,5 +259,12 @@ mod tests {
     #[test]
     fn backward_scrubs_do_not_start_forward_tweens() {
         assert_eq!(forward_event_range(Some(6), 2, 10), None);
+    }
+
+    #[test]
+    fn delayed_render_tick_preserves_one_event_per_presentation_tick() {
+        assert_eq!(super::playback_events_due(500.0, 17.0, 4, 100), 1);
+        assert_eq!(super::playback_events_due(16.9, 17.0, 4, 100), 0);
+        assert_eq!(super::playback_events_due(500.0, 17.0, 100, 100), 0);
     }
 }

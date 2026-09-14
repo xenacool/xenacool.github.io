@@ -3,16 +3,7 @@
 // visible WebGL2 canvas.
 import * as THREE from './vendor/three.module.min.js';
 import { advanceGlbAnimations, loadAnimationBundle, loadModel, syncGlbEntities } from './glb_actor.js';
-
-const HEX_DIRECTION_OFFSET = Math.PI / 6;
-const FACING_ANGLES = Object.freeze({
-    north: HEX_DIRECTION_OFFSET,
-    northeast: Math.PI / 3 + HEX_DIRECTION_OFFSET,
-    southeast: (Math.PI * 2) / 3 + HEX_DIRECTION_OFFSET,
-    south: Math.PI + HEX_DIRECTION_OFFSET,
-    southwest: (Math.PI * 4) / 3 + HEX_DIRECTION_OFFSET,
-    northwest: (Math.PI * 5) / 3 + HEX_DIRECTION_OFFSET,
-});
+import { facingYaw, HEX_DIRECTION_OFFSET } from './facing.js';
 
 const PRESENTATION_MOTION = Object.freeze({
     idleAmplitude: 0.025,
@@ -450,8 +441,7 @@ function syncNativeIndicators(frame) {
         marker.position.fromArray(entity.world_position);
         marker.position.y += 0.16;
         marker.scale.setScalar((Number(entity.scale) || 1) * 1.15);
-        const direction = FACING_ANGLES[String(indicator.direction || '').toLowerCase()];
-        if (direction !== undefined) marker.rotation.y = -direction;
+        marker.rotation.y = facingYaw(indicator.direction);
         marker.renderOrder = Number(entity.render_order || 0) * 1000 + 100000;
         seen.add(id);
     });
@@ -589,9 +579,8 @@ function applyNativeFrame(frame) {
             );
             mesh.renderOrder = Number(entity.render_order || 0) * 1000 + stackIndex;
             const authoredYaw = Number(entity.rotation_y || 0);
-            const facingAngle = FACING_ANGLES[String(entity.facing).toLowerCase()] ?? 0;
             SPRITESTACK_FACING.setFromAxisAngle(
-                SPRITESTACK_Y_AXIS, -facingAngle + authoredYaw,
+                SPRITESTACK_Y_AXIS, facingYaw(entity.facing) + authoredYaw,
             );
             SPRITESTACK_AUTHORED_ROTATION.setFromAxisAngle(
                 SPRITESTACK_Z_AXIS, -Number(entity.rotation_z || 0),
@@ -648,11 +637,10 @@ function applyNativeFrame(frame) {
         }
         marker.position.fromArray(entity.world_position); marker.position.y += 0.16;
         marker.scale.setScalar((Number(entity.scale) || 1) * 1.15);
-        const direction = FACING_ANGLES[String(indicator.direction).toLowerCase()];
-        if (direction === undefined) return;
+        const direction = facingYaw(indicator.direction);
         // The arrow mesh points along local -Z; negate the world heading so
         // east/west remain aligned with the authored facing convention.
-        marker.rotation.y = -direction;
+        marker.rotation.y = direction;
         marker.renderOrder = Number(entity.render_order || 0) * 1000 + 100000;
         seenMarkers.add(id);
     });

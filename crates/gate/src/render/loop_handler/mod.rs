@@ -3,6 +3,7 @@ mod playback_methods;
 pub mod scene;
 
 use self::camera::{setup_camera, viewport_size};
+use self::playback_methods::playback_events_due;
 use self::scene::resolved_entity_world_positions;
 use crate::AppCommand;
 use crate::render::RenderFrame;
@@ -222,9 +223,12 @@ impl LoopHandler {
             animation_times,
         );
         for entity in &mut frame.entities {
-            if let Some(tween) = self.ctx.movement_tweens.get(&entity.id).filter(|tween| {
-                now - tween.start_time_ms < tween.duration_ms
-            }) {
+            if let Some(tween) = self
+                .ctx
+                .movement_tweens
+                .get(&entity.id)
+                .filter(|tween| now - tween.start_time_ms < tween.duration_ms)
+            {
                 entity.animation_state = "walk".to_string();
                 entity.animation_clip = entity.walk_animation_clip.clone();
                 if let Some((from, to, _)) = tween.segment_at(now - tween.start_time_ms)
@@ -239,6 +243,26 @@ impl LoopHandler {
             .preview
             .as_ref()
             .map(|preview| crate::render::waypoint_preview(state, preview));
+        let mut movement_tweens = self
+            .ctx
+            .movement_tweens
+            .iter()
+            .map(
+                |(entity_id, tween)| crate::render::RenderMovementTweenDebug {
+                    entity_id: *entity_id,
+                    event_index: tween.event_index,
+                    playback_epoch: tween.playback_epoch,
+                    path: tween.path.iter().map(|hex| [hex.x, hex.y]).collect(),
+                },
+            )
+            .collect::<Vec<_>>();
+        movement_tweens.sort_by_key(|tween| tween.entity_id);
+        frame.presentation_debug = Some(crate::render::RenderPlaybackDebugFrame {
+            history_index: self.history_manager.current_index,
+            playback_epoch: self.playback_state.playback_epoch,
+            playing_log: self.playback_state.playing_log,
+            movement_tweens,
+        });
         self.render_tick = self.render_tick.saturating_add(1);
         if let Ok(json) = serde_json::to_string(&frame) {
             crate::render::publish_render_frame(&json);
@@ -259,11 +283,13 @@ impl LoopHandler {
                     self.playback_state.playing_log = false;
                     self.accumulator = 0.0;
                     self.manual_history_index = Some(self.history_manager.current_index);
+                    self.invalidate_presentation_overlays();
                     update_ui_slider(index);
                 }
                 AppCommand::TogglePlayLog => {
                     self.playback_state.playing_log = !self.playback_state.playing_log;
                     self.accumulator = 0.0;
+                    self.invalidate_presentation_overlays();
                     if self.playback_state.playing_log {
                         // Explicit playback resumes live-follow behavior.
                         self.manual_history_index = None;
@@ -294,6 +320,8 @@ impl LoopHandler {
                     self.ctx.camera_pose = None;
                     self.ctx.camera_ids.clear();
                     self.playback_state.last_sequence_ack_sent = None;
+                    self.playback_state.playback_epoch =
+                        self.playback_state.playback_epoch.saturating_add(1);
                     self.manual_history_index = None;
                     self.history_manager.jump_to(0);
                     crate::render::set_ui_slider_max(self.history_manager.log.len() as u32);
@@ -318,10 +346,6 @@ impl LoopHandler {
                     }
                     crate::render::set_ui_slider_max(self.history_manager.log.len() as u32);
                     crate::render::update_ui_slider(self.history_manager.current_index as u32);
-                    // A batch can arrive while the render loop is between
-                    // ticks.  Acknowledge its visible barrier immediately so
-                    // the worker is not dependent on a later animation frame.
-                    self.handle_sequence_number_acks(self.playback_state.last_tick_ms);
                     if let Ok(json) = serde_json::to_string(&self.history_manager.log) {
                         crate::render::update_action_log(&json);
                     }
@@ -408,6 +432,17 @@ impl LoopHandler {
         }
     }
 
+    /// A scrub or play-state transition starts a new presentation timeline.
+    /// Authoritative history remains intact; only wall-clock visual overlays
+    /// are discarded, so an old path cannot resume after a cursor change.
+    fn invalidate_presentation_overlays(&mut self) {
+        self.playback_state.playback_epoch = self.playback_state.playback_epoch.saturating_add(1);
+        self.ctx.movement_tweens.clear();
+        self.ctx.property_tweens.clear();
+        self.ctx.tween_state = None;
+        self.ctx.last_index = Some(self.history_manager.current_index);
+    }
+
     fn update_playback_and_history(&mut self, now: f64) -> (bool, bool, f64) {
         let delta = now - self.playback_state.last_tick_ms;
         self.playback_state.last_tick_ms = now;
@@ -432,8 +467,16 @@ impl LoopHandler {
         // current state.
         if self.playback_state.playing_log {
             self.accumulator += delta;
-            while self.accumulator >= self.playback_state.history_step_ms
-                && self.history_manager.current_index < self.history_manager.log.len()
+            // A catch-up loop can consume an entire movement transition after
+            // one delayed render tick. Playback is a presentation clock, so
+            // preserve the happens-before edge between each history event and
+            // its visible tween instead of skipping over it.
+            if playback_events_due(
+                self.accumulator,
+                self.playback_state.history_step_ms,
+                self.history_manager.current_index,
+                self.history_manager.log.len(),
+            ) == 1
             {
                 self.history_manager
                     .jump_to(self.history_manager.current_index + 1);
@@ -669,6 +712,18 @@ impl LoopHandler {
                 _ => None,
             });
         if let Some(n) = barrier {
+            // Movement barriers release only after the movement tween has
+            // completed. AppendHistory is processed before state/tween
+            // resolution in a render tick; acknowledging here would trigger
+            // the next gameplay action before the tween completes.
+            if self
+                .ctx
+                .movement_tweens
+                .values()
+                .any(|tween| now - tween.start_time_ms < tween.duration_ms)
+            {
+                return;
+            }
             let one_shot_pending =
                 self.history_manager
                     .current_state

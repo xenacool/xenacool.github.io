@@ -85,11 +85,18 @@ pub fn resolved_entity_world_positions(
                     progress,
                 ));
             }
-            if let Some(PropertyValue::Float(value)) = entity.properties.get("world_x") {
-                position.x = *value;
-            }
-            if let Some(PropertyValue::Float(value)) = entity.properties.get("world_y") {
-                position.y = *value;
+            // Authored world coordinates are a static-position escape hatch.
+            // While a movement transition is active, the tween is the
+            // presentation source of truth; applying these fields afterward
+            // would pin live actions to their destination and make playback
+            // appear to work only after a rewind.
+            if transition.is_none() {
+                if let Some(PropertyValue::Float(value)) = entity.properties.get("world_x") {
+                    position.x = *value;
+                }
+                if let Some(PropertyValue::Float(value)) = entity.properties.get("world_y") {
+                    position.y = *value;
+                }
             }
             let terrain_top = map
                 .as_ref()

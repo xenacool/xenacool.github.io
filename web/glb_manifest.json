@@ -1,5 +1,6 @@
 {
   "version": 1,
+  "model_forward_yaw": 3.141592653589793,
   "animation_bundles": {
     "general": { "url": "./web/assets/models/animation/Rig_Medium_General.glb", "rig": "Medium" },
     "movement": { "url": "./web/assets/models/animation/Rig_Medium_MovementBasic.glb", "rig": "Medium" },

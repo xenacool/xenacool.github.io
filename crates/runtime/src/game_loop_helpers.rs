@@ -87,12 +87,14 @@ impl Runtime {
             .position
             .hex;
         let target_hex = match target {
-            RuntimeAbilityTarget::Unit { unit_id } => simulation
-                .state
-                .agents
-                .get(&npc_engine_core::AgentId(*unit_id as u32))?
-                .position
-                .hex,
+            RuntimeAbilityTarget::Unit { unit_id } => {
+                simulation
+                    .state
+                    .agents
+                    .get(&npc_engine_core::AgentId(*unit_id as u32))?
+                    .position
+                    .hex
+            }
             RuntimeAbilityTarget::Cell { hex, .. } => *hex,
         };
         pystral_games::Facing::direction_to(from, target_hex)
@@ -448,76 +450,6 @@ impl Runtime {
         }
     }
 
-    fn commit_npc_ability(
-        &mut self,
-        request_id: u64,
-        unit_id: u64,
-        target: npc_engine_core::AgentId,
-        ability: pystral_games::AbilityId,
-    ) -> RuntimeResponse {
-        let Some(history) = self.pg_rpg_history.as_mut() else {
-            return RuntimeResponse::Error("Simulation not started".into());
-        };
-        let Some(sim) = self.pg_rpg_sim.as_ref() else {
-            return RuntimeResponse::Error("Simulation not started".into());
-        };
-        let start_idx = history.log.len();
-        let presentation_facing = Self::ability_presentation_facing(
-            sim,
-            unit_id,
-            &RuntimeAbilityTarget::Unit { unit_id: target.0 as u64 },
-        );
-        let (ability_name, presentation_animation) = sim
-            .state
-            .ability_registry
-            .get(&ability)
-            .map(|definition| {
-                (
-                    definition.name.clone(),
-                    definition.presentation_animation.clone(),
-                )
-            })
-            .unwrap_or_else(|| ("unknown ability".to_string(), None));
-        history.push_and_apply(Event::Log {
-            msg: format!(
-                "NPC unit {unit_id} used {ability_name} on unit {}",
-                target.0
-            ),
-        });
-        for affected_id in [unit_id, target.0 as u64] {
-            if let Some(unit) = sim
-                .state
-                .agents
-                .get(&npc_engine_core::AgentId(affected_id as u32))
-            {
-                history.push_and_apply(Event::UnitStateChanged {
-                    unit_id: affected_id,
-                    hex: unit.position.hex,
-                    layer: unit.position.layer,
-                    health: unit.health,
-                    mana: unit.mana,
-                    action_points: unit.action_points,
-                });
-            }
-        }
-        let barrier_id = Self::append_ability_animation_barrier(
-            history,
-            &mut self.pg_rpg_sequence_number,
-            unit_id,
-            presentation_animation.as_deref(),
-            presentation_facing,
-        );
-        let mut update = HistoryManager::new();
-        update.log = history.log[start_idx..].to_vec();
-        RuntimeResponse::ActionCommitted {
-            request_id,
-            unit_id,
-            action: "ability".into(),
-            barrier_id,
-            history: update,
-        }
-    }
-
     fn commit_npc_move(
         &mut self,
         request_id: u64,
@@ -735,10 +667,20 @@ mod tests {
             Event::UpdateProperty { property, value: pystral_core::log::PropertyValue::String(value), .. }
                 if property == "facing" && value == "northeast"
         )).unwrap();
-        let cue = history.log.iter().position(|event| matches!(event,
-            Event::UpdateProperty { property, .. } if property == "animation_cue"
-        )).unwrap();
-        let barrier = history.log.iter().position(|event| matches!(event, Event::SequenceNumber(1))).unwrap();
+        let cue = history
+            .log
+            .iter()
+            .position(|event| {
+                matches!(event,
+                    Event::UpdateProperty { property, .. } if property == "animation_cue"
+                )
+            })
+            .unwrap();
+        let barrier = history
+            .log
+            .iter()
+            .position(|event| matches!(event, Event::SequenceNumber(1)))
+            .unwrap();
         assert!(facing < cue && cue < barrier);
     }
 }

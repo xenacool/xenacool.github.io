@@ -1,5 +1,6 @@
 mod game_loop;
 mod game_loop_helpers;
+mod game_loop_npc_presentation;
 mod game_loop_presentation;
 pub mod pg_rpg;
 mod rhai_session;

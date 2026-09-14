@@ -443,8 +443,11 @@ async fn fetch_assets(
     let window = web_sys::window().expect("No global window found");
 
     let _ = window;
-    if active.get() { set_loading_state("loading", "Loading direct GLB presentation.", 30); }
-    fetch_text("web/glb_manifest.json", abort_controller).await
+    if active.get() {
+        set_loading_state("loading", "Loading direct GLB presentation.", 30);
+    }
+    fetch_text("web/glb_manifest.json", abort_controller)
+        .await
         .map_err(|error| JsValue::from_str(&format!("web/glb_manifest.json: {error:?}")))?;
 
     let script_manifest = fetch_manifest("web/scripts/manifest.json", abort_controller).await?;

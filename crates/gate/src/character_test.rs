@@ -45,11 +45,14 @@ mod tests {
                         break;
                     }
                     assert_eq!(
-                        char_entity.properties.get("asset").and_then(|value| match value {
-                            pystral_core::log::PropertyValue::String(name) => Some(name),
-                            pystral_core::log::PropertyValue::AssetRef(name) => Some(name),
-                            _ => None,
-                        }),
+                        char_entity
+                            .properties
+                            .get("asset")
+                            .and_then(|value| match value {
+                                pystral_core::log::PropertyValue::String(name) => Some(name),
+                                pystral_core::log::PropertyValue::AssetRef(name) => Some(name),
+                                _ => None,
+                            }),
                         Some(&char_entity.kind),
                         "character asset must be a direct GLB manifest key"
                     );

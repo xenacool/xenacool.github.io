@@ -1,6 +1,7 @@
 import * as THREE from './vendor/three.module.min.js';
 import { GLTFLoader } from './vendor/three/loaders/GLTFLoader.js';
 import { clone as cloneSkinned } from './vendor/three/utils/SkeletonUtils.js';
+import { actorYaw } from './facing.js';
 
 const loader = new GLTFLoader();
 const modelPromises = new Map();
@@ -211,9 +212,7 @@ export function syncGlbEntities(frame, scene, manifest, meshes, mixers, diagnost
         }
         record.group.scale.setScalar(Number(entity.scale || 1));
         record.group.renderOrder = Number(entity.render_order || 0) * 1000;
-        const facing = { north: 0, northeast: 1, southeast: 2, south: 3, southwest: 4, northwest: 5 };
-        record.group.rotation.y = (facing[String(entity.facing || '').toLowerCase()] || 0) * Math.PI / 3
-            + Number(entity.rotation_y || 0);
+        record.group.rotation.y = actorYaw(manifest, entity.asset, entity.facing, entity.rotation_y);
         const animation = mixers.get(key);
         if (animation) {
             const requested = animationKey(entity, animation);

@@ -32,6 +32,51 @@ test('authoritative facing indicator is visible above the actor scene', async ({
   expect(marker.arrowHeight).toBeGreaterThan(0.3);
 });
 
+test('GLB actor and direction indicator share the six logical headings', async ({ page }) => {
+  await page.goto('/game.html');
+  await page.waitForFunction(() => window.__pystralThreeGlbManifest?.models);
+  const headings = await page.evaluate(() => {
+    const facings = ['north', 'northeast', 'southeast', 'south', 'southwest', 'northwest'];
+    return facings.map((facing, index) => {
+      const id = 810 + index;
+      window.dispatchEvent(new CustomEvent('pystral-render-frame', { detail: {
+        version: 1, tick: id, cameras: [], map: null, materials: {}, entities: [{
+          id, kind: 'character', asset: 'test-facing-primitive', world_position: [index, 0, 0],
+          facing, rotation_y: 0.125, scale: 1,
+          indicator: { kind: 'facing', color: [1, 1, 1], state: 'committed', direction: facing },
+        }],
+      } }));
+      const actor = window.__pystralThreeNativeMeshes.get(String(id)).group;
+      const marker = window.__pystralThreeNativeMarkers.get(String(id));
+      return { facing, actorYaw: actor.rotation.y, markerYaw: marker.rotation.y };
+    });
+  });
+  for (const heading of headings) {
+    expect(heading.actorYaw - heading.markerYaw).toBeCloseTo(Math.PI + 0.125, 8);
+  }
+  expect(new Set(headings.map(({ actorYaw }) => actorYaw.toFixed(6))).size).toBe(6);
+});
+
+test('transient projectile presentation moves between logical render ticks and is removed', async ({ page }) => {
+  await page.goto('/game.html');
+  await page.waitForFunction(() => window.__pystralThreeGlbManifest?.models);
+  const result = await page.evaluate(() => {
+    const frame = (tick, entities) => window.dispatchEvent(new CustomEvent('pystral-render-frame', {
+      detail: { version: 1, tick, cameras: [], map: null, materials: {}, entities },
+    }));
+    frame(901, [{ id: 1000001, kind: 'projectile', asset: 'FireballOrb', scale: 0.35,
+      world_position: [0, 1.8, 0], facing: 'northeast' }]);
+    const start = window.__pystralThreeNativeMeshes.get('1000001').group.position.toArray();
+    frame(902, [{ id: 1000001, kind: 'projectile', asset: 'FireballOrb', scale: 0.35,
+      world_position: [3, 1.8, -2], facing: 'northeast' }]);
+    const end = window.__pystralThreeNativeMeshes.get('1000001').group.position.toArray();
+    frame(903, []);
+    return { start, end, removed: !window.__pystralThreeNativeMeshes.has('1000001') };
+  });
+  expect(result.end).not.toEqual(result.start);
+  expect(result.removed).toBe(true);
+});
+
 test('tactical compass anchors to the lowest tile and exposes six directions', async ({ page }) => {
   await page.goto('/game.html');
   await page.waitForFunction(() => window.__pystralThreeGlbManifest?.models);

@@ -254,6 +254,7 @@ test.describe('Three.js compositor performance contract', () => {
       window.dispatchEvent(new CustomEvent('pystral-render-frame', { detail: {
         version: 1, tick: 951, cameras: [], map: null, materials: {}, entities: [{
           id: 951, asset: 'Mage', world_position: [0, 0, 0], scale: 1,
+          facing: 'north', rotation_y: 0.25,
           animation_clip: 'general:Idle_A', animation_cue_clip: 'ranged:Ranged_Magic_Shoot', animation_cue: 71, animation_barrier: 71,
         }],
       } }));
@@ -266,6 +267,7 @@ test.describe('Three.js compositor performance contract', () => {
       window.dispatchEvent(new CustomEvent('pystral-render-frame', { detail: {
         version: 1, tick: 952, cameras: [], map: null, materials: {}, entities: [{
           id: 951, asset: 'Mage', world_position: [0, 0, 0], scale: 1,
+          facing: 'north', rotation_y: 0.25,
           animation_clip: 'general:Idle_A', animation_cue_clip: 'ranged:Ranged_Magic_Shoot', animation_cue: 71, animation_barrier: 71,
         }],
       } }));
@@ -273,10 +275,13 @@ test.describe('Three.js compositor performance contract', () => {
     const started = await page.evaluate(() => {
       const animation = window.__pystralThreeMixers?.get('951');
       return { cue: animation?.activeCue, clip: animation?.activeClip?.name,
+        yaw: window.__pystralThreeNativeMeshes.get('951')?.group.rotation.y,
         meshes: [...(window.__pystralThreeNativeMeshes?.keys() || [])],
         diagnostics: document.getElementById('log-output')?.textContent };
     });
     expect(started).toEqual(expect.objectContaining({ cue: 71, clip: 'Ranged_Magic_Shoot' }));
+    // `syncGlbEntities` applies logical aim before it selects/starts the cue.
+    expect(started.yaw).toBeCloseTo(-Math.PI / 6 + Math.PI + 0.25, 8);
     const acks = await page.evaluate(() => {
       const animation = window.__pystralThreeMixers.get('951');
       const before = [...window.__animationAcks];

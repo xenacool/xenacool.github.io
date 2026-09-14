@@ -1,5 +1,6 @@
 mod context;
 pub mod loop_handler;
+mod map;
 mod state;
 pub mod utils;
 mod waypoint;
@@ -71,6 +72,25 @@ pub struct RenderFrame {
     pub camera_pose: Option<RenderCameraPoseFrame>,
     pub waypoint_preview: Option<RenderWaypointPreviewFrame>,
     pub presentation: RenderPresentationConfig,
+    pub presentation_debug: Option<RenderPlaybackDebugFrame>,
+}
+
+/// Read-only logical-clock diagnostics consumed by deterministic browser
+/// tests. This describes presentation overlays, never simulation state.
+#[derive(Debug, Clone, Serialize, PartialEq)]
+pub struct RenderPlaybackDebugFrame {
+    pub history_index: usize,
+    pub playback_epoch: u64,
+    pub playing_log: bool,
+    pub movement_tweens: Vec<RenderMovementTweenDebug>,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq)]
+pub struct RenderMovementTweenDebug {
+    pub entity_id: u64,
+    pub event_index: usize,
+    pub playback_epoch: u64,
+    pub path: Vec<[i32; 2]>,
 }
 #[derive(Debug, Clone, Serialize, PartialEq)]
 pub struct RenderCameraPoseFrame {
@@ -312,54 +332,7 @@ impl RenderFrame {
             })
             .collect::<Vec<_>>();
         cameras.sort_by_key(|camera| camera.id);
-        let map = (tick == 0)
-            .then(|| {
-                state
-                    .entities
-                    .iter()
-                    .find(|entity| entity.kind == "world")
-                    .and_then(|entity| match entity.properties.get("map") {
-                        Some(pystral_core::log::PropertyValue::HexMap(map)) => {
-                            Some(RenderMapFrame {
-                                orientation: format!("{:?}", map.orientation),
-                                hex_size: map.hex_size.to_array(),
-                                tiles: map
-                                    .tiles
-                                    .iter()
-                                    .map(|tile| RenderTileFrame {
-                                        q: tile.hex.x,
-                                        r: tile.hex.y,
-                                        layer: tile.layer,
-                                        bottom: tile.bottom,
-                                        height: tile.height,
-                                        material: tile.material.clone(),
-                                    })
-                                    .collect(),
-                            })
-                        }
-                        _ => None,
-                    })
-            })
-            .flatten();
-        let materials = if tick == 0 {
-            state
-                .materials
-                .iter()
-                .map(|(name, material)| {
-                    (
-                        name.clone(),
-                        RenderMaterialFrame {
-                            color: material.color,
-                            roughness: material.roughness,
-                            metalness: material.metalness,
-                            emissive: material.emissive,
-                        },
-                    )
-                })
-                .collect()
-        } else {
-            BTreeMap::new()
-        };
+        let (map, materials) = map::scene_data(state);
         let presentation = presentation_config(state);
         Self {
             version: 1,
@@ -371,6 +344,7 @@ impl RenderFrame {
             camera_pose,
             waypoint_preview: None,
             presentation,
+            presentation_debug: None,
         }
     }
 }
@@ -482,7 +456,7 @@ mod tests {
     use super::RenderFrame;
     use hexx::Hex;
     use pystral_compiler::assets::{AssetCollection, SpriteAnimation};
-    use pystral_core::domain::{Spritestack, SpritestackSlice};
+    use pystral_core::domain::{HexMap, HexTile, Spritestack, SpritestackSlice};
     use pystral_core::log::{EntityState, PropertyValue, WorldState};
     use std::collections::HashMap;
     use std::sync::Arc;
@@ -514,6 +488,42 @@ mod tests {
         assert_eq!(frame.entities[0].indicator.direction, "south");
         assert_eq!(frame.cameras.len(), 1);
         assert_eq!(frame.cameras[0].id, 3);
+    }
+
+    #[test]
+    fn render_frame_keeps_map_and_materials_available_after_startup_tick() {
+        let mut state = WorldState::default();
+        state.entities.push({
+            let mut world = EntityState::new(1, "world".to_string(), Hex::ZERO, &[]);
+            world.properties.insert(
+                "map".to_string(),
+                PropertyValue::HexMap(HexMap {
+                    tiles: vec![HexTile {
+                        hex: Hex::ZERO,
+                        layer: 0,
+                        bottom: 0.0,
+                        height: 1.0,
+                        material: "grass".to_string(),
+                    }],
+                    ..HexMap::default()
+                }),
+            );
+            world
+        });
+        state.materials.insert(
+            "grass".to_string(),
+            pystral_core::domain::Material {
+                color: [0.2, 0.7, 0.3],
+                roughness: 0.8,
+                metalness: 0.0,
+                emissive: 0.0,
+            },
+        );
+
+        let frame = RenderFrame::from_world_state(&state, 37);
+
+        assert_eq!(frame.map.as_ref().map(|map| map.tiles.len()), Some(1));
+        assert!(frame.materials.contains_key("grass"));
     }
 
     #[test]

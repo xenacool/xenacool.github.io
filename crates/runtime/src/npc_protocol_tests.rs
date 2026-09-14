@@ -40,12 +40,11 @@ fn npc_ability_uses_typed_candidate_revalidation_and_barrier() {
         .pg_rpg_sim
         .as_ref()
         .unwrap()
-        .get_available_actions(2)
-        .unwrap()
-        .primary_job
-        .abilities
-        .first()
-        .unwrap()
+        .state
+        .ability_registry
+        .values()
+        .find(|ability| ability.name == "Fireball")
+        .expect("Mage Fireball")
         .id;
     runtime.continuation = RuntimeContinuation::AwaitMctsDecision {
         unit_id: 2,
@@ -59,7 +58,7 @@ fn npc_ability_uses_typed_candidate_revalidation_and_barrier() {
             decision: RuntimeDecision {
                 unit_id: 2,
                 action: RuntimeDecisionAction::Ability {
-                    ability_id: u64::from(ability_id),
+                    ability_id: ability_id.0 as u64,
                     target: RuntimeAbilityTarget::Unit { unit_id: 1 },
                 },
             },
@@ -75,6 +74,23 @@ fn npc_ability_uses_typed_candidate_revalidation_and_barrier() {
             assert_eq!(action, "ability");
             assert!(history.log.iter().any(|event| matches!(
                 event, Event::Log { msg } if msg.contains("NPC unit 2 used")
+            )));
+            let projectile_id = history
+                .log
+                .iter()
+                .find_map(|event| match event {
+                    Event::SpawnEntity { id, kind, .. } if kind == "projectile" => Some(*id),
+                    _ => None,
+                })
+                .expect("NPC Fireball must use the shared projectile presentation route");
+            assert!(history.log.iter().any(|event| matches!(
+                event,
+                Event::UpdateProperty { id, property, value: pystral_core::log::PropertyValue::AssetRef(profile) }
+                    if *id == projectile_id && property == "asset" && profile == "FireballOrb"
+            )));
+            assert!(history.log.iter().any(|event| matches!(
+                event, Event::MoveSprite { id, destination, .. }
+                    if *id == projectile_id && *destination == hexx::Hex::ZERO
             )));
             assert!(history.log.iter().any(|event| matches!(
                 event,
@@ -102,7 +118,10 @@ fn npc_ability_uses_typed_candidate_revalidation_and_barrier() {
         runtime
             .process_request(RuntimeRequest::AcknowledgeAnimation { barrier_id })
             .0,
-        RuntimeResponse::Continuation(RuntimeContinuation::AwaitMctsDecision { unit_id: 2, .. })
+        RuntimeResponse::AnimationAcknowledged {
+            continuation: RuntimeContinuation::AwaitMctsDecision { unit_id: 2, .. },
+            history,
+        } if history.log.iter().any(|event| matches!(event, Event::DespawnEntity { id } if *id >= 1_000_000))
     ));
 }
 

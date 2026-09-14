@@ -1495,11 +1495,15 @@
         window.__pystralControlsBound = true;
         const slider = document.getElementById('history-slider');
         const valueDisplay = document.getElementById('slider-value');
+        // Scrubbing stops the Rust playback clock. Keep the local button
+        // state causally consistent so the next Log click is a true resume.
+        let setLogPlaying = () => {};
         
         slider.addEventListener('input', (e) => {
             const val = parseInt(e.target.value, 10);
             valueDisplay.textContent = val;
             currentApp()?.set_history_index(val);
+            setLogPlaying(false);
         });
 
         const setupToggle = (btnId, toggleFn, autostart = false) => {
@@ -1508,20 +1512,21 @@
             const pauseIcon = btn.querySelector('.pause-icon');
             let playing = autostart;
             
-            if (playing) {
-                playIcon.style.display = 'none';
-                pauseIcon.style.display = 'block';
-            }
-
-            btn.addEventListener('click', () => {
-                playing = !playing;
-                toggleFn();
+            const setPlaying = (nextPlaying) => {
+                playing = nextPlaying;
                 playIcon.style.display = playing ? 'none' : 'block';
                 pauseIcon.style.display = playing ? 'block' : 'none';
+            };
+            setPlaying(playing);
+
+            btn.addEventListener('click', () => {
+                setPlaying(!playing);
+                toggleFn();
             });
+            return setPlaying;
         };
 
-        setupToggle('play-log', () => currentApp()?.toggle_play_log(), true);
+        setLogPlaying = setupToggle('play-log', () => currentApp()?.toggle_play_log(), true);
         setupToggle('play-sim', () => currentApp()?.toggle_play_animations(), true);
 
         const cameraNav = (direction) => {
