@@ -190,5 +190,30 @@ mod tests {
             .find(|definition| definition.name == "Manafeet")
             .unwrap();
         assert_eq!(manafeet.mana_gain, 5);
+        let presentation = |name: &str| {
+            simulation
+                .state
+                .ability_registry
+                .values()
+                .find(|definition| definition.name == name)
+                .and_then(|definition| definition.presentation_animation.as_deref())
+        };
+        for (ability, clip) in [
+            ("Club Smash", "melee:Melee_1H_Attack_Chop"),
+            ("Rock Throw", "general:Throw"),
+            ("Primal Roar", "melee:Melee_Unarmed_Attack_Punch_A"),
+            ("Fireball", "ranged:Ranged_Magic_Spellcasting_Long"),
+            ("Frost Bolt", "ranged:Ranged_Magic_Shoot"),
+            ("Arcane Shield", "ranged:Ranged_Magic_Raise"),
+            ("Raise Skeleton", "ranged:Ranged_Magic_Summon"),
+            ("Harvest Skeleton", "general:Interact"),
+            ("Soul Drain", "ranged:Ranged_Magic_Spellcasting"),
+            ("Bone Armor", "ranged:Ranged_Magic_Raise"),
+            ("Bony Strike", "melee:Melee_1H_Attack_Slice_Diagonal"),
+            ("Shield Bash", "melee:Melee_Block_Attack"),
+            ("Screech", "special:Skeletons_Taunt"),
+        ] {
+            assert_eq!(presentation(ability), Some(clip), "{ability}");
+        }
     }
 }

@@ -33,6 +33,71 @@ impl Runtime {
         *sequence_number
     }
 
+    /// A one-shot cue and its barrier share a logical clock. The browser can
+    /// therefore distinguish a later Fireball from a stale copy of the same
+    /// clip name, and releases this barrier only when that exact cue finishes.
+    pub(super) fn append_ability_animation_barrier(
+        history: &mut HistoryManager,
+        sequence_number: &mut u64,
+        unit_id: u64,
+        clip: Option<&str>,
+        facing: Option<pystral_games::Facing>,
+    ) -> u64 {
+        *sequence_number += 1;
+        let barrier = *sequence_number;
+        if let Some(facing) = facing {
+            history.push_and_apply(Event::UpdateProperty {
+                id: unit_id,
+                property: "facing".to_string(),
+                value: pystral_core::log::PropertyValue::String(facing.as_property().to_string()),
+            });
+        }
+        if let Some(clip) = clip {
+            history.push_and_apply(Event::UpdateProperty {
+                id: unit_id,
+                property: "animation_clip".to_string(),
+                value: pystral_core::log::PropertyValue::String(clip.to_string()),
+            });
+            history.push_and_apply(Event::UpdateProperty {
+                id: unit_id,
+                property: "animation_cue".to_string(),
+                value: pystral_core::log::PropertyValue::Float(barrier as f32),
+            });
+            history.push_and_apply(Event::UpdateProperty {
+                id: unit_id,
+                property: "animation_barrier".to_string(),
+                value: pystral_core::log::PropertyValue::Float(barrier as f32),
+            });
+        }
+        history.push_and_apply(Event::SequenceNumber(barrier));
+        barrier
+    }
+
+    /// Presentation-only attack aim. The existing end-of-turn facing decision
+    /// remains the sole authoritative direction-setting action.
+    pub(super) fn ability_presentation_facing(
+        simulation: &pg_rpg::simulation::TacticalSimulation,
+        unit_id: u64,
+        target: &RuntimeAbilityTarget,
+    ) -> Option<pystral_games::Facing> {
+        let from = simulation
+            .state
+            .agents
+            .get(&npc_engine_core::AgentId(unit_id as u32))?
+            .position
+            .hex;
+        let target_hex = match target {
+            RuntimeAbilityTarget::Unit { unit_id } => simulation
+                .state
+                .agents
+                .get(&npc_engine_core::AgentId(*unit_id as u32))?
+                .position
+                .hex,
+            RuntimeAbilityTarget::Cell { hex, .. } => *hex,
+        };
+        pystral_games::Facing::direction_to(from, target_hex)
+    }
+
     pub(super) fn default_movement_transition() -> pystral_core::log::TransitionConfig {
         pystral_core::log::TransitionConfig {
             duration_ms: 500,
@@ -397,12 +462,22 @@ impl Runtime {
             return RuntimeResponse::Error("Simulation not started".into());
         };
         let start_idx = history.log.len();
-        let ability_name = sim
+        let presentation_facing = Self::ability_presentation_facing(
+            sim,
+            unit_id,
+            &RuntimeAbilityTarget::Unit { unit_id: target.0 as u64 },
+        );
+        let (ability_name, presentation_animation) = sim
             .state
             .ability_registry
             .get(&ability)
-            .map(|definition| definition.name.as_str())
-            .unwrap_or("unknown ability");
+            .map(|definition| {
+                (
+                    definition.name.clone(),
+                    definition.presentation_animation.clone(),
+                )
+            })
+            .unwrap_or_else(|| ("unknown ability".to_string(), None));
         history.push_and_apply(Event::Log {
             msg: format!(
                 "NPC unit {unit_id} used {ability_name} on unit {}",
@@ -425,7 +500,13 @@ impl Runtime {
                 });
             }
         }
-        let barrier_id = Self::append_action_barrier(history, &mut self.pg_rpg_sequence_number);
+        let barrier_id = Self::append_ability_animation_barrier(
+            history,
+            &mut self.pg_rpg_sequence_number,
+            unit_id,
+            presentation_animation.as_deref(),
+            presentation_facing,
+        );
         let mut update = HistoryManager::new();
         update.log = history.log[start_idx..].to_vec();
         RuntimeResponse::ActionCommitted {
@@ -631,5 +712,33 @@ mod tests {
             resolve_pg_rpg_boundary(&simulation, &[AgentId(1)]),
             BoundaryResolution::Completed(GameOutcome::Victory { winning_team: 1 })
         );
+    }
+
+    #[test]
+    fn attack_aim_precedes_the_one_shot_cue_without_mutating_tactical_facing() {
+        let mut history = HistoryManager::new();
+        history.push_and_apply(Event::SpawnEntity {
+            id: 1,
+            kind: "character".to_string(),
+            hex: hexx::Hex::ZERO,
+            init_properties: vec![],
+        });
+        let mut sequence = 0;
+        Runtime::append_ability_animation_barrier(
+            &mut history,
+            &mut sequence,
+            1,
+            Some("ranged:Ranged_Magic_Shoot"),
+            Some(pystral_games::Facing::Northeast),
+        );
+        let facing = history.log.iter().position(|event| matches!(event,
+            Event::UpdateProperty { property, value: pystral_core::log::PropertyValue::String(value), .. }
+                if property == "facing" && value == "northeast"
+        )).unwrap();
+        let cue = history.log.iter().position(|event| matches!(event,
+            Event::UpdateProperty { property, .. } if property == "animation_cue"
+        )).unwrap();
+        let barrier = history.log.iter().position(|event| matches!(event, Event::SequenceNumber(1))).unwrap();
+        assert!(facing < cue && cue < barrier);
     }
 }

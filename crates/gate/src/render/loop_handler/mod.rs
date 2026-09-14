@@ -127,6 +127,7 @@ impl LoopHandler {
             Some((view, proj)),
             Some(&positions),
             Some(&animation_times),
+            now,
         );
         phase_ms[3] = performance.now() - phase_at;
 
@@ -206,6 +207,7 @@ impl LoopHandler {
         camera_pose: Option<(glam::Mat4, glam::Mat4)>,
         positions: Option<&HashMap<u64, [f32; 3]>>,
         animation_times: Option<&HashMap<u64, f32>>,
+        now: f64,
     ) {
         let camera_pose =
             camera_pose.map(|(view, projection)| crate::render::RenderCameraPoseFrame {
@@ -219,6 +221,17 @@ impl LoopHandler {
             positions,
             animation_times,
         );
+        for entity in &mut frame.entities {
+            let moving = self
+                .ctx
+                .movement_tweens
+                .get(&entity.id)
+                .is_some_and(|tween| now - tween.start_time_ms < tween.duration_ms);
+            if moving && entity.animation_cue.is_none() {
+                entity.animation_state = "walk".to_string();
+                entity.animation_clip = entity.walk_animation_clip.clone();
+            }
+        }
         frame.waypoint_preview = self
             .transient_state
             .preview
@@ -375,6 +388,19 @@ impl LoopHandler {
                 }
                 AppCommand::ActionRejected { request_id, reason } => {
                     self.last_action_rejection = Some((request_id, reason));
+                }
+                AppCommand::AnimationCompleted(barrier_id) => {
+                    // Completion is an edge from the browser mixer, not a
+                    // frame-count guess. Keep the ACK watermark monotonic.
+                    if self
+                        .playback_state
+                        .last_sequence_ack_sent
+                        .is_none_or(|(sent, _)| barrier_id > sent)
+                    {
+                        self.playback_state.last_sequence_ack_sent =
+                            Some((barrier_id, self.playback_state.last_tick_ms));
+                        let _ = self.worker_tx.unbounded_send(WorkerInput::Ack(barrier_id));
+                    }
                 }
             }
         }
@@ -641,6 +667,20 @@ impl LoopHandler {
                 _ => None,
             });
         if let Some(n) = barrier {
+            let one_shot_pending =
+                self.history_manager
+                    .current_state
+                    .entities
+                    .iter()
+                    .any(|entity| {
+                        matches!(entity.properties.get("animation_barrier"),
+                    Some(pystral_core::log::PropertyValue::Float(value)) if *value as u64 == n)
+                    });
+            // An ability barrier is visible now, but it is released solely
+            // by AppCommand::AnimationCompleted from the matching mixer.
+            if one_shot_pending {
+                return;
+            }
             // ACKs are monotonic watermarks. Retry a missing ACK slowly, while
             // avoiding the per-frame flood that can starve simulation.
             if !sequence_ack_due(self.playback_state.last_sequence_ack_sent, n, now) {

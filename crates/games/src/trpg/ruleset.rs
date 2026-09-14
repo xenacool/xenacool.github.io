@@ -59,6 +59,8 @@ pub struct ScriptAbilityDef {
     pub delivery: Option<String>,
     pub target_rule: Option<String>,
     pub projectile_profile: Option<String>,
+    /// Exact browser animation key, e.g. `ranged:Ranged_Magic_Shoot`.
+    pub presentation_animation: Option<String>,
     pub area_radius: Option<u8>,
     pub scaling: Vec<(String, f32)>,
     pub emit_tags: Vec<(String, u8)>,
@@ -172,6 +174,7 @@ impl ScriptAbilityDef {
             delivery,
             target_rule,
             projectile_profile: self.projectile_profile.clone(),
+            presentation_animation: self.presentation_animation.clone(),
             area_radius,
             scaling: self.scaling.iter().cloned().collect(),
             emit_tags: self

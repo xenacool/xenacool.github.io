@@ -137,6 +137,7 @@
             delivery: None,
             target_rule: None,
             projectile_profile: None,
+            presentation_animation: None,
             area_radius: None,
             scaling: Vec::new(),
             emit_tags: Vec::new(),
@@ -226,6 +227,12 @@
             "set_projectile_profile",
             |ability: &mut ScriptAbilityDef, profile: &str| {
                 ability.projectile_profile = Some(profile.to_string())
+            },
+        )
+        .register_fn(
+            "set_presentation_animation",
+            |ability: &mut ScriptAbilityDef, animation: &str| {
+                ability.presentation_animation = Some(animation.to_string())
             },
         )
         .register_fn("set_area_radius", |ability: &mut ScriptAbilityDef, radius: i64| {

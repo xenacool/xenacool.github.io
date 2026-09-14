@@ -1,5 +1,12 @@
 {
   "version": 1,
+  "animation_bundles": {
+    "general": { "url": "./web/assets/models/animation/Rig_Medium_General.glb", "rig": "Medium" },
+    "movement": { "url": "./web/assets/models/animation/Rig_Medium_MovementBasic.glb", "rig": "Medium" },
+    "melee": { "url": "./web/assets/models/animation/Rig_Medium_CombatMelee.glb", "rig": "Medium" },
+    "ranged": { "url": "./web/assets/models/animation/Rig_Medium_CombatRanged.glb", "rig": "Medium" },
+    "special": { "url": "./web/assets/models/animation/Rig_Medium_Special.glb", "rig": "Medium" }
+  },
   "models": {
     "4GTN": { "url": "./web/assets/models/jobs/4GTN.glb", "rig": "Medium", "scale": 1 },
     "4GTN_Forgotten": { "url": "./web/assets/models/jobs/4GTN_Forgotten.glb", "rig": "Medium", "scale": 1 },

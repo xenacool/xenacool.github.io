@@ -83,24 +83,30 @@ fn authored_ability(name, ap_cost, range, delivery, stat1, factor1, stat2, facto
 }
 
 let club_smash = authored_ability("Club Smash", 2, 1, "Melee", "STR", 1.5, "", 0.0, "", 0);
+club_smash.set_presentation_animation("melee:Melee_1H_Attack_Chop");
 scenario.add_script_ability(club_smash);
 
 let rock_throw = authored_ability("Rock Throw", 2, 6, "StraightProjectile", "STR", 1.0, "DEX", 0.5, "", 0);
 rock_throw.set_projectile_profile("Rock");
+rock_throw.set_presentation_animation("general:Throw");
 scenario.add_script_ability(rock_throw);
 
 let primal_roar = authored_ability("Primal Roar", 3, 3, "Area", "CHA", 0.5, "", 0.0, "Stun", 1);
+primal_roar.set_presentation_animation("melee:Melee_Unarmed_Attack_Punch_A");
 scenario.add_script_ability(primal_roar);
 
 let fireball = authored_ability("Fireball", 3, 8, "ArcProjectile", "INT", 2.0, "", 0.0, "", 0);
 fireball.set_projectile_profile("FireballOrb");
+fireball.set_presentation_animation("ranged:Ranged_Magic_Spellcasting_Long");
 scenario.add_script_ability(fireball);
 
 let frost_bolt = authored_ability("Frost Bolt", 2, 6, "StraightProjectile", "INT", 1.0, "WIS", 0.5, "Slow", 1);
 frost_bolt.set_projectile_profile("FrostBolt");
+frost_bolt.set_presentation_animation("ranged:Ranged_Magic_Shoot");
 scenario.add_script_ability(frost_bolt);
 
 let arcane_shield = authored_ability("Arcane Shield", 2, 0, "SelfTarget", "INT", 0.5, "WIS", 1.0, "Shield", 2);
+arcane_shield.set_presentation_animation("ranged:Ranged_Magic_Raise");
 let shield = new_rpg_program();
 shield.add_timed_modifier("ArmorClass", 4, 2, "RefreshReplace");
 let shield_programs = new_rpg_programs();
@@ -109,6 +115,7 @@ arcane_shield.set_programs(shield_programs);
 scenario.add_script_ability(arcane_shield);
 
 let raise_skeleton = authored_ability("Raise Skeleton", 2, 1, "Area", "", 0.0, "", 0.0, "", 0);
+raise_skeleton.set_presentation_animation("ranged:Ranged_Magic_Summon");
 raise_skeleton.set_health_cost(20);
 raise_skeleton.set_health_floor(1);
 raise_skeleton.set_target_rule("EmptyCell");
@@ -120,6 +127,7 @@ raise_skeleton.set_programs(raise_programs);
 scenario.add_script_ability(raise_skeleton);
 
 let harvest_skeleton = authored_ability("Harvest Skeleton", 1, 4, "Melee", "", 0.0, "", 0.0, "Fresh Soul", 1);
+harvest_skeleton.set_presentation_animation("general:Interact");
 harvest_skeleton.set_target_rule("OwnedSummon");
 let harvest = new_rpg_program();
 harvest.add_destroy_owned_summon();
@@ -132,6 +140,7 @@ scenario.add_script_ability(harvest_skeleton);
 
 let soul_drain = authored_ability("Soul Drain", 3, 4, "StraightProjectile", "INT", 1.0, "CHA", 1.0, "", 0);
 soul_drain.set_projectile_profile("SoulOrb");
+soul_drain.set_presentation_animation("ranged:Ranged_Magic_Spellcasting");
 soul_drain.set_mana_cost(10);
 soul_drain.add_consume_tag("Fresh Soul", 1, 1);
 let drain = new_rpg_program();
@@ -142,12 +151,16 @@ soul_drain.set_programs(drain_programs);
 scenario.add_script_ability(soul_drain);
 
 let bone_armor = authored_ability("Bone Armor", 2, 0, "SelfTarget", "INT", 1.0, "", 0.0, "Armor", 2);
+bone_armor.set_presentation_animation("ranged:Ranged_Magic_Raise");
 scenario.add_script_ability(bone_armor);
 let bony_strike = authored_ability("Bony Strike", 1, 1, "Melee", "STR", 1.0, "", 0.0, "", 0);
+bony_strike.set_presentation_animation("melee:Melee_1H_Attack_Slice_Diagonal");
 scenario.add_script_ability(bony_strike);
 let shield_bash = authored_ability("Shield Bash", 2, 1, "Melee", "STR", 0.5, "CON", 0.5, "Stun", 1);
+shield_bash.set_presentation_animation("melee:Melee_Block_Attack");
 scenario.add_script_ability(shield_bash);
 let screech = authored_ability("Screech", 2, 3, "Area", "CHA", 0.2, "", 0.0, "Fear", 1);
+screech.set_presentation_animation("special:Skeletons_Taunt");
 scenario.add_script_ability(screech);
 let caveman_job = new_script_job("Caveman");
 caveman_job.set_base_stats(unit_stats(15, 8, 4, 4, 6, 14, 8, 12, 12, 4));

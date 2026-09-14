@@ -2,7 +2,7 @@
 // Rust publishes authoritative simulation presentation data; Three.js owns the
 // visible WebGL2 canvas.
 import * as THREE from './vendor/three.module.min.js';
-import { loadModel, syncGlbEntities } from './glb_actor.js';
+import { advanceGlbAnimations, loadAnimationBundle, loadModel, syncGlbEntities } from './glb_actor.js';
 
 const HEX_DIRECTION_OFFSET = Math.PI / 6;
 const FACING_ANGLES = Object.freeze({
@@ -86,6 +86,7 @@ export function createNativePresentation(canvas) {
     const waypointMarkers = new Map();
     const mixers = new Map();
     window.__pystralThreeMixers = mixers;
+    window.__pystralThreeAdvanceAnimations = (seconds) => advanceGlbAnimations(mixers, seconds);
     window.__pystralThreePoseProfile = () => ({ ready: glbManifest !== null });
     window.__pystralThreeNativeMarkers = teamMarkers;
     window.__pystralThreeNativeWaypointMarkers = waypointMarkers;
@@ -192,6 +193,9 @@ export function createNativePresentation(canvas) {
                     return model;
                 }))
             );
+            window.__pystralThreeLoadAnimationBundles = (bundles) => Promise.all(
+                [...new Set(bundles || [])].map((bundle) => loadAnimationBundle(manifest, bundle))
+            );
             profile.nativeGlbReady = true;
             profile.nativeGlbModels = Object.keys(manifest.models || {}).length;
             window.dispatchEvent(new CustomEvent('pystral-three-glb-ready'));
@@ -209,6 +213,7 @@ export function createNativePresentation(canvas) {
             profile.lastFrameIntervalMs = frameIntervalMs;
         }
         profile.lastFrameAt = frameStart;
+        advanceGlbAnimations(mixers, Math.min(frameIntervalMs || 0, 100) / 1000);
         resize();
         renderer.setRenderTarget(null);
         renderer.setClearColor(0x1a1a1a, 1);
@@ -307,6 +312,8 @@ export function createNativePresentation(canvas) {
             delete window.__pystralThreeFacingMarkerGeometry;
             delete window.__pystralThreeGlbManifest;
             delete window.__pystralThreeLoadGlbModels;
+            delete window.__pystralThreeLoadAnimationBundles;
+            delete window.__pystralThreeAdvanceAnimations;
             delete window.__pystralThreeActorCatalog;
             actorMaskMeshes.forEach((mesh) => mesh.material.dispose());
             actorMaskMeshes.clear();

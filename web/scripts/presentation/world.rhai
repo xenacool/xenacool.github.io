@@ -14,6 +14,15 @@ for id in agents {
     let cell = sim.get_agent_cell(id);
     history.spawn_entity(id, kind, cell.hex, character_init_properties());
     history.set(id, "asset", kind);
+    // Job presentation defaults are authored here, rather than guessed by
+    // Three.js. Future campaign APIs may override these per level.
+    if kind == "Skeleton_Minion" {
+        history.set(id, "animation_clip", "special:Skeletons_Idle");
+        history.set(id, "walk_animation_clip", "special:Skeletons_Walking");
+    } else {
+        history.set(id, "animation_clip", "general:Idle_A");
+        history.set(id, "walk_animation_clip", "movement:Walking_A");
+    }
     // Native GLB jobs are normalized to the two-hex actor contract. Keep the
     // authored transform at one so their rendered height remains exactly two
     // hex units; individual units can still override scale when desired.

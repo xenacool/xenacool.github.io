@@ -94,12 +94,18 @@ impl Runtime {
             return RuntimeResponse::Error("Simulation not started".to_string());
         };
         let simulation_before_request = sim.clone();
-        let ability_name = sim
+        let presentation_facing = Self::ability_presentation_facing(sim, unit_id, &target);
+        let (ability_name, presentation_animation) = sim
             .state
             .ability_registry
             .get(&pystral_games::AbilityId(ability_id as u32))
-            .map(|definition| definition.name.clone())
-            .unwrap_or_else(|| format!("ability {ability_id}"));
+            .map(|definition| {
+                (
+                    definition.name.clone(),
+                    definition.presentation_animation.clone(),
+                )
+            })
+            .unwrap_or_else(|| (format!("ability {ability_id}"), None));
         let projectile_route = match target {
             RuntimeAbilityTarget::Unit { unit_id: target_id } => sim
                 .state
@@ -242,7 +248,13 @@ impl Runtime {
                 }
             }
         }
-        let barrier_id = Self::append_action_barrier(history, &mut self.pg_rpg_sequence_number);
+        let barrier_id = Self::append_ability_animation_barrier(
+            history,
+            &mut self.pg_rpg_sequence_number,
+            unit_id,
+            presentation_animation.as_deref(),
+            presentation_facing,
+        );
         let mut update = HistoryManager::new();
         update.log = history.log[start_idx..].to_vec();
         RuntimeResponse::ActionCommitted {

@@ -150,6 +150,10 @@ impl AppHandle {
     pub fn action_nav(&self, direction: String) {
         let _ = self.sender.send(AppCommand::ActionNav(direction));
     }
+
+    pub fn animation_completed(&self, barrier_id: u64) {
+        let _ = self.sender.send(AppCommand::AnimationCompleted(barrier_id));
+    }
 }
 
 fn initialize_renderer() -> HistoryManager {
