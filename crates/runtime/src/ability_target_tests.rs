@@ -124,12 +124,7 @@ fn player_ability_commit_resolves_pending_reaction_before_fireball() {
         .find(|ability| ability.name == "Fireball")
         .unwrap()
         .id;
-    let reaction = simulation.state.agents[&mage].reaction_abilities[0];
     let target_health_before = simulation.state.agents[&target].health;
-    simulation
-        .state
-        .reaction_queue
-        .push((mage, reaction, target));
 
     let mut runtime = Runtime::new();
     runtime.pg_rpg_sim = Some(simulation);
@@ -170,26 +165,52 @@ fn player_ability_commit_resolves_pending_reaction_before_fireball() {
         })
         .0;
 
-    assert!(matches!(
-        response,
-        RuntimeResponse::ActionCommitted { action, history, .. }
-            if action.starts_with("ability (")
-                && history.log.iter().any(|event| matches!(
-                    event,
-                    pystral_core::log::Event::Log { msg }
-                        if msg.contains("resolved forced reaction")
-                ))
-    ));
+    let barrier_id = match response {
+        RuntimeResponse::ActionCommitted {
+            action, barrier_id, ..
+        } if action.starts_with("ability (") => barrier_id,
+        other => panic!("expected ability commit, got {other:?}"),
+    };
     assert!(
-        !runtime
+        runtime
             .pg_rpg_sim
             .as_ref()
             .unwrap()
             .state
             .reaction_queue
             .iter()
-            .any(|(agent, _, _)| *agent == mage)
+            .any(|(agent, _, _)| *agent == target)
     );
+    let pending = runtime
+        .process_request(RuntimeRequest::AcknowledgeAnimation { barrier_id })
+        .0;
+    let reaction_prompt = match pending {
+        RuntimeResponse::ReactionPending { reaction, .. } => reaction,
+        other => panic!("expected reaction prompt, got {other:?}"),
+    };
+    let reaction_commit = runtime
+        .process_request(RuntimeRequest::CommitReaction {
+            request_id: 3,
+            unit_id: reaction_prompt.unit_id,
+            reaction_id: reaction_prompt.reaction_id,
+            target_id: reaction_prompt.target_id,
+            state_version: reaction_prompt.state_version,
+        })
+        .0;
+    let reaction_barrier = match reaction_commit {
+        RuntimeResponse::ActionCommitted {
+            barrier_id, action, ..
+        } if action == "reaction" => barrier_id,
+        other => panic!("expected reaction commit, got {other:?}"),
+    };
+    assert!(matches!(
+        runtime
+            .process_request(RuntimeRequest::AcknowledgeAnimation {
+                barrier_id: reaction_barrier
+            })
+            .0,
+        RuntimeResponse::Continuation(RuntimeContinuation::AwaitPlayerDecision { unit_id: 2 })
+    ));
     assert!(
         runtime.pg_rpg_sim.as_ref().unwrap().state.agents[&target].health < target_health_before
     );

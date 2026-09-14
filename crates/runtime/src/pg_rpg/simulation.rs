@@ -132,6 +132,15 @@ impl TacticalSimulation {
     /// Return only a serializable gameplay action. Engine task objects never
     /// cross the runtime/controller boundary.
     pub fn request_npc_decision(&self, agent: AgentId) -> Option<TacticalDisplayAction> {
+        if let Some((_reaction_agent, reaction, target)) = self
+            .state
+            .reaction_queue
+            .first()
+            .copied()
+            .filter(|(reaction_agent, _, _)| *reaction_agent == agent)
+        {
+            return Some(TacticalDisplayAction::Reaction { reaction, target });
+        }
         if self.npc_facing_pending.contains(&agent) {
             let attacker = self.state.agents.get(&agent)?;
             let facing = self
@@ -315,29 +324,14 @@ impl TacticalSimulation {
                 .facing = facing;
             return Ok(action);
         }
-        // Reactions are mandatory and this is the final authoritative action
-        // boundary.  Keep the invariant here as well as in controller
-        // adapters: an ordinary candidate must never be rejected merely
-        // because a reaction was queued between planning and commit.
-        if !matches!(action, TacticalDisplayAction::Reaction { .. }) {
-            let forced_reaction = self
+        if !matches!(action, TacticalDisplayAction::Reaction { .. })
+            && self
                 .state
                 .reaction_queue
                 .iter()
-                .find(|(reaction_agent, _, _)| *reaction_agent == agent)
-                .map(|(_, reaction, target)| TacticalDisplayAction::Reaction {
-                    reaction: *reaction,
-                    target: *target,
-                });
-            if let Some(reaction) = forced_reaction {
-                let before_reaction = self.clone();
-                self.apply_npc_action(agent, reaction)?;
-                if let Err(error) = self.apply_npc_action(agent, action.clone()) {
-                    *self = before_reaction;
-                    return Err(error);
-                }
-                return Ok(action);
-            }
+                .any(|(reaction_agent, _, _)| *reaction_agent == agent)
+        {
+            return Err(format!("agent {} has a pending reaction", agent.0));
         }
         let mut diff = TacticalDiff::default();
         let tasks =
@@ -391,12 +385,11 @@ impl TacticalSimulation {
             after.facing = facing;
         }
         self.state.cleanup_orphaned_summons();
-        // Every committed NPC action ends that unit's turn. Restricting this
-        // to Wait left move/ability turns out of the round ledger, so the
-        // late-turn MCTS cap never activated during real combat and the
-        // worker could monopolize the browser on repeated NPC actions.
-        self.record_completed_turn(agent);
+        // Reactions interrupt another actor's turn. They spend their own
+        // resources, but never consume or advance the responder's ordinary
+        // turn in the round ledger.
         if !matches!(action, TacticalDisplayAction::Reaction { .. }) {
+            self.record_completed_turn(agent);
             self.npc_facing_pending.insert(agent);
         }
         Ok(action)

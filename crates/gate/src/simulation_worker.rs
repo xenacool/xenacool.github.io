@@ -102,6 +102,9 @@ fn status_for(runtime: &Runtime) -> WorkerStatus {
         pystral_runtime::RuntimeContinuation::AwaitPlayerDecision { .. } => {
             WorkerStatus::AwaitingPlayerDecision
         }
+        pystral_runtime::RuntimeContinuation::AwaitPlayerReaction { .. } => {
+            WorkerStatus::AwaitingPlayerDecision
+        }
         pystral_runtime::RuntimeContinuation::AwaitPlayerFacing { .. } => {
             WorkerStatus::AwaitingPlayerDecision
         }

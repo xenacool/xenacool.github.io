@@ -10,16 +10,18 @@ async function waitForNecromancer(page, predicate = () => true) {
   await page.waitForFunction((predicateSource) => {
     const state = window.__pystralLastTransientState;
     const necromancer = state?.unit_states?.find(({ unit_id }) => unit_id === 5)?.state;
-    const status = window.__pystralWorkerStatus || '';
     return state?.active_unit_id === 5
       && state.available_actions
       && state.input_enabled
       && !state.action_pending
       && !state.wait_pending
       && !state.game_completed
-      && status.includes('AwaitingPlayerDecision')
-      && status.includes('simulation request None')
-      && !status.startsWith('Simulating')
+      && (window.__pystralWorkerStatus || '').includes('AwaitingPlayerDecision')
+      && (window.__pystralWorkerStatus || '').includes('simulation request None')
+      && !(window.__pystralWorkerStatus || '').startsWith('Simulating')
+      // The transient state is the causal boundary. Worker status can retain
+      // the preceding animation label for one heartbeat after the authoritative
+      // player snapshot is published, so it is diagnostic rather than a gate.
       && necromancer
       && Function('unit', `return (${predicateSource})(unit)`)(necromancer);
   }, predicate.toString(), { timeout: 30000 });
@@ -84,12 +86,24 @@ test('Rhai Necromancer raises, harvests, and spends Fresh Soul on Soul Drain', a
   const drain = await openAbility(page, 'Soul Drain');
   expect(drain).toContain('3 AP -> 2 AP (Fresh Soul), 10 MP');
   await chooseTargetAndCommit(page, 'Unit 3');
-  await waitForNecromancer(page, (unit) => unit.health > 90 && unit.mana === 0 && unit.action_points === 1);
+  await page.waitForFunction(() => {
+    const unit = window.__pystralLastTransientState?.unit_states
+      ?.find(({ unit_id }) => unit_id === 5)?.state;
+    return unit?.health > 90 && unit?.mana === 0 && unit?.action_points === 1;
+  }, { timeout: 30000 });
 
   const finalState = await page.evaluate(() => window.__pystralLastTransientState);
   const enemy = finalState.unit_states.find(({ unit_id }) => unit_id === 3).state;
   expect(enemy.health).toBeLessThan(140);
   await expect(page.locator('#action-log')).toContainText('used Soul Drain on unit 3');
+  await page.waitForFunction(() => {
+    const events = window.__pystralActionLogEvents || [];
+    const projectileIds = events
+      .filter((event) => event.SpawnEntity?.kind === 'projectile')
+      .map((event) => event.SpawnEntity.id);
+    return events.some((event) => event.DespawnEntity
+      && projectileIds.includes(event.DespawnEntity.id));
+  }, { timeout: 15000 });
 
   const projectileLifecycle = await page.evaluate(() => {
     const events = window.__pystralActionLogEvents;

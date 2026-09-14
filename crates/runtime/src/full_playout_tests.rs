@@ -64,6 +64,24 @@ fn production_shaped_four_unit_playout_reaches_completion_past_history_379() {
                 .0;
         }
         match runtime.continuation.clone() {
+            RuntimeContinuation::AwaitPlayerReaction { reaction, .. } => {
+                let committed = runtime
+                    .process_request(RuntimeRequest::CommitReaction {
+                        request_id: 20_000 + step,
+                        unit_id: reaction.unit_id,
+                        reaction_id: reaction.reaction_id,
+                        target_id: reaction.target_id,
+                        state_version: reaction.state_version,
+                    })
+                    .0;
+                let barrier_id = match committed {
+                    RuntimeResponse::ActionCommitted { barrier_id, .. } => barrier_id,
+                    other => panic!("player reaction failed at step {step}: {other:?}"),
+                };
+                response = runtime
+                    .process_request(RuntimeRequest::AcknowledgeAnimation { barrier_id })
+                    .0;
+            }
             RuntimeContinuation::AwaitPlayerDecision { unit_id } => {
                 let committed = runtime
                     .process_request(RuntimeRequest::CommitWait {

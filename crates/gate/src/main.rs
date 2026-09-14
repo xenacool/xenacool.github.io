@@ -30,6 +30,7 @@ fn simulation_request_label(request: &RuntimeRequest) -> &'static str {
         RuntimeRequest::CommitFacing { .. } => "CommitFacing",
         RuntimeRequest::CommitMove { .. } => "CommitMove",
         RuntimeRequest::CommitDecision { .. } => "CommitDecision",
+        RuntimeRequest::CommitReaction { .. } => "CommitReaction",
         RuntimeRequest::OpenMovePreview { .. } => "OpenMovePreview",
         RuntimeRequest::OpenAbilityTargets { .. } => "OpenAbilityTargets",
         RuntimeRequest::ActionInput { .. } => "ActionInput",

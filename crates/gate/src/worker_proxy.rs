@@ -175,7 +175,7 @@ impl UnifiedWorker {
                     RuntimeContinuation::AwaitPlayerDecision { .. }
                 );
                 self.transient_state.input_enabled = !self.is_simulating;
-                self.push_output(WorkerOutput::RuntimeResponse(Box::new(response)));
+                self.push_output(WorkerOutput::RuntimeResponse(Box::new(response.clone())));
             }
             PendingSimulation::Action { is_confirm } => {
                 let output = self.finish_action_input(response, is_confirm);
@@ -189,10 +189,23 @@ impl UnifiedWorker {
                 // projectile despawns). Forward that history before publishing
                 // the refreshed player boundary so the rendered world cannot
                 // retain an entity the runtime has already retired.
-                self.push_output(WorkerOutput::RuntimeResponse(Box::new(response)));
+                self.push_output(WorkerOutput::RuntimeResponse(Box::new(response.clone())));
                 self.transient_state.action_pending = false;
                 self.transient_state.input_enabled = false;
-                if matches!(
+                if let RuntimeResponse::ReactionPending { reaction, .. } = &response {
+                    self.is_simulating = false;
+                    self.current_actions = None;
+                    self.transient_state.available_actions = None;
+                    self.transient_state.active_unit_id = Some(reaction.unit_id);
+                    self.transient_state.pending_reaction = Some(reaction.clone());
+                    self.transient_state.wait_pending = false;
+                    self.transient_state.facing_pending = false;
+                    self.transient_state.input_enabled = true;
+                    self.transient_state.action_feedback = Some(format!(
+                        "Reaction pending: {} against unit {}",
+                        reaction.reaction_name, reaction.target_id
+                    ));
+                } else if matches!(
                     self.continuation,
                     RuntimeContinuation::AwaitPlayerFacing { .. }
                 ) {
@@ -205,6 +218,12 @@ impl UnifiedWorker {
                     self.transient_state.wait_pending = false;
                     self.transient_state.facing_pending = false;
                     self.boundary_resume_pending = true;
+                } else if animation_ack_starts_simulation(&self.continuation) {
+                    // A player action can trigger an NPC reaction. The
+                    // animation ACK is the causal handoff into that MCTS
+                    // continuation, so resume simulation before the next
+                    // input can observe the old player boundary.
+                    self.is_simulating = true;
                 } else if animation_ack_resumes_boundary(wait, &self.continuation) {
                     // A non-wait action can still end the match when its
                     // mutation kills the last living unit. Runtime routes

@@ -114,14 +114,41 @@ fn npc_ability_uses_typed_candidate_revalidation_and_barrier() {
             ..
         }
     ));
+    let pending = runtime
+        .process_request(RuntimeRequest::AcknowledgeAnimation { barrier_id })
+        .0;
+    let reaction = match pending {
+        RuntimeResponse::ReactionPending { reaction, history } => {
+            assert!(
+                history
+                    .log
+                    .iter()
+                    .any(|event| matches!(event, Event::DespawnEntity { id } if *id >= 1_000_000))
+            );
+            reaction
+        }
+        other => panic!("expected player reaction prompt, got {other:?}"),
+    };
+    let reaction_barrier = match runtime
+        .process_request(RuntimeRequest::CommitReaction {
+            request_id: 91,
+            unit_id: reaction.unit_id,
+            reaction_id: reaction.reaction_id,
+            target_id: reaction.target_id,
+            state_version: reaction.state_version,
+        })
+        .0
+    {
+        RuntimeResponse::ActionCommitted { barrier_id, .. } => barrier_id,
+        other => panic!("expected reaction commit, got {other:?}"),
+    };
     assert!(matches!(
         runtime
-            .process_request(RuntimeRequest::AcknowledgeAnimation { barrier_id })
+            .process_request(RuntimeRequest::AcknowledgeAnimation {
+                barrier_id: reaction_barrier
+            })
             .0,
-        RuntimeResponse::AnimationAcknowledged {
-            continuation: RuntimeContinuation::AwaitMctsDecision { unit_id: 2, .. },
-            history,
-        } if history.log.iter().any(|event| matches!(event, Event::DespawnEntity { id } if *id >= 1_000_000))
+        RuntimeResponse::Continuation(RuntimeContinuation::AwaitMctsDecision { unit_id: 2, .. })
     ));
 }
 

@@ -1068,6 +1068,7 @@
         }
         window.previewActive = Boolean(state.preview);
         menu.dataset.gameCompleted = state.game_completed ? 'true' : 'false';
+        menu.dataset.reactionPending = state.pending_reaction ? 'true' : 'false';
         const outcome = state.completion_outcome;
         // serde_wasm_bindgen represents unit-like Rust enum variants as their
         // numeric discriminant, while data-bearing variants are keyed
@@ -1117,6 +1118,24 @@
             window.previewLocation = '';
             window.previewReachableCount = 0;
             window.previewApCost = 0;
+        }
+        if (state.pending_reaction) {
+            menu.style.display = 'block';
+            stack.style.display = 'flex';
+            document.getElementById('action-menu-heading').textContent =
+                `Unit ${state.pending_reaction.unit_id} reaction`;
+            status.textContent =
+                `Reaction pending: ${state.pending_reaction.reaction_name} against unit ${state.pending_reaction.target_id}`;
+            items.replaceChildren();
+            const confirm = document.createElement('button');
+            confirm.type = 'button';
+            confirm.dataset.reactionConfirm = 'true';
+            confirm.textContent = `Confirm ${state.pending_reaction.reaction_name}`;
+            confirm.setAttribute('aria-label',
+                `Confirm ${state.pending_reaction.reaction_name} against unit ${state.pending_reaction.target_id}`);
+            confirm.onclick = () => window.sendActionInput('reaction-confirm');
+            items.appendChild(confirm);
+            return;
         }
         if (!actions) {
             menu.style.display = state.game_completed ? 'block' : 'none';

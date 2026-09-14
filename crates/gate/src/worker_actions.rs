@@ -128,6 +128,32 @@ impl UnifiedWorker {
         {
             return None;
         }
+        if let Some(reaction) = self.transient_state.pending_reaction.clone() {
+            if direction != "reaction-confirm" {
+                return Some(WorkerOutput::RuntimeResponse(Box::new(
+                    RuntimeResponse::Error("A reaction confirmation is pending".into()),
+                )));
+            }
+            let request_id = self.next_action_request_id;
+            self.next_action_request_id += 1;
+            self.is_simulating = true;
+            self.transient_state.input_enabled = false;
+            self.transient_state.action_pending = true;
+            self.enqueue_simulation_request(
+                RuntimeRequest::CommitReaction {
+                    request_id,
+                    unit_id: reaction.unit_id,
+                    reaction_id: reaction.reaction_id,
+                    target_id: reaction.target_id,
+                    state_version: reaction.state_version,
+                },
+                PendingSimulation::Action { is_confirm: true },
+            );
+            self.push_output(WorkerOutput::TransientState(Box::new(
+                self.transient_state.clone(),
+            )));
+            return None;
+        }
         self.push_debug_trace(format!("unified worker accepted action input {direction}"));
         let is_confirm = direction == "confirm";
         self.emit_action_input_log(&direction);
@@ -375,6 +401,7 @@ impl UnifiedWorker {
             self.last_sent_sequence_number = *barrier_id;
             self.transient_state.preview = None;
             self.transient_state.ability_targets = None;
+            self.transient_state.pending_reaction = None;
             if action == "move" || wait {
                 self.transient_state.menu_path.clear();
             }

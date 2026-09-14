@@ -2,6 +2,7 @@ mod game_loop;
 mod game_loop_helpers;
 mod game_loop_npc_presentation;
 mod game_loop_presentation;
+mod game_loop_reactions;
 pub mod pg_rpg;
 mod rhai_session;
 use pg_rpg::{ScenarioBundle, VirtualRhaiWorkspace};
@@ -47,6 +48,24 @@ pub struct RuntimeDecision {
     pub action: RuntimeDecisionAction,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct PendingReaction {
+    pub unit_id: u64,
+    pub reaction_id: u64,
+    pub reaction_name: String,
+    pub target_id: u64,
+    pub trigger_unit_id: u64,
+    pub state_version: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct ReactionResume {
+    pub unit_id: u64,
+    pub npc: bool,
+    pub ends_turn: bool,
+    pub await_facing: bool,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UnitStateInfo {
     pub unit_id: u64,
@@ -80,6 +99,10 @@ pub enum RuntimeContinuation {
     AwaitBoundary,
     AwaitPlayerDecision {
         unit_id: u64,
+    },
+    AwaitPlayerReaction {
+        reaction: PendingReaction,
+        resume: ReactionResume,
     },
     AwaitPlayerFacing {
         unit_id: u64,
@@ -177,6 +200,13 @@ pub enum RuntimeRequest {
         decision: RuntimeDecision,
         provenance: Option<DecisionProvenance>,
     },
+    CommitReaction {
+        request_id: u64,
+        unit_id: u64,
+        reaction_id: u64,
+        target_id: u64,
+        state_version: u64,
+    },
     AcknowledgeAnimation {
         barrier_id: u64,
     },
@@ -255,6 +285,10 @@ pub enum RuntimeResponse {
     AvailableActionsRefreshed {
         actions: AvailableActions,
     },
+    ReactionPending {
+        reaction: PendingReaction,
+        history: HistoryManager,
+    },
     NpcPerception {
         perception: crate::pg_rpg::simulation::NpcPerception,
     },
@@ -280,6 +314,7 @@ pub struct Runtime {
     active_target_session: Option<(u64, u64, u64)>,
     next_transient_entity_id: u64,
     pending_projectile_despawns: Vec<u64>,
+    reaction_resume: Option<ReactionResume>,
 }
 
 impl Runtime {
@@ -385,39 +420,7 @@ impl Runtime {
                 request_id,
                 decision,
                 provenance,
-            } => match decision.action {
-                RuntimeDecisionAction::Move { hex, layer } => {
-                    self.process_request(RuntimeRequest::CommitMove {
-                        request_id,
-                        preview_request_id: 0,
-                        unit_id: decision.unit_id,
-                        hex,
-                        layer,
-                    })
-                    .0
-                }
-                RuntimeDecisionAction::Wait => {
-                    self.process_request(RuntimeRequest::CommitWait {
-                        request_id,
-                        unit_id: decision.unit_id,
-                    })
-                    .0
-                }
-                RuntimeDecisionAction::Reaction { .. } => RuntimeResponse::Error(
-                    "Reaction decisions are reserved for NPC revalidation".into(),
-                ),
-                RuntimeDecisionAction::Ability { ability_id, target } => self
-                    .commit_ability_request(
-                        request_id,
-                        decision.unit_id,
-                        ability_id,
-                        target,
-                        provenance,
-                    ),
-                RuntimeDecisionAction::Face { facing } => {
-                    self.commit_facing_request(request_id, decision.unit_id, &facing)
-                }
-            },
+            } => self.commit_decision_request(request_id, decision, provenance),
             RuntimeRequest::OpenMovePreview {
                 request_id,
                 unit_id,
@@ -503,6 +506,19 @@ impl Runtime {
                 unit_id,
                 facing,
             } => self.commit_facing_request(request_id, unit_id, &facing),
+            RuntimeRequest::CommitReaction {
+                request_id,
+                unit_id,
+                reaction_id,
+                target_id,
+                state_version,
+            } => self.commit_reaction_request(
+                request_id,
+                unit_id,
+                reaction_id,
+                target_id,
+                state_version,
+            ),
             RuntimeRequest::AcknowledgeAnimation { barrier_id } => {
                 self.acknowledge_animation(barrier_id)
             }
@@ -511,6 +527,46 @@ impl Runtime {
         };
         self.update_continuation(&response);
         (response, logs)
+    }
+
+    fn commit_decision_request(
+        &mut self,
+        request_id: u64,
+        decision: RuntimeDecision,
+        provenance: Option<DecisionProvenance>,
+    ) -> RuntimeResponse {
+        match decision.action {
+            RuntimeDecisionAction::Move { hex, layer } => {
+                self.process_request(RuntimeRequest::CommitMove {
+                    request_id,
+                    preview_request_id: 0,
+                    unit_id: decision.unit_id,
+                    hex,
+                    layer,
+                })
+                .0
+            }
+            RuntimeDecisionAction::Wait => {
+                self.process_request(RuntimeRequest::CommitWait {
+                    request_id,
+                    unit_id: decision.unit_id,
+                })
+                .0
+            }
+            RuntimeDecisionAction::Reaction { .. } => {
+                RuntimeResponse::Error("Use CommitReaction for a pending reaction".into())
+            }
+            RuntimeDecisionAction::Ability { ability_id, target } => self.commit_ability_request(
+                request_id,
+                decision.unit_id,
+                ability_id,
+                target,
+                provenance,
+            ),
+            RuntimeDecisionAction::Face { facing } => {
+                self.commit_facing_request(request_id, decision.unit_id, &facing)
+            }
+        }
     }
 
     fn sync_rhai_session(&mut self) {
