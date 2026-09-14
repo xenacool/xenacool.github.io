@@ -24,6 +24,57 @@ pub(super) fn resolve_pg_rpg_boundary(
 }
 
 impl Runtime {
+    pub(super) fn pending_reaction(&self) -> Option<PendingReaction> {
+        let sim = self.pg_rpg_sim.as_ref()?;
+        let (unit, reaction, target) = *sim.state.reaction_queue.first()?;
+        let name = sim
+            .state
+            .reaction_registry
+            .get(&reaction)
+            .map(|definition| definition.name.clone())
+            .unwrap_or_else(|| format!("Reaction {}", reaction.0));
+        Some(PendingReaction {
+            unit_id: unit.0 as u64,
+            reaction_id: reaction.0 as u64,
+            reaction_name: name,
+            target_id: target.0 as u64,
+            trigger_unit_id: 0,
+            state_version: self.pg_rpg_sequence_number,
+        })
+    }
+
+    pub(super) fn discard_dead_reactions(&mut self) {
+        if let Some(sim) = self.pg_rpg_sim.as_mut() {
+            let agents = sim.state.agents.clone();
+            sim.state
+                .reaction_queue
+                .retain(|(owner, _, _)| agents.get(owner).is_some_and(|unit| unit.health > 0));
+        }
+    }
+
+    pub(super) fn enter_pending_reaction(
+        &mut self,
+        mut reaction: PendingReaction,
+        resume: ReactionResume,
+    ) -> RuntimeContinuation {
+        reaction.trigger_unit_id = resume.unit_id;
+        reaction.state_version = self.pg_rpg_sequence_number;
+        if self.pg_rpg_sim.as_ref().is_some_and(|sim| {
+            sim.is_player_controlled(npc_engine_core::AgentId(reaction.unit_id as u32))
+        }) {
+            RuntimeContinuation::AwaitPlayerReaction { reaction, resume }
+        } else {
+            self.reaction_resume = Some(resume);
+            let request_id = self.next_npc_request_id;
+            self.next_npc_request_id += 1;
+            RuntimeContinuation::AwaitMctsDecision {
+                unit_id: reaction.unit_id,
+                request_id,
+                state_version: reaction.state_version,
+            }
+        }
+    }
+
     pub(super) fn append_action_barrier(
         history: &mut HistoryManager,
         sequence_number: &mut u64,
@@ -413,12 +464,21 @@ impl Runtime {
         reaction: pystral_games::ReactionId,
         target: npc_engine_core::AgentId,
     ) -> RuntimeResponse {
+        let reaction_name = self
+            .pg_rpg_sim
+            .as_ref()
+            .and_then(|sim| sim.state.reaction_registry.get(&reaction))
+            .map(|definition| definition.name.as_str())
+            .unwrap_or("unknown reaction");
         let Some(history) = self.pg_rpg_history.as_mut() else {
             return RuntimeResponse::Error("Simulation not started".into());
         };
         let start_idx = history.log.len();
         history.push_and_apply(Event::Log {
-            msg: format!("NPC unit {unit_id} resolved reaction {}", reaction.0),
+            msg: format!(
+                "NPC unit {unit_id} resolved {reaction_name} (reaction {}) against unit {}",
+                reaction.0, target.0
+            ),
         });
         if let Some(sim) = self.pg_rpg_sim.as_ref() {
             for affected_id in [unit_id, target.0 as u64] {

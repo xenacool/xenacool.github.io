@@ -81,10 +81,10 @@ fn perceived_state_is_authoritative_snapshot_for_planning() {
     assert!(fireball.affordable);
     assert!(fireball.legal_target_count > 0);
 
-    let next = simulation
-        .preview_action(2, TacticalDisplayAction::Wait)
-        .unwrap();
-    assert_eq!(next.resources.action_points, 4);
+    assert!(matches!(
+        simulation.preview_action(2, TacticalDisplayAction::Wait),
+        Err(message) if message == "agent 2 has a pending reaction"
+    ));
 
     // The runtime transport uses a binary serde format; this assertion keeps
     // the snapshot fields directly comparable without imposing JSON's string
@@ -299,11 +299,11 @@ fn authoritative_action_boundary_resolves_reaction_before_ordinary_candidate() {
         ability: fireball,
     };
     assert_eq!(
-        simulation.apply_npc_action(agent, action.clone()),
-        Ok(action)
+        simulation.apply_npc_action(agent, action),
+        Err("agent 2 has a pending reaction".to_string())
     );
     assert!(
-        !simulation
+        simulation
             .state
             .reaction_queue
             .iter()

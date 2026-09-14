@@ -112,32 +112,6 @@ impl Runtime {
             pystral_games::AbilityId(ability_id as u32),
             &target,
         );
-        // A reaction is a mandatory response in the tactical rules.  The
-        // player protocol does not expose reaction choices yet, so consume a
-        // pending reaction for this unit before revalidating the ability the
-        // player selected.  Keeping this in the commit path is important: a
-        // reaction can have been queued after the target menu was opened.
-        let forced_reaction = sim
-            .state
-            .reaction_queue
-            .iter()
-            .find(|(agent, _, _)| *agent == npc_engine_core::AgentId(unit_id as u32))
-            .map(
-                |(_, reaction, target)| pystral_games::TacticalDisplayAction::Reaction {
-                    reaction: *reaction,
-                    target: *target,
-                },
-            );
-        if let Some(reaction) = forced_reaction.as_ref() {
-            if let Err(error) =
-                sim.apply_npc_action(npc_engine_core::AgentId(unit_id as u32), reaction.clone())
-            {
-                return RuntimeResponse::ActionRejected {
-                    request_id,
-                    reason: ActionError::IllegalAbility(error),
-                };
-            }
-        }
         let history_start_idx = self
             .pg_rpg_history
             .as_ref()
@@ -152,9 +126,6 @@ impl Runtime {
                 if let Err(error) =
                     sim.apply_npc_action(npc_engine_core::AgentId(unit_id as u32), action)
                 {
-                    // The reaction and ability form one player request.  Do
-                    // not leave a partially committed reaction behind if the
-                    // final authoritative ability check fails.
                     *sim = simulation_before_request.clone();
                     return RuntimeResponse::ActionRejected {
                         request_id,
@@ -186,16 +157,6 @@ impl Runtime {
             return RuntimeResponse::Error("Simulation not started".to_string());
         };
         let start_idx = history_start_idx.min(history.log.len());
-        if let Some(pystral_games::TacticalDisplayAction::Reaction { reaction, target }) =
-            forced_reaction
-        {
-            history.push_and_apply(Event::Log {
-                msg: format!(
-                    "Unit {unit_id} resolved forced reaction {} against {}",
-                    reaction.0, target.0
-                ),
-            });
-        }
         history.push_and_apply(Event::Log {
             msg: match target {
                 RuntimeAbilityTarget::Unit { unit_id: target_id } => {
@@ -260,6 +221,19 @@ impl Runtime {
             RuntimeResponse::ActionCommitted {
                 unit_id, action, ..
             } => {
+                let reaction_resume = if action == "reaction" {
+                    match &self.continuation {
+                        RuntimeContinuation::AwaitPlayerReaction { resume, .. } => {
+                            Some(resume.clone())
+                        }
+                        RuntimeContinuation::AwaitMctsDecision { .. } => {
+                            self.reaction_resume.clone()
+                        }
+                        _ => None,
+                    }
+                } else {
+                    None
+                };
                 let npc_boundary = matches!(
                     self.continuation,
                     RuntimeContinuation::AwaitMctsDecision { .. }
@@ -271,6 +245,11 @@ impl Runtime {
                     npc: npc_boundary,
                     await_facing: action == "end_turn",
                 };
+                if action == "reaction" {
+                    self.reaction_resume = reaction_resume;
+                } else {
+                    self.reaction_resume = None;
+                }
             }
             RuntimeResponse::ActionRejected { request_id, .. } => {
                 self.continuation = RuntimeContinuation::RecoverRejected {
@@ -299,6 +278,7 @@ impl Runtime {
                     | RuntimeRequest::CommitWait { .. }
                     | RuntimeRequest::CommitEndTurn { .. }
                     | RuntimeRequest::CommitFacing { .. }
+                    | RuntimeRequest::CommitReaction { .. }
                     | RuntimeRequest::CommitDecision { .. }
                     | RuntimeRequest::AcknowledgeAnimation { .. }
                     | RuntimeRequest::ResumeBoundary
@@ -521,25 +501,62 @@ impl Runtime {
                 let actor_alive = self.pg_rpg_sim.as_ref().is_some_and(|simulation| {
                     simulation.is_alive(npc_engine_core::AgentId(unit_id as u32))
                 });
-                let next = if game_complete || !actor_alive {
+                let reaction_resume = self.reaction_resume.take().unwrap_or(ReactionResume {
+                    unit_id,
+                    npc,
+                    ends_turn,
+                    await_facing,
+                });
+                self.discard_dead_reactions();
+                let next_reaction = if !game_complete && actor_alive {
+                    self.pending_reaction()
+                } else {
+                    None
+                };
+                let next = if let Some(reaction) = next_reaction {
+                    self.enter_pending_reaction(reaction, reaction_resume)
+                } else if game_complete || !actor_alive {
                     RuntimeContinuation::AwaitBoundary
-                } else if !npc && await_facing {
-                    RuntimeContinuation::AwaitPlayerFacing { unit_id }
-                } else if ends_turn {
+                } else if reaction_resume.await_facing && !reaction_resume.npc {
+                    RuntimeContinuation::AwaitPlayerFacing {
+                        unit_id: reaction_resume.unit_id,
+                    }
+                } else if reaction_resume.ends_turn {
                     RuntimeContinuation::AwaitBoundary
-                } else if npc {
+                } else if reaction_resume.npc {
                     let request_id = self.next_npc_request_id;
                     self.next_npc_request_id += 1;
                     RuntimeContinuation::AwaitMctsDecision {
-                        unit_id,
+                        unit_id: reaction_resume.unit_id,
                         request_id,
                         state_version: self.pg_rpg_sequence_number,
                     }
                 } else {
-                    RuntimeContinuation::AwaitPlayerDecision { unit_id }
+                    RuntimeContinuation::AwaitPlayerDecision {
+                        unit_id: reaction_resume.unit_id,
+                    }
                 };
                 self.continuation = next.clone();
-                if self.pending_projectile_despawns.is_empty() {
+                if matches!(next, RuntimeContinuation::AwaitPlayerReaction { .. }) {
+                    let reaction = match &next {
+                        RuntimeContinuation::AwaitPlayerReaction { reaction, .. } => {
+                            reaction.clone()
+                        }
+                        _ => unreachable!(),
+                    };
+                    let mut update = HistoryManager::new();
+                    if let Some(history) = self.pg_rpg_history.as_mut() {
+                        let start = history.log.len();
+                        for id in self.pending_projectile_despawns.drain(..) {
+                            history.push_and_apply(Event::DespawnEntity { id });
+                        }
+                        update.log = history.log[start..].to_vec();
+                    }
+                    RuntimeResponse::ReactionPending {
+                        reaction,
+                        history: update,
+                    }
+                } else if self.pending_projectile_despawns.is_empty() {
                     RuntimeResponse::Continuation(next)
                 } else {
                     let mut update = HistoryManager::new();
@@ -606,6 +623,10 @@ impl Runtime {
     pub(super) fn continuation_unit_id(&self) -> u64 {
         match self.continuation {
             RuntimeContinuation::AwaitPlayerDecision { unit_id }
+            | RuntimeContinuation::AwaitPlayerReaction {
+                reaction: PendingReaction { unit_id, .. },
+                ..
+            }
             | RuntimeContinuation::AwaitPlayerFacing { unit_id }
             | RuntimeContinuation::AwaitMctsDecision { unit_id, .. }
             | RuntimeContinuation::AwaitAnimationAck { unit_id, .. }
@@ -631,6 +652,9 @@ impl Runtime {
             RuntimeContinuation::AwaitPlayerDecision { unit_id: expected } => Err(format!(
                 "Decision for unit {unit_id} is stale; unit {expected} owns the boundary"
             )),
+            RuntimeContinuation::AwaitPlayerReaction { .. } => {
+                Err("Decision submitted before reaction acknowledgment".to_string())
+            }
             RuntimeContinuation::AwaitAnimationAck { .. } => {
                 Err("Decision submitted before animation acknowledgment".to_string())
             }

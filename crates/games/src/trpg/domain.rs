@@ -185,9 +185,15 @@ impl GlobalDomain for TacticalDomain {
         if let Some(queue) = &diff.reaction_queue_replace {
             global_state.reaction_queue = queue.clone();
         } else {
-            global_state
-                .reaction_queue
-                .extend(diff.reaction_queue.iter().cloned());
+            // A reaction is an interrupt window, not a stackable copy of the
+            // same response. Coalesce the same owner/reaction/target while it
+            // is pending; a later hit can open a new window after this one is
+            // consumed.
+            for reaction in &diff.reaction_queue {
+                if !global_state.reaction_queue.contains(reaction) {
+                    global_state.reaction_queue.push(*reaction);
+                }
+            }
         }
     }
 }

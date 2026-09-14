@@ -94,6 +94,20 @@ fn terminal_animation_ack_resumes_boundary_even_without_wait() {
     ));
 }
 
+#[test]
+fn reaction_animation_ack_resumes_mcts() {
+    assert!(animation_ack_starts_simulation(
+        &RuntimeContinuation::AwaitMctsDecision {
+            unit_id: 3,
+            request_id: 9,
+            state_version: 15,
+        }
+    ));
+    assert!(!animation_ack_starts_simulation(
+        &RuntimeContinuation::AwaitPlayerDecision { unit_id: 1 }
+    ));
+}
+
 proptest::proptest! {
     #[test]
     fn stale_simulation_response_never_matches(

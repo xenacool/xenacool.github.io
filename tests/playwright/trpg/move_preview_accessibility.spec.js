@@ -201,7 +201,7 @@ test('committed movement waits for its animation barrier', async ({ page }) => {
     window.addEventListener('pystral-render-frame', (event) => {
       const walks = (event.detail.entities || [])
         .filter((entity) => entity.animation_state === 'walk')
-        .map((entity) => entity.id);
+        .map((entity) => ({ id: entity.id, position: entity.world_position }));
       if (walks.length) window.__movementWalkFrames.push({ tick: event.detail.tick, walks });
     });
   });
@@ -216,6 +216,21 @@ test('committed movement waits for its animation barrier', async ({ page }) => {
   await expect(status).toContainText(/Move preview: selected/);
   expect(await page.evaluate(() => window.__movementWalkFrames.length))
     .toBeGreaterThan(0);
+  const translated = await page.evaluate(() => {
+    const positions = new Map();
+    for (const frame of window.__movementWalkFrames) {
+      for (const walk of frame.walks) {
+        if (!Array.isArray(walk.position)) continue;
+        const prior = positions.get(walk.id);
+        if (prior && walk.position.some((value, index) => Math.abs(value - prior[index]) > 0.01)) {
+          return true;
+        }
+        positions.set(walk.id, walk.position);
+      }
+    }
+    return false;
+  });
+  expect(translated).toBe(true);
 });
 
 test('End Turn opens facing after the implicit wait settles', async ({ page }) => {

@@ -26,6 +26,7 @@ fn repeated_player_npc_handoffs_reach_completion_exactly_once() {
         .0;
     let mut player_turns = 0;
     let mut npc_turns = 0;
+    let mut reaction_turns = 0;
     let mut acknowledgments = 0;
     for _ in 0..128 {
         while matches!(runtime.continuation, RuntimeContinuation::AwaitBoundary) {
@@ -35,6 +36,24 @@ fn repeated_player_npc_handoffs_reach_completion_exactly_once() {
             }
         }
         match runtime.continuation.clone() {
+            RuntimeContinuation::AwaitPlayerReaction { reaction, .. } => {
+                reaction_turns += 1;
+                let committed = runtime
+                    .process_request(RuntimeRequest::CommitReaction {
+                        request_id: 900 + acknowledgments,
+                        unit_id: reaction.unit_id,
+                        reaction_id: reaction.reaction_id,
+                        target_id: reaction.target_id,
+                        state_version: reaction.state_version,
+                    })
+                    .0;
+                let barrier_id = match committed {
+                    RuntimeResponse::ActionCommitted { barrier_id, .. } => barrier_id,
+                    other => panic!("expected reaction commit, got {other:?}"),
+                };
+                runtime.process_request(RuntimeRequest::AcknowledgeAnimation { barrier_id });
+                acknowledgments += 1;
+            }
             RuntimeContinuation::AwaitPlayerDecision { unit_id } => {
                 player_turns += 1;
                 let committed = runtime
@@ -97,9 +116,9 @@ fn repeated_player_npc_handoffs_reach_completion_exactly_once() {
         }
     }
 
-    assert!(player_turns >= 2);
+    assert!(player_turns >= 1);
     assert!(npc_turns >= 2);
-    assert_eq!(acknowledgments, player_turns + npc_turns);
+    assert_eq!(acknowledgments, player_turns + npc_turns + reaction_turns);
     assert!(matches!(response, RuntimeResponse::GameCompleted { .. }));
     let completion_count = runtime
         .pg_rpg_history

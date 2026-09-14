@@ -1,7 +1,9 @@
 use pystral_core::history::HistoryManager;
 use pystral_core::log::{AvailableActions, AvailableMove, GameOutcome};
 use pystral_games::ActionError;
-use pystral_runtime::{AbilityTarget, RuntimeRequest, RuntimeResponse, UnitStateInfo};
+use pystral_runtime::{
+    AbilityTarget, PendingReaction, RuntimeRequest, RuntimeResponse, UnitStateInfo,
+};
 use serde::{Deserialize, Serialize};
 
 pub mod render;
@@ -106,6 +108,8 @@ pub struct TransientState {
     pub menu_path: Vec<String>,
     pub preview: Option<MovePreview>,
     pub ability_targets: Option<AbilityTargetMenu>,
+    #[serde(default)]
+    pub pending_reaction: Option<PendingReaction>,
     pub action_pending: bool,
     pub wait_pending: bool,
     #[serde(default)]

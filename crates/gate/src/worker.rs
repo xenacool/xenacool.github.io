@@ -101,6 +101,7 @@ fn transient_state_from_history(
                 menu_path: Vec::new(),
                 preview: None,
                 ability_targets: None,
+                pending_reaction: None,
                 action_pending: false,
                 wait_pending: false,
                 facing_pending: false,
@@ -146,6 +147,10 @@ pub(crate) fn animation_ack_resumes_boundary(
     continuation: &RuntimeContinuation,
 ) -> bool {
     wait || matches!(continuation, RuntimeContinuation::AwaitBoundary)
+}
+
+pub(crate) fn animation_ack_starts_simulation(continuation: &RuntimeContinuation) -> bool {
+    matches!(continuation, RuntimeContinuation::AwaitMctsDecision { .. })
 }
 
 pub(crate) fn simulation_response_matches(expected: u64, received: u64) -> bool {

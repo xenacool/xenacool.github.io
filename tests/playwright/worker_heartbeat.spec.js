@@ -32,7 +32,11 @@ async function waitForPlayerBoundary(page) {
 async function waitForBridgeIdle(page, timeout = 500) {
   await page.waitForFunction(() => {
     const status = window.__pystralWorkerStatus || '';
-    return Date.now() - window.__pystralHeartbeatReceivedAt < 1000
+    // The transient UI can briefly look enabled while the simulation worker
+    // is still crossing an interruptible reaction boundary.  Require the
+    // authoritative worker phase as the happens-before edge for replay input.
+    return status.includes('AwaitingPlayerDecision')
+      && Date.now() - window.__pystralHeartbeatReceivedAt < 1000
       && status.includes('simulation request None')
       && !status.includes('WaitingForAnimationAck');
   }, { timeout });
@@ -43,9 +47,15 @@ async function waitForAnimationAcquiescence(page, timeout = 500) {
     const isQuiescent = () => {
       const slider = document.getElementById('history-slider');
       const menu = document.getElementById('action-menu');
+      const status = window.__pystralWorkerStatus || '';
       return slider
         && Number(slider.value) === Number(slider.max)
         && menu?.style.display === 'block'
+        && status.includes('AwaitingPlayerDecision')
+        && status.includes('simulation request None')
+        && Date.now() - window.__pystralHeartbeatReceivedAt < 1000
+        && window.__pystralLastTransientState?.input_enabled === true
+        && !window.__pystralLastTransientState?.pending_reaction
         && menu.dataset.actionPending !== 'true'
         && menu.dataset.animationPending !== 'true'
         && menu.dataset.waitPending !== 'true';

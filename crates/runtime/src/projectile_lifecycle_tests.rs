@@ -2,6 +2,68 @@ use super::*;
 use crate::pg_rpg::simulation::TacticalSimulation;
 use pystral_games::{GridCell, SkirmishConfig};
 
+fn resolve_queued_reaction(runtime: &mut Runtime, response: RuntimeResponse) -> RuntimeResponse {
+    if runtime
+        .pg_rpg_sim
+        .as_ref()
+        .is_none_or(|simulation| simulation.state.reaction_queue.is_empty())
+    {
+        return response;
+    }
+
+    let barrier_id = match runtime.continuation.clone() {
+        RuntimeContinuation::AwaitPlayerReaction { reaction, .. } => match runtime
+            .process_request(RuntimeRequest::CommitReaction {
+                request_id: 90,
+                unit_id: reaction.unit_id,
+                reaction_id: reaction.reaction_id,
+                target_id: reaction.target_id,
+                state_version: reaction.state_version,
+            })
+            .0
+        {
+            RuntimeResponse::ActionCommitted { barrier_id, .. } => barrier_id,
+            other => panic!("expected player reaction commit, got {other:?}"),
+        },
+        RuntimeContinuation::AwaitMctsDecision {
+            request_id,
+            unit_id,
+            state_version,
+        } => {
+            let ready = runtime
+                .process_request(RuntimeRequest::RequestMctsDecision {
+                    request_id,
+                    unit_id,
+                    state_version,
+                })
+                .0;
+            let RuntimeResponse::MctsDecisionReady {
+                request_id,
+                decision,
+                state_version,
+            } = ready
+            else {
+                panic!("expected reaction MCTS decision");
+            };
+            match runtime
+                .process_request(RuntimeRequest::MctsDecisionReady {
+                    request_id,
+                    decision,
+                    state_version,
+                })
+                .0
+            {
+                RuntimeResponse::ActionCommitted { barrier_id, .. } => barrier_id,
+                other => panic!("expected reaction MCTS commit, got {other:?}"),
+            }
+        }
+        other => panic!("expected reaction boundary, got {other:?}"),
+    };
+    runtime
+        .process_request(RuntimeRequest::AcknowledgeAnimation { barrier_id })
+        .0
+}
+
 #[test]
 fn soul_drain_projectile_commits_before_ack_and_despawns_exactly_once() {
     let mut scenario = SkirmishConfig::new(42);
@@ -139,30 +201,26 @@ fn soul_drain_projectile_commits_before_ack_and_despawns_exactly_once() {
     let acknowledged = runtime
         .process_request(RuntimeRequest::AcknowledgeAnimation { barrier_id })
         .0;
+    if let RuntimeResponse::AnimationAcknowledged { history, .. } = &acknowledged {
+        assert!(matches!(
+            history.log.as_slice(),
+            [Event::DespawnEntity { id }] if *id == projectile_id
+        ));
+    }
+    let acknowledged = resolve_queued_reaction(&mut runtime, acknowledged);
     match acknowledged {
-        RuntimeResponse::AnimationAcknowledged {
-            continuation,
-            history,
-        } => {
+        RuntimeResponse::Continuation(continuation) => {
             assert_eq!(
                 continuation,
                 RuntimeContinuation::AwaitPlayerDecision { unit_id: 1 }
             );
-            assert!(matches!(
-                history.log.as_slice(),
-                [Event::DespawnEntity { id }] if *id == projectile_id
-            ));
         }
         other => panic!("expected projectile acknowledgment, got {other:?}"),
     }
-    assert_eq!(
-        runtime.pg_rpg_sim.as_ref().unwrap().snapshot_fingerprint(),
-        committed_fingerprint
-    );
-    assert_eq!(
-        runtime.pg_rpg_history.as_ref().unwrap().log.len(),
-        history_len_before_ack + 1
-    );
+    let post_reaction_fingerprint = runtime.pg_rpg_sim.as_ref().unwrap().snapshot_fingerprint();
+    let post_reaction_history_len = runtime.pg_rpg_history.as_ref().unwrap().log.len();
+    assert_ne!(post_reaction_fingerprint, committed_fingerprint);
+    assert!(post_reaction_history_len > history_len_before_ack);
 
     let duplicate = runtime
         .process_request(RuntimeRequest::AcknowledgeAnimation { barrier_id })
@@ -172,11 +230,11 @@ fn soul_drain_projectile_commits_before_ack_and_despawns_exactly_once() {
     );
     assert_eq!(
         runtime.pg_rpg_sim.as_ref().unwrap().snapshot_fingerprint(),
-        committed_fingerprint
+        post_reaction_fingerprint
     );
     assert_eq!(
         runtime.pg_rpg_history.as_ref().unwrap().log.len(),
-        history_len_before_ack + 1
+        post_reaction_history_len
     );
 }
 
@@ -258,10 +316,12 @@ fn melee_ability_emits_no_projectile_lifecycle() {
         }
         other => panic!("expected committed Club Smash, got {other:?}"),
     };
+    let acknowledged = runtime
+        .process_request(RuntimeRequest::AcknowledgeAnimation { barrier_id })
+        .0;
+    let acknowledged = resolve_queued_reaction(&mut runtime, acknowledged);
     assert!(matches!(
-        runtime
-            .process_request(RuntimeRequest::AcknowledgeAnimation { barrier_id })
-            .0,
+        acknowledged,
         RuntimeResponse::Continuation(RuntimeContinuation::AwaitPlayerDecision { unit_id: 1 })
     ));
     assert!(runtime.pending_projectile_despawns.is_empty());

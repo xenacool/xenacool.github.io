@@ -256,9 +256,11 @@ export function syncGlbEntities(frame, scene, manifest, meshes, mixers, diagnost
                         mixer.addEventListener('finished', onFinished);
                     }
                 }
-                if (!oneShot) {
-                    animation.mixer.setTime(Math.max(0, Number(entity.animation_time_ms || 0)) / 1000);
-                }
+                // Looping clips own their presentation clock. Runtime frames
+                // deliberately carry no per-actor animation clock for normal
+                // GLB units, so seeking each frame would pin both idle and
+                // walking to their first pose. One-shot cues are separately
+                // reset when their cue identity changes.
             } else if (requested) {
                 diagnostics(`GLB ${record.asset}: animation clip is not available: ${requested}`);
             }

@@ -109,6 +109,30 @@
     }
 
     #[test]
+    fn identical_pending_reaction_is_coalesced_until_the_window_is_consumed() {
+        let mut scenario = SkirmishConfig::new(42);
+        scenario
+            .add_unit(1, 1, "Caveman", GridCell::new(hexx::Hex::ZERO, 0))
+            .unwrap();
+        scenario
+            .add_unit(2, 2, "Mage", GridCell::new(hexx::Hex::new(1, 0), 0))
+            .unwrap();
+        let mut state = scenario.build_state().unwrap();
+        let reaction = (
+            AgentId(2),
+            state.agents[&AgentId(2)].reaction_abilities[0],
+            AgentId(1),
+        );
+        let mut diff = TacticalDiff::default();
+        diff.reaction_queue = vec![reaction, reaction];
+        let previous = state.clone();
+
+        TacticalDomain::apply(&mut state, &previous, &diff);
+
+        assert_eq!(state.reaction_queue, vec![reaction]);
+    }
+
+    #[test]
     fn composite_prototype_folds_actions_and_groups_by_first_action() {
         let first = TacticalDisplayAction::Move {
             to: GridCell::new(hexx::Hex::new(1, 0), 0),
