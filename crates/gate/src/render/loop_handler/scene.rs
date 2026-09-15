@@ -65,25 +65,19 @@ pub fn resolved_entity_world_positions(
             if let Some(tween) = ctx.movement_tweens.get_mut(&entity.id) {
                 let elapsed = (now - tween.start_time_ms).max(0.0);
                 if let Some((from, to, progress)) = tween.segment_at(elapsed) {
-                    let start = layout.hex_to_world_pos(from);
-                    let end = layout.hex_to_world_pos(to);
-                    let eased = progress * progress * (3.0 - 2.0 * progress);
-                    position.x = start.x + (end.x - start.x) * eased;
-                    position.y = start.y + (end.y - start.y) * eased;
+                    let start = layout.hex_to_world_pos(from.hex);
+                    let end = layout.hex_to_world_pos(to.hex);
+                    // Segment-local easing forced velocity to zero at every
+                    // waypoint, producing a visible walk jerk. The route is
+                    // already time-partitioned by segment, so linear sampling
+                    // preserves a continuous speed between tactical cells.
+                    position.x = start.x + (end.x - start.x) * progress;
+                    position.y = start.y + (end.y - start.y) * progress;
                 }
-                let progress = (elapsed / tween.duration_ms.max(1.0)).clamp(0.0, 1.0) as f32;
-                terrain = if progress < 0.5 {
-                    (tween.from_hex, tween.from_layer)
-                } else {
-                    (tween.to_hex, tween.to_layer)
-                };
-                transition = Some((
-                    tween.from_hex,
-                    tween.from_layer,
-                    tween.to_hex,
-                    tween.to_layer,
-                    progress,
-                ));
+                if let Some((from, to, local_progress)) = tween.segment_at(elapsed) {
+                    terrain = (from.hex, from.layer);
+                    transition = Some((from.hex, from.layer, to.hex, to.layer, local_progress));
+                }
             }
             // Authored world coordinates are a static-position escape hatch.
             // While a movement transition is active, the tween is the

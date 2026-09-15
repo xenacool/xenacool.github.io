@@ -436,7 +436,7 @@
             steps_ap_cost: Vec::new(),
             vertical_deltas: Vec::new(),
             crosses_holes: false,
-            crosses_occupied: false,
+            occupied_traversal: pystral_games::trpg::OccupiedTraversal::AlliesOnly,
             teleport_range: None,
             emit_tags: Vec::new(),
             consume_tags: Vec::new(),
@@ -462,8 +462,17 @@
             |movement: &mut ScriptMovementDef, value: bool| movement.crosses_holes = value,
         )
         .register_fn(
-            "set_crosses_occupied",
-            |movement: &mut ScriptMovementDef, value: bool| movement.crosses_occupied = value,
+            "set_occupied_traversal",
+            |movement: &mut ScriptMovementDef,
+             value: &str|
+             -> Result<(), Box<rhai::EvalAltResult>> {
+                movement.occupied_traversal = match value {
+                    "block_all" => pystral_games::trpg::OccupiedTraversal::BlockAll,
+                    "allies_only" => pystral_games::trpg::OccupiedTraversal::AlliesOnly,
+                    _ => return Err(script_error("Occupied traversal must be block_all or allies_only")),
+                };
+                Ok(())
+            },
         )
         .register_fn(
             "set_teleport_range",

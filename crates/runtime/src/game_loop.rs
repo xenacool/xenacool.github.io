@@ -330,7 +330,17 @@ impl Runtime {
         history.push_and_apply(Event::MoveSprite {
             id: validated.agent.0 as u64,
             destination: validated.destination.hex,
-            transition: Some(Self::default_movement_transition()),
+            path: validated
+                .path
+                .iter()
+                .map(|cell| pystral_core::log::MovementWaypoint {
+                    hex: cell.hex,
+                    layer: cell.layer,
+                })
+                .collect(),
+            transition: Some(Self::movement_transition(
+                validated.path.len().saturating_sub(1),
+            )),
         });
         history.push_and_apply(Event::UpdateProperty {
             id: validated.agent.0 as u64,

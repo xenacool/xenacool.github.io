@@ -79,9 +79,13 @@ pub struct RenderFrame {
 /// tests. This describes presentation overlays, never simulation state.
 #[derive(Debug, Clone, Serialize, PartialEq)]
 pub struct RenderPlaybackDebugFrame {
+    pub presentation_clock: u64,
     pub history_index: usize,
     pub playback_epoch: u64,
     pub playing_log: bool,
+    /// Monotonic barrier watermark sent only after visible presentation work
+    /// has completed. It lets browser tests prove the causal ordering.
+    pub last_sent_animation_ack: Option<u64>,
     pub movement_tweens: Vec<RenderMovementTweenDebug>,
 }
 
@@ -90,7 +94,9 @@ pub struct RenderMovementTweenDebug {
     pub entity_id: u64,
     pub event_index: usize,
     pub playback_epoch: u64,
-    pub path: Vec<[i32; 2]>,
+    pub duration_ms: f64,
+    pub completed: bool,
+    pub path: Vec<[i32; 3]>,
 }
 #[derive(Debug, Clone, Serialize, PartialEq)]
 pub struct RenderCameraPoseFrame {

@@ -88,6 +88,12 @@ pub fn generate_pg_rpg_log_rhai(
             if !simulation.state.agents.contains_key(&agent) {
                 return Err(format!("Rhai returned unknown agent {}", agent.0).into());
             }
+            // A reaction may have killed a unit since the Rhai boundary was
+            // authored. Static generation has no asynchronous decision to
+            // recover, so a dead unit is simply no longer actionable.
+            if !simulation.is_alive(agent) {
+                continue;
+            }
             let action = if simulation.is_player_controlled(agent) {
                 pystral_games::TacticalDisplayAction::Wait
             } else {
@@ -477,9 +483,20 @@ fn register_history_methods(engine: &mut Engine) {
     engine.register_fn(
         "move_sprite",
         |history: &mut HistoryManager, id: i64, destination: Hex, transition: TransitionConfig| {
+            let source = history
+                .current_state
+                .entities
+                .iter()
+                .find(|entity| entity.id == id as u64)
+                .map(|entity| entity.hex)
+                .unwrap_or(destination);
             history.push_and_apply(Event::MoveSprite {
                 id: id as u64,
                 destination,
+                path: source
+                    .line_to(destination)
+                    .map(|hex| pystral_core::log::MovementWaypoint { hex, layer: 0 })
+                    .collect(),
                 transition: Some(transition),
             });
         },

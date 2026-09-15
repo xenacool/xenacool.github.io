@@ -88,6 +88,16 @@ impl Runtime {
             Event::MoveSprite {
                 id,
                 destination: target.hex,
+                path: vec![
+                    pystral_core::log::MovementWaypoint {
+                        hex: source.hex,
+                        layer: source.layer,
+                    },
+                    pystral_core::log::MovementWaypoint {
+                        hex: target.hex,
+                        layer: target.layer,
+                    },
+                ],
                 transition: Some(Self::default_movement_transition()),
             },
         ]

@@ -1,7 +1,6 @@
 pub mod camera;
 mod playback_methods;
 pub mod scene;
-
 use self::camera::{setup_camera, viewport_size};
 use self::playback_methods::playback_events_due;
 use self::scene::resolved_entity_world_positions;
@@ -18,7 +17,6 @@ use pystral_core::log::{Event, WorldState};
 use pystral_games::ActionError;
 use std::collections::HashMap;
 use std::sync::mpsc::Receiver;
-
 pub struct LoopHandler {
     pub ctx: RenderContext,
     pub history_manager: HistoryManager,
@@ -36,7 +34,6 @@ pub struct LoopHandler {
     profile_max_ms: f64,
     profile_tick_samples: Vec<f64>,
 }
-
 impl LoopHandler {
     pub fn new(
         ctx: RenderContext,
@@ -62,7 +59,6 @@ impl LoopHandler {
             profile_tick_samples: Vec::new(),
         }
     }
-
     pub fn tick(&mut self) {
         let tick_started_at = web_sys::window()
             .expect("No global window found")
@@ -74,14 +70,12 @@ impl LoopHandler {
             .performance()
             .expect("Performance object not found")
             .now();
-
         let phase_started_at = |performance: &web_sys::Performance| performance.now();
         let performance = web_sys::window()
             .expect("No global window found")
             .performance()
             .expect("Performance object not found");
         let mut phase_ms = [0.0; 7];
-
         // 0. Process Commands
         let phase_at = phase_started_at(&performance);
         self.process_commands();
@@ -232,7 +226,7 @@ impl LoopHandler {
                 entity.animation_state = "walk".to_string();
                 entity.animation_clip = entity.walk_animation_clip.clone();
                 if let Some((from, to, _)) = tween.segment_at(now - tween.start_time_ms)
-                    && let Some(facing) = pystral_games::Facing::from_step(from, to)
+                    && let Some(facing) = pystral_games::Facing::from_step(from.hex, to.hex)
                 {
                     entity.facing = facing.as_property().to_string();
                 }
@@ -252,15 +246,26 @@ impl LoopHandler {
                     entity_id: *entity_id,
                     event_index: tween.event_index,
                     playback_epoch: tween.playback_epoch,
-                    path: tween.path.iter().map(|hex| [hex.x, hex.y]).collect(),
+                    duration_ms: tween.duration_ms,
+                    completed: now - tween.start_time_ms >= tween.duration_ms,
+                    path: tween
+                        .path
+                        .iter()
+                        .map(|waypoint| [waypoint.hex.x, waypoint.hex.y, waypoint.layer])
+                        .collect(),
                 },
             )
             .collect::<Vec<_>>();
         movement_tweens.sort_by_key(|tween| tween.entity_id);
         frame.presentation_debug = Some(crate::render::RenderPlaybackDebugFrame {
+            presentation_clock: self.render_tick,
             history_index: self.history_manager.current_index,
             playback_epoch: self.playback_state.playback_epoch,
             playing_log: self.playback_state.playing_log,
+            last_sent_animation_ack: self
+                .playback_state
+                .last_sequence_ack_sent
+                .map(|(sequence, _)| sequence),
             movement_tweens,
         });
         self.render_tick = self.render_tick.saturating_add(1);
@@ -391,7 +396,6 @@ impl LoopHandler {
                             }
                         }
                     }
-
                     if let Some(id) = target_cam_id {
                         let msg = format!("Switched to camera {}", id);
                         let _ = self.worker_tx.unbounded_send(WorkerInput::LogInfo(msg));
@@ -431,7 +435,6 @@ impl LoopHandler {
             }
         }
     }
-
     /// A scrub or play-state transition starts a new presentation timeline.
     /// Authoritative history remains intact; only wall-clock visual overlays
     /// are discarded, so an old path cannot resume after a cursor change.
@@ -488,13 +491,11 @@ impl LoopHandler {
         }
         (is_playing_anims, debug_mode, delta)
     }
-
     fn sync_nav_buttons(&self, state: &WorldState) {
         let mut up = false;
         let mut down = false;
         let mut left = false;
         let mut right = false;
-
         let cam = if let Some(id) = self.ctx.active_camera_id {
             state
                 .entities
@@ -733,18 +734,17 @@ impl LoopHandler {
                         matches!(entity.properties.get("animation_barrier"),
                     Some(pystral_core::log::PropertyValue::Float(value)) if *value as u64 == n)
                     });
-            // An ability barrier is visible now, but it is released solely
-            // by AppCommand::AnimationCompleted from the matching mixer.
             if one_shot_pending {
                 return;
             }
-            // ACKs are monotonic watermarks. Retry a missing ACK slowly, while
-            // avoiding the per-frame flood that can starve simulation.
             if !sequence_ack_due(self.playback_state.last_sequence_ack_sent, n, now) {
                 return;
             }
             self.playback_state.last_sequence_ack_sent = Some((n, now));
             let _ = self.worker_tx.unbounded_send(WorkerInput::Ack(n));
+            self.ctx
+                .movement_tweens
+                .retain(|_, tween| now - tween.start_time_ms < tween.duration_ms);
         }
     }
 }

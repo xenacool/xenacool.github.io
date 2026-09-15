@@ -254,7 +254,7 @@ fn test_ap_movement_costs() {
         steps_ap_cost: vec![(3, 2), (5, 3)], // 1-2: 1AP, 3-4: 2AP, 5+: 3AP
         vertical_deltas: vec![],
         crosses_holes: false,
-        crosses_occupied: false,
+        occupied_traversal: pystral_games::trpg::OccupiedTraversal::AlliesOnly,
         teleport_range: None,
         emit_tags: vec![],
         consume_tags: vec![],
@@ -295,7 +295,7 @@ fn test_tag_discount() {
         steps_ap_cost: vec![(3, 2), (5, 3)],
         vertical_deltas: vec![],
         crosses_holes: false,
-        crosses_occupied: false,
+        occupied_traversal: pystral_games::trpg::OccupiedTraversal::AlliesOnly,
         teleport_range: None,
         emit_tags: vec![],
         consume_tags: vec![(tag1, 1, 1)], // Consume 1 stack of tag1 for 1 AP discount

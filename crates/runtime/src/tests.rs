@@ -32,7 +32,7 @@ fn commit_move_returns_history_delta_but_rejection_does_not() {
     };
     assert_eq!(accepted_history.log.len(), 5);
     assert!(
-        accepted_history.log.iter().any(|event| matches!(event, Event::MoveSprite { id: 1, destination, transition: Some(transition) } if *destination == hexx::Hex::new(1, 0) && transition.duration_ms == 500 && transition.delta_time_ms == 16.0 && transition.tween == pystral_core::log::TweenKind::SineInOut))
+        accepted_history.log.iter().any(|event| matches!(event, Event::MoveSprite { id: 1, destination, path, transition: Some(transition) } if *destination == hexx::Hex::new(1, 0) && *path == vec![pystral_core::log::MovementWaypoint { hex: hexx::Hex::ZERO, layer: 0 }, pystral_core::log::MovementWaypoint { hex: hexx::Hex::new(1, 0), layer: 0 }] && transition.duration_ms == 500 && transition.delta_time_ms == 16.0 && transition.tween == pystral_core::log::TweenKind::SineInOut))
     );
     assert!(
         accepted_history.log.iter().any(|event| matches!(event, Event::UpdateProperty { id: 1, property, value: pystral_core::log::PropertyValue::Float(layer) } if property == "layer" && *layer == 0.0))

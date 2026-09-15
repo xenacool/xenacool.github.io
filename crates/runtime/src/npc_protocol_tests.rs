@@ -323,3 +323,43 @@ fn stale_and_duplicate_mcts_results_cannot_commit() {
         RuntimeResponse::Continuation(RuntimeContinuation::AwaitBoundary)
     ));
 }
+
+#[test]
+fn lethal_change_discards_an_inflight_npc_decision_without_a_dead_fallback() {
+    let mut scenario = SkirmishConfig::new(42);
+    scenario
+        .add_unit(1, 1, "Caveman", GridCell::new(hexx::Hex::ZERO, 0))
+        .unwrap();
+    scenario
+        .add_unit(2, 2, "Mage", GridCell::new(hexx::Hex::new(1, 0), 0))
+        .unwrap();
+    let mut runtime = test_runtime(scenario);
+    runtime.continuation = RuntimeContinuation::AwaitMctsDecision {
+        unit_id: 2,
+        request_id: 93,
+        state_version: 0,
+    };
+    runtime
+        .pg_rpg_sim
+        .as_mut()
+        .unwrap()
+        .state
+        .agents
+        .get_mut(&npc_engine_core::AgentId(2))
+        .unwrap()
+        .health = 0;
+    let response = runtime
+        .process_request(RuntimeRequest::MctsDecisionReady {
+            request_id: 93,
+            state_version: 0,
+            decision: RuntimeDecision {
+                unit_id: 2,
+                action: RuntimeDecisionAction::Wait,
+            },
+        })
+        .0;
+    assert!(
+        !matches!(response, RuntimeResponse::Error(message) if message.contains("fallback action failed"))
+    );
+    assert!(runtime.pg_rpg_sim.as_ref().unwrap().is_complete());
+}

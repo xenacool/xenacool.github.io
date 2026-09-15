@@ -3,8 +3,9 @@ use std::collections::HashMap;
 
 use crate::{
     AbilityDef, AbilityDelivery, AbilityId, AbilityTargetRule, DefinitionIdAllocator, DerivedStat,
-    FacingRelation, JobDef, JobId, MoveProgram, MovementId, PassiveDef, PassiveId, RPGPrograms,
-    ReactionDef, ReactionId, ScriptJobDef, TagDef, TagId, validate_rpg_programs,
+    FacingRelation, JobDef, JobId, MoveProgram, MovementId, OccupiedTraversal, PassiveDef,
+    PassiveId, RPGPrograms, ReactionDef, ReactionId, ScriptJobDef, TagDef, TagId,
+    validate_rpg_programs,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -36,7 +37,7 @@ pub struct ScriptMovementDef {
     pub steps_ap_cost: Vec<(u8, u8)>,
     pub vertical_deltas: Vec<i32>,
     pub crosses_holes: bool,
-    pub crosses_occupied: bool,
+    pub occupied_traversal: OccupiedTraversal,
     pub teleport_range: Option<u32>,
     pub emit_tags: Vec<(String, u8)>,
     pub consume_tags: Vec<(String, u8, u8)>,
@@ -371,7 +372,7 @@ impl Ruleset {
                     steps_ap_cost: definition.steps_ap_cost.clone(),
                     vertical_deltas: definition.vertical_deltas.clone(),
                     crosses_holes: definition.crosses_holes,
-                    crosses_occupied: definition.crosses_occupied,
+                    occupied_traversal: definition.occupied_traversal,
                     teleport_range: definition.teleport_range,
                     emit_tags,
                     consume_tags: resolve_tags(&definition.consume_tags)?,
@@ -476,7 +477,7 @@ mod tests {
             steps_ap_cost: vec![(1, 1)],
             vertical_deltas: vec![],
             crosses_holes: false,
-            crosses_occupied: false,
+            occupied_traversal: OccupiedTraversal::AlliesOnly,
             teleport_range: None,
             emit_tags: vec![],
             consume_tags: vec![],

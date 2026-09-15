@@ -40,6 +40,15 @@ pub struct AvailableMove {
     pub ap_cost: u8,
 }
 
+/// An authoritative tactical cell in a presentation movement route. Keeping
+/// elevation beside the hex prevents render playback from flattening a legal
+/// vertical move into an unrelated ground-level shortcut.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+pub struct MovementWaypoint {
+    pub hex: Hex,
+    pub layer: i32,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct AvailableAbility {
     pub id: u32,
@@ -109,6 +118,9 @@ pub enum Event {
     MoveSprite {
         id: u64,
         destination: Hex,
+        /// Authoritative route, including source and destination. Renderers
+        /// must not infer a shortcut that tactical validation did not permit.
+        path: Vec<MovementWaypoint>,
         transition: Option<TransitionConfig>,
     },
     UpdateProperty {

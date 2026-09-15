@@ -228,7 +228,10 @@ export function syncGlbEntities(frame, scene, manifest, meshes, mixers, diagnost
             }
             if (clip) {
                 const cue = entity.animation_cue == null ? null : Number(entity.animation_cue);
-                const oneShot = cue !== null;
+                // Cues remain in immutable history after completion. Only an
+                // unconsumed cue may configure a one-shot; otherwise the
+                // restored idle/walk clip would clamp at its first end.
+                const oneShot = cue !== null && animation.completedCue !== cue;
                 const newCue = oneShot && animation.activeCue !== cue;
                 if (animation.activeClip !== clip || newCue) {
                     const nextAction = animation.mixer.clipAction(clip);
@@ -243,7 +246,7 @@ export function syncGlbEntities(frame, scene, manifest, meshes, mixers, diagnost
                     nextAction.play();
                     animation.activeClip = clip;
                     animation.activeAction = nextAction;
-                    animation.activeCue = cue;
+                    animation.activeCue = oneShot ? cue : null;
                     animation.oneShot = oneShot;
                     if (oneShot) {
                         const barrier = Number(entity.animation_barrier);
@@ -277,7 +280,12 @@ export function syncGlbEntities(frame, scene, manifest, meshes, mixers, diagnost
 
 export function advanceGlbAnimations(mixers, deltaSeconds) {
     for (const animation of mixers.values()) {
+        const priorTime = animation.activeAction?.time ?? 0;
         animation.mixer.update(Math.max(0, deltaSeconds));
+        if (!animation.oneShot && animation.activeClip?.duration > 0
+            && (animation.activeAction?.time ?? 0) < priorTime) {
+            animation.loopCount = (animation.loopCount || 0) + 1;
+        }
         if (animation.oneShot && animation.activeAction?.time >= animation.activeClip?.duration) {
             finishOneShot(animation, animation.activeCue, animation.activeBarrier);
         }

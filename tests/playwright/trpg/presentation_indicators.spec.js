@@ -32,7 +32,30 @@ test('authoritative facing indicator is visible above the actor scene', async ({
   expect(marker.arrowHeight).toBeGreaterThan(0.3);
 });
 
-test('GLB actor and direction indicator share the six logical headings', async ({ page }) => {
+test('team legend and direction rings share the accessible Dark2 team palette', async ({ page }) => {
+  await page.goto('/game.html');
+  await page.waitForFunction(() => window.__pystralThreeGlbManifest?.models);
+  const rendered = await page.evaluate(() => {
+    window.dispatchEvent(new CustomEvent('pystral-render-frame', { detail: {
+    version: 1, tick: 79, cameras: [], map: null, materials: {}, entities: [
+      { id: 79, kind: 'character', asset: 'Mage', team_id: 1, world_position: [0, 0, 0],
+        indicator: { kind: 'facing', color: [1, 1, 1], state: 'committed', direction: 'north' } },
+      { id: 80, kind: 'character', asset: 'Caveman', team_id: 2, world_position: [2, 0, 0],
+        indicator: { kind: 'facing', color: [1, 1, 1], state: 'committed', direction: 'south' } },
+    ],
+    } }));
+    return {
+      hidden: document.getElementById('team-legend').hidden,
+      labels: [...document.querySelectorAll('#team-legend [data-team-id]')].map((entry) => entry.textContent),
+      colors: [79, 80].map((id) => `#${window.__pystralThreeNativeMarkers.get(String(id)).children[0].material.color.getHexString()}`),
+    };
+  });
+  expect(rendered.hidden).toBe(false);
+  expect(rendered.labels).toEqual(['Team 1', 'Team 2']);
+  expect(rendered.colors).toEqual(['#1b9e77', '#d95f02']);
+});
+
+test('GLB actor applies its 180-degree forward-axis calibration to all six headings', async ({ page }) => {
   await page.goto('/game.html');
   await page.waitForFunction(() => window.__pystralThreeGlbManifest?.models);
   const headings = await page.evaluate(() => {
@@ -52,9 +75,37 @@ test('GLB actor and direction indicator share the six logical headings', async (
     });
   });
   for (const heading of headings) {
+    // Markers point along local -Z; shipped GLBs point along local +Z.
+    // Their yaw values therefore differ by π while their visible forward
+    // direction remains aligned for every logical facing.
     expect(heading.actorYaw - heading.markerYaw).toBeCloseTo(Math.PI + 0.125, 8);
   }
   expect(new Set(headings.map(({ actorYaw }) => actorYaw.toFixed(6))).size).toBe(6);
+});
+
+test('movement-facing markers point along their authoritative pointy-top hex edge', async ({ page }) => {
+  await page.goto('/game.html');
+  await page.waitForFunction(() => window.__pystralThreeGlbManifest?.models);
+  const headings = await page.evaluate(() => {
+    const steps = [['north', 0, -1], ['northeast', 1, -1], ['southeast', 1, 0],
+      ['south', 0, 1], ['southwest', -1, 1], ['northwest', -1, 0]];
+    return steps.map(([direction, q, r], index) => {
+      const id = 830 + index;
+      window.dispatchEvent(new CustomEvent('pystral-render-frame', { detail: {
+        version: 1, tick: id, cameras: [], map: null, materials: {}, entities: [{
+          id, kind: 'character', asset: 'test-facing-primitive', world_position: [0, 0, 0],
+          facing: direction, indicator: { kind: 'facing', direction },
+        }],
+      } }));
+      const yaw = window.__pystralThreeNativeMarkers.get(String(id)).rotation.y;
+      return { actual: [-Math.sin(yaw), -Math.cos(yaw)], expected: [Math.sqrt(3) * (q + r / 2), 1.5 * r] };
+    });
+  });
+  for (const { actual, expected } of headings) {
+    const length = Math.hypot(...expected);
+    expect(actual[0]).toBeCloseTo(expected[0] / length, 8);
+    expect(actual[1]).toBeCloseTo(expected[1] / length, 8);
+  }
 });
 
 test('transient projectile presentation moves between logical render ticks and is removed', async ({ page }) => {

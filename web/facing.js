@@ -1,21 +1,20 @@
-// Canonical presentation heading for tactical Facing values.  Both the
-// authoritative direction marker and every GLB actor use this convention.
+// Yaws for a local -Z forward axis on the pointy-top tactical layout. These
+// are derived from Facing::from_delta, not a separately rotated compass.
 export const HEX_DIRECTION_OFFSET = Math.PI / 6;
-
-const FACING_ANGLES = Object.freeze({
+const FACING_YAWS = Object.freeze({
     north: HEX_DIRECTION_OFFSET,
-    northeast: Math.PI / 3 + HEX_DIRECTION_OFFSET,
-    southeast: (Math.PI * 2) / 3 + HEX_DIRECTION_OFFSET,
-    south: Math.PI + HEX_DIRECTION_OFFSET,
-    southwest: (Math.PI * 4) / 3 + HEX_DIRECTION_OFFSET,
-    northwest: (Math.PI * 5) / 3 + HEX_DIRECTION_OFFSET,
+    northeast: -HEX_DIRECTION_OFFSET,
+    southeast: -Math.PI / 2,
+    south: -Math.PI * 5 / 6,
+    southwest: -Math.PI * 7 / 6,
+    northwest: Math.PI / 2,
 });
 
 // Direction markers point down their local -Z axis.  This is consequently
 // the group yaw that makes their visible arrow point at a logical Facing.
 export function facingYaw(facing) {
-    const angle = FACING_ANGLES[String(facing || '').toLowerCase()];
-    return angle === undefined ? 0 : -angle;
+    const yaw = FACING_YAWS[String(facing || '').toLowerCase()];
+    return yaw === undefined ? 0 : yaw;
 }
 
 // GLB assets may have an authored local forward that differs from the marker
