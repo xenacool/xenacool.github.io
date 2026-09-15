@@ -81,6 +81,8 @@ presentation.path_opacity = 0.62;
 presentation.selected_opacity = 0.95;
 presentation.marker_scale = 1.0;
 presentation.animation_crossfade_ms = 120.0;
+presentation.attack_turn_in_ms = 150.0;
+presentation.attack_turn_out_ms = 180.0;
 presentation.reduced_motion_policy = "snap";
 install_presentation_config(history, presentation);
 

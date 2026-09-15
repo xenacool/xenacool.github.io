@@ -78,7 +78,8 @@ test('GLB actor applies its 180-degree forward-axis calibration to all six headi
     // Markers point along local -Z; shipped GLBs point along local +Z.
     // Their yaw values therefore differ by π while their visible forward
     // direction remains aligned for every logical facing.
-    expect(heading.actorYaw - heading.markerYaw).toBeCloseTo(Math.PI + 0.125, 8);
+    const calibrationError = heading.actorYaw - heading.markerYaw - Math.PI - 0.125;
+    expect(Math.atan2(Math.sin(calibrationError), Math.cos(calibrationError))).toBeCloseTo(0, 8);
   }
   expect(new Set(headings.map(({ actorYaw }) => actorYaw.toFixed(6))).size).toBe(6);
 });

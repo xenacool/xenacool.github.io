@@ -367,7 +367,9 @@ test.describe('Three.js compositor performance contract', () => {
         version: 1, tick: 951, cameras: [], map: null, materials: {}, entities: [{
           id: 951, asset: 'Mage', world_position: [0, 0, 0], scale: 1,
           facing: 'north', rotation_y: 0.25,
+          indicator: { kind: 'facing', direction: 'north' },
           animation_clip: 'general:Idle_A', animation_cue_clip: 'ranged:Ranged_Magic_Shoot', animation_cue: 71, animation_barrier: 71,
+          presentation_aim_yaw: -0.4,
         }],
       } }));
     });
@@ -380,31 +382,49 @@ test.describe('Three.js compositor performance contract', () => {
         version: 1, tick: 952, cameras: [], map: null, materials: {}, entities: [{
           id: 951, asset: 'Mage', world_position: [0, 0, 0], scale: 1,
           facing: 'north', rotation_y: 0.25,
+          indicator: { kind: 'facing', direction: 'north' },
           animation_clip: 'general:Idle_A', animation_cue_clip: 'ranged:Ranged_Magic_Shoot', animation_cue: 71, animation_barrier: 71,
+          presentation_aim_yaw: -0.4,
         }],
       } }));
     });
+    const beforeAim = await page.evaluate(() => ({
+      cue: window.__pystralThreeMixers?.get('951')?.activeCue,
+      phase: window.__pystralThreeNativeMeshes.get('951')?.orientation?.phase,
+      trace: window.__pystralPresentationTrace,
+    }));
+    expect(beforeAim).toEqual(expect.objectContaining({ cue: null, phase: 'aiming' }));
     const started = await page.evaluate(() => {
+      window.__pystralThreeAdvanceAnimations(0.15);
       const animation = window.__pystralThreeMixers?.get('951');
       return { cue: animation?.activeCue, clip: animation?.activeClip?.name,
         yaw: window.__pystralThreeNativeMeshes.get('951')?.group.rotation.y,
+        markerYaw: window.__pystralThreeNativeMarkers.get('951')?.rotation.y,
         meshes: [...(window.__pystralThreeNativeMeshes?.keys() || [])],
         diagnostics: document.getElementById('log-output')?.textContent };
     });
     expect(started).toEqual(expect.objectContaining({ cue: 71, clip: 'Ranged_Magic_Shoot' }));
-    // `syncGlbEntities` applies logical aim before it selects/starts the cue.
-    // North's pointy-top tactical yaw is +30°.  Mage models are authored
-    // 180° from the direction-marker mesh, then receive their per-event aim.
-    expect(started.yaw).toBeCloseTo(Math.PI / 6 + Math.PI + 0.25, 8);
+    // The authored model calibration is additive to the exact, non-hex aim.
+    expect(started.yaw).toBeCloseTo(-0.4 + Math.PI + 0.25, 8);
+    expect(started.markerYaw).toBeCloseTo(-0.4, 8);
     const acks = await page.evaluate(() => {
       const animation = window.__pystralThreeMixers.get('951');
       const before = [...window.__animationAcks];
       window.__pystralThreeAdvanceAnimations(100);
-      return { before, after: [...window.__animationAcks], cue: animation.completedCue };
+      const duringReturn = [...window.__animationAcks];
+      window.__pystralThreeAdvanceAnimations(0.18);
+      const settledYaw = window.__pystralThreeNativeMeshes.get('951')?.group.rotation.y;
+      window.__pystralThreeAdvanceAnimations(0.5);
+      return { before, duringReturn, after: [...window.__animationAcks], cue: animation.completedCue,
+        phase: window.__pystralThreeNativeMeshes.get('951')?.orientation?.phase,
+        settledYaw, laterYaw: window.__pystralThreeNativeMeshes.get('951')?.group.rotation.y };
     });
     expect(acks.before).toEqual([]);
+    expect(acks.duringReturn).toEqual([]);
     expect(acks.cue).toBe(71);
     expect(acks.after).toEqual([71]);
+    expect(acks.phase).toBe('tactical');
+    expect(acks.laterYaw).toBeCloseTo(acks.settledYaw, 8);
   });
 
   test('does not attach an obsolete GLB load after an entity asset is replaced', async ({ page }) => {

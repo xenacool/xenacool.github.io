@@ -162,6 +162,7 @@ pub struct RenderEntityFrame {
     pub z: f32,
     pub rotation_z: f32,
     pub rotation_y: f32,
+    pub presentation_aim_yaw: Option<f32>,
     pub camera_offset: [f32; 3],
     pub slice_indices: Vec<u32>,
     pub selected_slice_index: Option<u32>,
@@ -288,6 +289,14 @@ impl RenderFrame {
                     z: property_float(entity, "z", 0.0),
                     rotation_z: property_float(entity, "rotation_z", 0.0),
                     rotation_y: entity_rotation_y(entity),
+                    presentation_aim_yaw: match entity.properties.get("presentation_aim_yaw") {
+                        Some(pystral_core::log::PropertyValue::Float(value))
+                            if value.is_finite() =>
+                        {
+                            Some(*value)
+                        }
+                        _ => None,
+                    },
                     camera_offset: [
                         property_float(entity, "cam_offset_x", 0.0),
                         property_float(entity, "cam_offset_y", 0.0),
@@ -357,14 +366,12 @@ impl RenderFrame {
         }
     }
 }
-
 fn property_float(entity: &pystral_core::log::EntityState, name: &str, fallback: f32) -> f32 {
     match entity.properties.get(name) {
         Some(pystral_core::log::PropertyValue::Float(value)) if value.is_finite() => *value,
         _ => fallback,
     }
 }
-
 fn property_u8(entity: &pystral_core::log::EntityState, name: &str) -> Option<u8> {
     match entity.properties.get(name) {
         Some(pystral_core::log::PropertyValue::Float(value)) if *value >= 0.0 => Some(*value as u8),

@@ -190,7 +190,6 @@ impl LoopHandler {
             }
         }
     }
-
     fn publish_render_frame(
         &mut self,
         state: &WorldState,
@@ -224,6 +223,7 @@ impl LoopHandler {
                     && let Some(facing) = pystral_games::Facing::from_step(from.hex, to.hex)
                 {
                     entity.facing = facing.as_property().to_string();
+                    entity.indicator.direction = entity.facing.clone();
                 }
             }
         }

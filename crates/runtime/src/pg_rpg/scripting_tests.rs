@@ -61,6 +61,8 @@ fn presentation_config_is_fluent_and_validated_at_install() {
             config.reachable_color = [0.1, 0.2, 0.3];
             config.marker_scale = 1.5;
             config.animation_crossfade_ms = 80;
+            config.attack_turn_in_ms = 60;
+            config.attack_turn_out_ms = 90;
             config.reduced_motion_policy = "crossfade";
             install_presentation_config(history, config);
         "#,
@@ -72,6 +74,12 @@ fn presentation_config_is_fluent_and_validated_at_install() {
             .properties
             .get("presentation_waypoint_reachable_color"),
         Some(&PropertyValue::Color([0.1, 0.2, 0.3]))
+    );
+    assert_eq!(
+        history.current_state.entities[0]
+            .properties
+            .get("presentation_attack_turn_in_ms"),
+        Some(&PropertyValue::Float(60.0))
     );
     assert_eq!(
         history.current_state.entities[0]

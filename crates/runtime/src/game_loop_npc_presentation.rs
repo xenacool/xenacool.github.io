@@ -13,7 +13,7 @@ impl Runtime {
         };
         let (
             projectile_route,
-            presentation_facing,
+            presentation_aim_yaw,
             ability_name,
             presentation_animation,
             unit_states,
@@ -52,7 +52,7 @@ impl Runtime {
                 .unwrap_or_else(|| ("unknown ability".to_string(), None));
             (
                 Self::ability_projectile_route(sim, unit_id, ability, &presentation_target),
-                Self::ability_presentation_facing(sim, unit_id, &presentation_target),
+                Self::ability_presentation_aim_yaw(sim, unit_id, &presentation_target),
                 ability_name,
                 presentation_animation,
                 unit_states,
@@ -89,7 +89,7 @@ impl Runtime {
             &mut self.pg_rpg_sequence_number,
             unit_id,
             presentation_animation.as_deref(),
-            presentation_facing,
+            presentation_aim_yaw,
         );
         let mut update = HistoryManager::new();
         update.log = history.log[start_idx..].to_vec();

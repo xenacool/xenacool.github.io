@@ -19,9 +19,12 @@ export function facingYaw(facing) {
 
 // GLB assets may have an authored local forward that differs from the marker
 // mesh.  Keep that calibration declarative and additive to logical facing.
-export function actorYaw(manifest, asset, facing, authoredYaw = 0) {
+export function actorModelYaw(manifest, asset, authoredYaw = 0) {
     const entry = manifest?.models?.[asset] || {};
     const modelForwardYaw = Number(entry.forward_yaw ?? manifest?.model_forward_yaw ?? 0);
-    return facingYaw(facing) + (Number.isFinite(modelForwardYaw) ? modelForwardYaw : 0)
-        + (Number(authoredYaw) || 0);
+    return (Number.isFinite(modelForwardYaw) ? modelForwardYaw : 0) + (Number(authoredYaw) || 0);
+}
+
+export function actorYaw(manifest, asset, facing, authoredYaw = 0) {
+    return facingYaw(facing) + actorModelYaw(manifest, asset, authoredYaw);
 }
