@@ -427,6 +427,9 @@ function __wbg_get_imports() {
             const ret = setTimeout(arg0, arg1);
             return ret;
         }, arguments); },
+        __wbg_set_initial_actor_assets_8ede3ef7df0720da: function(arg0, arg1) {
+            window.set_initial_actor_assets(getStringFromWasm0(arg0, arg1));
+        },
         __wbg_set_loading_error_25af7682e8856ceb: function(arg0, arg1) {
             window.set_loading_error(getStringFromWasm0(arg0, arg1));
         },
