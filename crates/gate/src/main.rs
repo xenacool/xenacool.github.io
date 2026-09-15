@@ -169,16 +169,23 @@ fn request_initial_pg_rpg_log(
     worker_tx: futures::channel::mpsc::UnboundedSender<WorkerInput>,
     active: Rc<Cell<bool>>,
     abort_controller: web_sys::AbortController,
+    workspace: VirtualRhaiWorkspace,
 ) {
     wasm_bindgen_futures::spawn_local(async move {
         match fetch_assets(&active, &abort_controller).await {
-            Ok(bundle) => {
+            Ok(mut bundle) => {
                 if !active.get() {
                     return;
                 }
+                if let Err(error) = workspace.compile() {
+                    set_loading_error(&format!("Workspace validation failed: {error}"));
+                    return;
+                }
+                bundle.rhai_files = workspace.files.clone();
                 let _ = worker_tx.unbounded_send(WorkerInput::RuntimeRequest(
                     RuntimeRequest::GeneratePgRpgLog {
                         bundle,
+                        entrypoint: workspace.entrypoint.clone(),
                         atlas_json: String::new(),
                         spritesheet_rgba: Vec::new(),
                         spritesheet_width: 0,
@@ -380,7 +387,9 @@ fn handle_runtime_response(response: RuntimeResponse, app_tx: &Sender<AppCommand
     }
 }
 #[wasm_bindgen]
-pub fn run_app() -> Result<AppHandle, JsValue> {
+pub fn run_app_with_workspace(workspace_json: &str) -> Result<AppHandle, JsValue> {
+    let workspace: VirtualRhaiWorkspace = serde_json::from_str(workspace_json)
+        .map_err(|error| JsValue::from_str(&format!("Invalid workspace: {error}")))?;
     let history = initialize_renderer();
 
     let (app_tx, app_rx) = channel();
@@ -388,7 +397,12 @@ pub fn run_app() -> Result<AppHandle, JsValue> {
 
     let active = Rc::new(Cell::new(true));
     let abort_controller = web_sys::AbortController::new()?;
-    request_initial_pg_rpg_log(worker_tx.clone(), active.clone(), abort_controller.clone());
+    request_initial_pg_rpg_log(
+        worker_tx.clone(),
+        active.clone(),
+        abort_controller.clone(),
+        workspace,
+    );
 
     start_worker_plumbing(app_tx.clone(), worker_tx.clone(), worker_rx, active.clone());
 

@@ -132,12 +132,14 @@ pub enum RuntimeRequest {
     SolveIk(IkRequest),
     GeneratePgRpgLog {
         bundle: ScenarioBundle,
+        entrypoint: String,
         atlas_json: String,
         spritesheet_rgba: Vec<u8>,
         spritesheet_width: u32,
     },
     StartPgRpgSimulation {
         bundle: ScenarioBundle,
+        entrypoint: String,
         atlas_json: String,
         spritesheet_rgba: Vec<u8>,
         spritesheet_width: u32,
@@ -364,14 +366,16 @@ impl Runtime {
             },
             RuntimeRequest::GeneratePgRpgLog {
                 bundle,
+                entrypoint,
                 atlas_json,
                 spritesheet_rgba,
                 spritesheet_width,
             } => {
                 let mut history = HistoryManager::new();
-                pg_rpg::generate_pg_rpg_log_bundle(
+                pg_rpg::generate_pg_rpg_log_bundle_at(
                     &mut history,
                     &bundle,
+                    &entrypoint,
                     &atlas_json,
                     &spritesheet_rgba,
                     spritesheet_width,
@@ -380,11 +384,13 @@ impl Runtime {
             }
             RuntimeRequest::StartPgRpgSimulation {
                 bundle,
+                entrypoint,
                 atlas_json,
                 spritesheet_rgba,
                 spritesheet_width,
             } => self.start_pg_rpg_simulation(
                 bundle,
+                entrypoint,
                 atlas_json,
                 spritesheet_rgba,
                 spritesheet_width,

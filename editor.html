@@ -37,8 +37,6 @@
     <section class="workspace" aria-label="Rhai workspace editor">
         <aside class="files" aria-label="Workspace files">
             <strong>Files</strong>
-            <button type="button" data-file="main.rhai">main.rhai</button>
-            <button type="button" data-file="tests.rhai">tests.rhai</button>
         </aside>
         <section class="editor-panel">
             <label for="source">Editing <span id="active-file">main.rhai</span></label>
@@ -47,6 +45,10 @@
                 <button id="run" type="button">Run</button>
                 <button id="test" type="button">Test</button>
                 <button id="export" type="button">Export workspace</button>
+                <input id="workspace-name" aria-label="Workspace name" placeholder="Workspace name">
+                <button id="save-copy" type="button">Save copy</button>
+                <button id="save" type="button" disabled>Save</button>
+                <button id="play" type="button">Play this workspace</button>
             </div>
         </section>
     </section>
@@ -57,15 +59,15 @@
 </main>
 <script type="module">
     import init from './web/pystral_gate.js';
+    import { createWorkspace, loadBuiltinTemplate, saveWorkspace, selectWorkspace } from './web/workspaces.js';
 
-    const files = {
-        'main.rhai': `fn authored_case() { return #{ status: "passed", message: "Hello from pg_rpg" }; }`,
-        'tests.rhai': `fn authored_case() { return #{ status: "passed", test: "unit health remains inspectable" }; }`,
-    };
+    let files = {};
+    let template;
+    let savedWorkspace = null;
     const source = document.getElementById('source');
     const result = document.getElementById('result');
     const activeFile = document.getElementById('active-file');
-    let currentFile = 'main.rhai';
+    let currentFile = null;
     let runtimeReady = false;
     const rhaiWorker = new Worker('./rhai_worker.js', { type: 'module' });
     let nextRequestId = 1;
@@ -80,6 +82,7 @@
     };
 
     function selectFile(path) {
+        if (currentFile === null) return;
         files[currentFile] = source.value;
         currentFile = path;
         activeFile.textContent = path;
@@ -91,7 +94,7 @@
 
     function workspace() {
         files[currentFile] = source.value;
-        return { entrypoint: 'main.rhai', files: Object.entries(files).map(([path, contents]) => ({ path, contents })) };
+        return { entrypoint: template.entrypoint, files: Object.entries(files).map(([path, contents]) => ({ path, contents })) };
     }
 
     async function execute(caseName) {
@@ -105,7 +108,6 @@
         result.textContent = JSON.stringify(response, null, 2);
     }
 
-    document.querySelectorAll('[data-file]').forEach((button) => button.addEventListener('click', () => selectFile(button.dataset.file)));
     const executeAndReport = (caseName) => execute(caseName).catch((error) => {
         result.textContent = JSON.stringify({ status: 'error', error: String(error) }, null, 2);
     });
@@ -121,8 +123,46 @@
         URL.revokeObjectURL(anchor.href);
         result.textContent = 'Workspace export started.';
     });
-    source.value = files[currentFile];
-    selectFile('main.rhai');
+    document.getElementById('save-copy').addEventListener('click', async () => {
+        try {
+            const name = document.getElementById('workspace-name').value;
+            if (!name.trim()) throw new Error('Provide a workspace name.');
+            savedWorkspace = await createWorkspace(name, template);
+            savedWorkspace = await saveWorkspace({ ...savedWorkspace, overrides: Object.fromEntries(Object.entries(files)
+                .filter(([path, contents]) => template.files.find((file) => file.path === path)?.contents !== contents)) });
+            document.getElementById('save').disabled = false;
+            result.textContent = `Saved ${name}.`;
+        } catch (error) { result.textContent = String(error); }
+    });
+    document.getElementById('save').addEventListener('click', async () => {
+        try {
+            if (!savedWorkspace) throw new Error('Save a copy before updating it.');
+            files[currentFile] = source.value;
+            savedWorkspace = await saveWorkspace({ ...savedWorkspace, overrides: Object.fromEntries(Object.entries(files)
+                .filter(([path, contents]) => template.files.find((file) => file.path === path)?.contents !== contents)) });
+            result.textContent = `Saved ${savedWorkspace.name}.`;
+        } catch (error) { result.textContent = String(error); }
+    });
+    document.getElementById('play').addEventListener('click', async () => {
+        try {
+            if (!savedWorkspace) throw new Error('Save a workspace before playing it.');
+            await selectWorkspace(savedWorkspace.id);
+            window.location.href = './game.html';
+        } catch (error) { result.textContent = String(error); }
+    });
+    try {
+        template = await loadBuiltinTemplate();
+        files = Object.fromEntries(template.files.map((file) => [file.path, file.contents]));
+        currentFile = template.entrypoint;
+        const fileList = document.querySelector('.files');
+        template.files.forEach((file) => {
+            const button = document.createElement('button');
+            button.type = 'button'; button.dataset.file = file.path; button.textContent = file.path.replace('scripts/', '');
+            button.addEventListener('click', () => selectFile(file.path)); fileList.append(button);
+        });
+        source.value = files[currentFile];
+        selectFile(currentFile);
+    } catch (error) { result.textContent = `Workspace template failed to load: ${error}`; }
     try { await init({ module_or_path: 'web/pystral_gate_bg.wasm' }); runtimeReady = true; result.textContent = 'Ready. Edit source, then Run or Test.'; }
     catch (error) { result.textContent = `Runtime failed to load: ${error}`; }
 </script>
