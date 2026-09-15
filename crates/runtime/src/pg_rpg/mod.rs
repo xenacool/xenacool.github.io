@@ -38,7 +38,25 @@ pub fn generate_pg_rpg_log_bundle(
     spritesheet_rgba: &[u8],
     spritesheet_width: u32,
 ) {
-    let script = match bundle.root_rhai() {
+    generate_pg_rpg_log_bundle_at(
+        history,
+        bundle,
+        "scripts/pg_rpg.rhai",
+        atlas_json,
+        spritesheet_rgba,
+        spritesheet_width,
+    );
+}
+
+pub fn generate_pg_rpg_log_bundle_at(
+    history: &mut HistoryManager,
+    bundle: &ScenarioBundle,
+    entrypoint: &str,
+    atlas_json: &str,
+    spritesheet_rgba: &[u8],
+    spritesheet_width: u32,
+) {
+    let script = match bundle.root_rhai_at(entrypoint) {
         Ok(script) => script,
         Err(e) => {
             history.push_and_apply(Event::Log {

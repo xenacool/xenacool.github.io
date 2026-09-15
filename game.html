@@ -506,6 +506,9 @@
     <h1 id="loading-heading" style="font-size: 18px; margin: 0;">Loading game</h1>
     <progress id="loading-progress" max="100" value="0" aria-label="Game loading progress"></progress>
     <div id="loading-status" role="status" aria-live="polite">Starting game…</div>
+    <label for="workspace-picker">Workspace</label>
+    <select id="workspace-picker" aria-label="Workspace"></select>
+    <button id="workspace-start" type="button" disabled>Start selected workspace</button>
     <div id="loading-error" role="alert" hidden></div>
     <button id="loading-retry" type="button" hidden>Retry</button>
 </section>
@@ -622,8 +625,9 @@
 </section>
 </div>
 <script type="module">
-    import init, { run_app } from './web/pystral_gate.js';
+    import init, { run_app_with_workspace } from './web/pystral_gate.js';
     import { createNativePresentation } from './web/renderer.js';
+    import { listWorkspaces, loadBuiltinTemplate, materializeWorkspace, selectWorkspace, selectedWorkspaceId } from './web/workspaces.js';
 
     document.body.dataset.loadingState = 'loading';
     const loadingPanel = document.getElementById('loading-panel');
@@ -632,6 +636,9 @@
     const loadingError = document.getElementById('loading-error');
     const loadingRetry = document.getElementById('loading-retry');
     let runtimeReadyPending = false;
+    let selectedWorkspace = null;
+    const workspacePicker = document.getElementById('workspace-picker');
+    const workspaceStart = document.getElementById('workspace-start');
     const setLoadingDisplay = (state, message, progress = null) => {
         document.body.dataset.loadingState = state;
         loadingPanel.hidden = state === 'ready';
@@ -764,7 +771,9 @@
             } else {
                 throw new Error('WebGL2 is required by the native renderer.');
             }
-            const app = await run_app();
+            if (!selectedWorkspace) throw new Error('Select a workspace before starting the game.');
+            const workspace = await materializeWorkspace(selectedWorkspace, await loadBuiltinTemplate());
+            const app = await run_app_with_workspace(JSON.stringify(workspace));
             if (attemptId !== currentAttemptId) {
                 app.dispose();
                 return;
@@ -779,6 +788,13 @@
     }
 
     loadingRetry.addEventListener('click', () => startAttempt());
+    workspacePicker.addEventListener('change', () => { workspaceStart.disabled = !workspacePicker.value; });
+    workspaceStart.addEventListener('click', async () => {
+        selectedWorkspace = workspacePicker.value || null;
+        if (!selectedWorkspace) return;
+        try { await selectWorkspace(selectedWorkspace); await startAttempt(); }
+        catch (error) { window.set_loading_error(String(error)); }
+    });
 
     const hudDock = document.getElementById('hud-dock');
     const diagnosticsStack = document.getElementById('diagnostics-stack');
@@ -1652,7 +1668,28 @@
             }
         });
     }
-    startAttempt().catch(console.error);
+    (async () => {
+        try {
+            const template = await loadBuiltinTemplate();
+            const saved = await listWorkspaces();
+            const prompt = document.createElement('option');
+            prompt.value = '';
+            prompt.textContent = 'Choose workspace…';
+            prompt.disabled = true;
+            prompt.selected = true;
+            workspacePicker.replaceChildren(prompt, ...[template, ...saved].map((workspace) => {
+                const option = document.createElement('option');
+                option.value = workspace.id;
+                option.textContent = workspace.name;
+                return option;
+            }));
+            const remembered = await selectedWorkspaceId();
+            workspacePicker.value = [...workspacePicker.options].some((option) => option.value === remembered)
+                ? remembered : '';
+            workspaceStart.disabled = !workspacePicker.value;
+            setLoadingDisplay('loading', 'Choose a workspace to start.', 0);
+        } catch (error) { window.set_loading_error(`Workspace loading failed: ${error}`); }
+    })();
 </script>
 </body>
 </html>

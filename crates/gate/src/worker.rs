@@ -265,6 +265,7 @@ impl Future for UnifiedWorker {
                             let task = match task {
                                 RuntimeRequest::GeneratePgRpgLog {
                                     bundle,
+                                    entrypoint,
                                     atlas_json,
                                     spritesheet_rgba,
                                     spritesheet_width,
@@ -277,6 +278,7 @@ impl Future for UnifiedWorker {
                                     self.boundary_resume_pending = false;
                                     RuntimeRequest::StartPgRpgSimulation {
                                         bundle,
+                                        entrypoint,
                                         atlas_json,
                                         spritesheet_rgba,
                                         spritesheet_width,

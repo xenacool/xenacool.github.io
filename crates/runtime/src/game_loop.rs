@@ -18,11 +18,12 @@ impl Runtime {
     pub(super) fn start_pg_rpg_simulation(
         &mut self,
         bundle: ScenarioBundle,
+        entrypoint: String,
         atlas_json: String,
         spritesheet_rgba: Vec<u8>,
         spritesheet_width: u32,
     ) -> RuntimeResponse {
-        let script = match bundle.root_rhai() {
+        let script = match bundle.root_rhai_at(&entrypoint) {
             Ok(script) => script,
             Err(error) => return RuntimeResponse::Error(error),
         };
