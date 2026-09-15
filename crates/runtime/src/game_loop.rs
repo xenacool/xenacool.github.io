@@ -94,7 +94,7 @@ impl Runtime {
             return RuntimeResponse::Error("Simulation not started".to_string());
         };
         let simulation_before_request = sim.clone();
-        let presentation_facing = Self::ability_presentation_facing(sim, unit_id, &target);
+        let presentation_aim_yaw = Self::ability_presentation_aim_yaw(sim, unit_id, &target);
         let (ability_name, presentation_animation) = sim
             .state
             .ability_registry
@@ -199,7 +199,7 @@ impl Runtime {
             &mut self.pg_rpg_sequence_number,
             unit_id,
             presentation_animation.as_deref(),
-            presentation_facing,
+            presentation_aim_yaw,
         );
         let mut update = HistoryManager::new();
         update.log = history.log[start_idx..].to_vec();

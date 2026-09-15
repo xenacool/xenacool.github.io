@@ -19,6 +19,8 @@ struct PresentationConfig {
     selected_opacity: f32,
     marker_scale: f32,
     animation_crossfade_ms: f32,
+    attack_turn_in_ms: f32,
+    attack_turn_out_ms: f32,
     reduced_motion_policy: String,
     reachable_color_valid: bool,
     path_color_valid: bool,
@@ -36,6 +38,8 @@ impl Default for PresentationConfig {
             selected_opacity: 0.95,
             marker_scale: 1.0,
             animation_crossfade_ms: 120.0,
+            attack_turn_in_ms: 150.0,
+            attack_turn_out_ms: 180.0,
             reduced_motion_policy: "snap".to_string(),
             reachable_color_valid: true,
             path_color_valid: true,
@@ -126,6 +130,14 @@ fn install(
         (
             "presentation_animation_crossfade_ms",
             PropertyValue::Float(config.animation_crossfade_ms.max(0.0)),
+        ),
+        (
+            "presentation_attack_turn_in_ms",
+            PropertyValue::Float(config.attack_turn_in_ms.max(0.0)),
+        ),
+        (
+            "presentation_attack_turn_out_ms",
+            PropertyValue::Float(config.attack_turn_out_ms.max(0.0)),
         ),
         (
             "presentation_reduced_motion_policy",
@@ -225,6 +237,26 @@ pub fn register_rhai(engine: &mut Engine) {
         .register_set(
             "animation_crossfade_ms",
             |c: &mut PresentationConfig, v: i64| c.animation_crossfade_ms = v as f32,
+        )
+        .register_get("attack_turn_in_ms", |c: &mut PresentationConfig| {
+            c.attack_turn_in_ms as f64
+        })
+        .register_set("attack_turn_in_ms", |c: &mut PresentationConfig, v: f64| {
+            c.attack_turn_in_ms = v as f32
+        })
+        .register_set("attack_turn_in_ms", |c: &mut PresentationConfig, v: i64| {
+            c.attack_turn_in_ms = v as f32
+        })
+        .register_get("attack_turn_out_ms", |c: &mut PresentationConfig| {
+            c.attack_turn_out_ms as f64
+        })
+        .register_set(
+            "attack_turn_out_ms",
+            |c: &mut PresentationConfig, v: f64| c.attack_turn_out_ms = v as f32,
+        )
+        .register_set(
+            "attack_turn_out_ms",
+            |c: &mut PresentationConfig, v: i64| c.attack_turn_out_ms = v as f32,
         )
         .register_get("reduced_motion_policy", |c: &mut PresentationConfig| {
             c.reduced_motion_policy.clone()

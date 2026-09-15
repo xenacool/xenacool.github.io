@@ -29,6 +29,8 @@ pub struct RenderPresentationConfig {
     pub selected_opacity: f32,
     pub marker_scale: f32,
     pub animation_crossfade_ms: f32,
+    pub attack_turn_in_ms: f32,
+    pub attack_turn_out_ms: f32,
     pub reduced_motion_policy: String,
 }
 
@@ -43,6 +45,8 @@ impl Default for RenderPresentationConfig {
             selected_opacity: 0.95,
             marker_scale: 1.0,
             animation_crossfade_ms: 120.0,
+            attack_turn_in_ms: 150.0,
+            attack_turn_out_ms: 180.0,
             reduced_motion_policy: "snap".to_string(),
         }
     }
@@ -91,6 +95,13 @@ pub fn presentation_config(state: &WorldState) -> RenderPresentationConfig {
         animation_crossfade_ms: float(
             "presentation_animation_crossfade_ms",
             defaults.animation_crossfade_ms,
+        )
+        .max(0.0),
+        attack_turn_in_ms: float("presentation_attack_turn_in_ms", defaults.attack_turn_in_ms)
+            .max(0.0),
+        attack_turn_out_ms: float(
+            "presentation_attack_turn_out_ms",
+            defaults.attack_turn_out_ms,
         )
         .max(0.0),
         reduced_motion_policy: string(

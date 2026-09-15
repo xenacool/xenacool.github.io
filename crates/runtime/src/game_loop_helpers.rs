@@ -81,15 +81,15 @@ impl Runtime {
         sequence_number: &mut u64,
         unit_id: u64,
         clip: Option<&str>,
-        facing: Option<pystral_games::Facing>,
+        aim_yaw: Option<f32>,
     ) -> u64 {
         *sequence_number += 1;
         let barrier = *sequence_number;
-        if let Some(facing) = facing {
+        if let Some(aim_yaw) = aim_yaw {
             history.push_and_apply(Event::UpdateProperty {
                 id: unit_id,
-                property: "facing".to_string(),
-                value: pystral_core::log::PropertyValue::String(facing.as_property().to_string()),
+                property: "presentation_aim_yaw".to_string(),
+                value: pystral_core::log::PropertyValue::Float(aim_yaw),
             });
         }
         if let Some(clip) = clip {
@@ -112,11 +112,11 @@ impl Runtime {
         history.push_and_apply(Event::SequenceNumber(barrier));
         barrier
     }
-    pub(super) fn ability_presentation_facing(
+    pub(super) fn ability_presentation_aim_yaw(
         simulation: &pg_rpg::simulation::TacticalSimulation,
         unit_id: u64,
         target: &RuntimeAbilityTarget,
-    ) -> Option<pystral_games::Facing> {
+    ) -> Option<f32> {
         let from = simulation
             .state
             .agents
@@ -134,7 +134,14 @@ impl Runtime {
             }
             RuntimeAbilityTarget::Cell { hex, .. } => *hex,
         };
-        pystral_games::Facing::direction_to(from, target_hex)
+        let dq = target_hex.x - from.x;
+        let dr = target_hex.y - from.y;
+        if dq == 0 && dr == 0 {
+            return None;
+        }
+        let x = 3.0_f32.sqrt() * (dq as f32 + dr as f32 * 0.5);
+        let z = 1.5 * dr as f32;
+        Some((-x).atan2(-z))
     }
     pub(super) fn default_movement_transition() -> pystral_core::log::TransitionConfig {
         Self::movement_transition(1)
