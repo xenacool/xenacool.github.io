@@ -6,16 +6,53 @@ import { actorYaw } from './facing.js';
 const loader = new GLTFLoader();
 const modelPromises = new Map();
 const animationBundlePromises = new Map();
+const assetStates = new Map();
+const RETRY_DELAYS_MS = [250, 1000, 4000];
+
+function reportAssetState(kind, name, state) {
+    const detail = { kind, name, ...state };
+    assetStates.set(`${kind}:${name}`, detail);
+    console.warn(`GLB ${kind} ${name}: ${state.status} (attempt ${state.attempt}/4)${state.error ? `: ${state.error}` : ''}`);
+    window.dispatchEvent(new CustomEvent('pystral-glb-asset-state', { detail }));
+}
+
+function retryLoad(kind, name, url) {
+    const load = async (attempt = 1) => {
+        reportAssetState(kind, name, { status: 'loading', attempt, url });
+        try {
+            const gltf = await loader.loadAsync(url);
+            reportAssetState(kind, name, { status: 'ready', attempt, url });
+            return gltf;
+        } catch (error) {
+            const message = error?.message || String(error);
+            if (attempt > RETRY_DELAYS_MS.length) {
+                reportAssetState(kind, name, { status: 'failed', attempt, url, error: message });
+                throw new Error(`${kind} ${name} failed after ${attempt} attempts: ${message}`);
+            }
+            const delay = RETRY_DELAYS_MS[attempt - 1];
+            reportAssetState(kind, name, { status: 'retrying', attempt, url, error: message, retryInMs: delay });
+            await new Promise((resolve) => window.setTimeout(resolve, delay));
+            return load(attempt + 1);
+        }
+    };
+    return load();
+}
+
+export function glbAssetStates() {
+    return [...assetStates.values()].map((state) => ({ ...state }));
+}
 
 export async function loadModel(manifest, asset) {
     const entry = manifest?.models?.[asset];
     if (!entry?.url) throw new Error(`GLB model is not registered: ${asset}`);
     if (!modelPromises.has(asset)) {
-        modelPromises.set(asset, loader.loadAsync(entry.url).then((gltf) => ({
+        const promise = retryLoad('model', asset, entry.url).then((gltf) => ({
             scene: gltf.scene,
             animations: gltf.animations || [],
             scale: Number(entry.scale || 1),
-        })));
+        }));
+        modelPromises.set(asset, promise);
+        promise.catch(() => modelPromises.delete(asset));
     }
     return modelPromises.get(asset);
 }
@@ -24,11 +61,13 @@ export async function loadAnimationBundle(manifest, bundle) {
     const entry = manifest?.animation_bundles?.[bundle];
     if (!entry?.url) throw new Error(`GLB animation bundle is not registered: ${bundle}`);
     if (!animationBundlePromises.has(bundle)) {
-        animationBundlePromises.set(bundle, loader.loadAsync(entry.url).then((gltf) => ({
+        const promise = retryLoad('animation bundle', bundle, entry.url).then((gltf) => ({
             scene: gltf.scene,
             clips: gltf.animations || [],
             rig: entry.rig,
-        })));
+        }));
+        animationBundlePromises.set(bundle, promise);
+        promise.catch(() => animationBundlePromises.delete(bundle));
     }
     return animationBundlePromises.get(bundle);
 }
@@ -195,6 +234,9 @@ export function syncGlbEntities(frame, scene, manifest, meshes, mixers, diagnost
                     const mixer = new THREE.AnimationMixer(instance);
                     mixers.set(key, { mixer, clips, retargeted: new Map(), instance });
                     record.loaded = true;
+                    window.dispatchEvent(new CustomEvent('pystral-glb-record-attached', {
+                        detail: { entityId: entity.id, asset: record.asset },
+                    }));
                 }).catch((error) => diagnostics(`GLB ${entity.asset}: ${error.message}`));
             } else {
                 record.primitive = primitive(entity.asset);

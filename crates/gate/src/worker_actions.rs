@@ -1,6 +1,8 @@
 use super::*;
 mod preview_navigation;
-use preview_navigation::{preview_path, select_radial_destination, select_rotated_destination};
+use preview_navigation::{
+    preview_path, select_nearest_axial_destination, select_nearest_layer_destination,
+};
 impl UnifiedWorker {
     pub(crate) fn handle_animation_ack(&mut self, sequence_number: u64, cx: &mut Context<'_>) {
         self.highest_animation_ack = self.highest_animation_ack.max(sequence_number);
@@ -433,21 +435,23 @@ impl UnifiedWorker {
             selected_destination,
         } = response
         {
+            let selected_destination = if invalidate_selection {
+                None
+            } else if let Some(destination) = selected_destination {
+                Some(destination.clone())
+            } else {
+                None
+            };
             self.transient_state.preview = Some(MovePreview {
                 request_id: *request_id,
                 unit_id: *unit_id,
-                source: Some(source.clone()),
+                source: source.clone(),
                 reachable: reachable.clone(),
-                selected_destination: if invalidate_selection {
-                    None
-                } else {
-                    selected_destination.clone()
-                },
-                path: if invalidate_selection {
-                    Vec::new()
-                } else {
-                    preview_path(source, selected_destination.as_ref())
-                },
+                path: selected_destination
+                    .as_ref()
+                    .map(|destination| preview_path(source, destination))
+                    .unwrap_or_default(),
+                selected_destination,
             });
             self.push_output(WorkerOutput::TransientState(Box::new(
                 self.transient_state.clone(),
@@ -575,85 +579,22 @@ impl UnifiedWorker {
         let Some(preview) = self.transient_state.preview.as_mut() else {
             return;
         };
-        let Some(source) = preview.source.as_ref() else {
-            return;
-        };
-        let Some(current) = preview.selected_destination.as_ref().or(Some(source)) else {
-            return;
-        };
+        let reference = preview
+            .selected_destination
+            .as_ref()
+            .unwrap_or(&preview.source);
         let next = match direction {
-            "left" | "right" => select_rotated_destination(
-                source,
-                current,
-                &preview.reachable,
-                direction == "right",
-            ),
-            "up" | "down" => {
-                select_radial_destination(source, current, &preview.reachable, direction == "up")
+            "left" | "right" | "up" | "down" => {
+                select_nearest_axial_destination(reference, &preview.reachable, direction)
             }
             "layer-up" | "layer-down" => {
-                self.select_preview_layer(direction);
-                return;
+                select_nearest_layer_destination(reference, &preview.reachable, direction)
             }
             _ => None,
         };
-        if let Some(next) = next {
-            preview.selected_destination = Some(next);
-            preview.path = preview_path(
-                preview.source.as_ref().expect("preview source"),
-                preview.selected_destination.as_ref(),
-            );
-        }
-    }
-
-    fn select_preview_layer(&mut self, direction: &str) {
-        let Some(preview) = self.transient_state.preview.as_mut() else {
-            return;
-        };
-        let Some(current) = preview
-            .selected_destination
-            .as_ref()
-            .or(preview.source.as_ref())
-        else {
-            return;
-        };
-        let candidate_layer = if direction == "layer-up" {
-            preview
-                .reachable
-                .iter()
-                .map(|candidate| candidate.layer)
-                .filter(|layer| *layer > current.layer)
-                .min()
-        } else {
-            preview
-                .reachable
-                .iter()
-                .map(|candidate| candidate.layer)
-                .filter(|layer| *layer < current.layer)
-                .max()
-        };
-        let Some(candidate_layer) = candidate_layer else {
-            return;
-        };
-        let mut candidates = preview
-            .reachable
-            .iter()
-            .filter(|candidate| candidate.layer == candidate_layer)
-            .cloned()
-            .collect::<Vec<_>>();
-        candidates.sort_by_key(|candidate| {
-            (
-                current.hex.distance_to(candidate.hex),
-                candidate.hex.x,
-                candidate.hex.y,
-            )
-        });
-        if let Some(next) = candidates.into_iter().next() {
-            preview.selected_destination = Some(next);
-            preview.path = preview_path(
-                preview.source.as_ref().expect("preview source"),
-                preview.selected_destination.as_ref(),
-            );
+        if let Some(destination) = next {
+            preview.path = preview_path(&preview.source, &destination);
+            preview.selected_destination = Some(destination);
         }
     }
 

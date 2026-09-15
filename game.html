@@ -631,7 +631,8 @@
     const loadingStatus = document.getElementById('loading-status');
     const loadingError = document.getElementById('loading-error');
     const loadingRetry = document.getElementById('loading-retry');
-    window.set_loading_state = (state, message, progress = null) => {
+    let runtimeReadyPending = false;
+    const setLoadingDisplay = (state, message, progress = null) => {
         document.body.dataset.loadingState = state;
         loadingPanel.hidden = state === 'ready';
         loadingPanel.setAttribute('aria-busy', String(state === 'loading'));
@@ -643,6 +644,31 @@
             loadingProgress.setAttribute('aria-valuenow', String(progress));
         }
     };
+    const releaseGameplayWhenActorsReady = () => {
+        const readiness = window.__pystralThreeInitialActors?.();
+        if (!runtimeReadyPending || readiness?.status !== 'ready') return false;
+        runtimeReadyPending = false;
+        setLoadingDisplay('ready', 'Game ready.', 100);
+        return true;
+    };
+    window.set_loading_state = (state, message, progress = null) => {
+        if (state !== 'ready') {
+            setLoadingDisplay(state, message, progress);
+            return;
+        }
+        runtimeReadyPending = true;
+        if (!releaseGameplayWhenActorsReady()) {
+            setLoadingDisplay('loading', 'Preparing initial character models…', 95);
+        }
+    };
+    window.addEventListener('pystral-three-initial-actors-ready', releaseGameplayWhenActorsReady);
+    window.addEventListener('pystral-three-initial-actors-failed', (event) => {
+        const failed = event.detail?.error;
+        const name = failed?.name || 'unknown asset';
+        const reason = failed?.error || 'unknown load error';
+        runtimeReadyPending = false;
+        window.set_loading_error?.(`Required GLB asset failed: ${name}: ${reason}`);
+    });
     // Render-frame ingress. Three.js consumes this presentation-only payload;
     // Rust remains authoritative for simulation and resolved presentation data.
     window.__pystralFrame = null;
@@ -670,7 +696,18 @@
             console.error('Invalid render frame:', error);
         }
     };
+    window.set_initial_actor_assets = (json) => {
+        try {
+            const assets = JSON.parse(json);
+            if (!Array.isArray(assets)) throw new Error('expected an asset array');
+            window.__pystralInitialActorAssets = assets;
+            window.dispatchEvent(new CustomEvent('pystral-initial-actor-assets', { detail: assets }));
+        } catch (error) {
+            console.error('Invalid initial actor asset list:', error);
+        }
+    };
     window.set_loading_error = (message) => {
+        runtimeReadyPending = false;
         window.set_loading_state('error', 'Game could not be loaded.', 0);
         loadingError.textContent = message.split('\n', 1)[0];
         loadingRetry.focus();
@@ -696,6 +733,7 @@
         window.__pystralCameraAxial = { q: 0, r: 0 };
         window.previewActive = false;
         window.__pystralHistoryExportSource = null;
+        window.__pystralInitialActorAssets = null;
         window.__pystralHeartbeatReceivedAt = 0;
         threePresentation?.dispose();
         threePresentation = null;
@@ -1027,6 +1065,16 @@
     window.update_action_buttons = (visible, up, down, left, right, layerUp, layerDown, confirm, ret, wait, face) => {
         const container = document.getElementById('action-controls');
         const previewActive = window.previewActive === true;
+        const movementLabels = previewActive
+            ? { up: ['r−', 'Decrease r'], down: ['r+', 'Increase r'], left: ['q−', 'Decrease q'], right: ['q+', 'Increase q'] }
+            : { up: ['▲', 'Up'], down: ['▼', 'Down'], left: ['◀', 'Left'], right: ['▶', 'Right'] };
+        for (const direction of ['up', 'down', 'left', 'right']) {
+            const button = document.getElementById(`action-${direction}`);
+            const [label, description] = movementLabels[direction];
+            button.textContent = label;
+            button.title = description;
+            button.setAttribute('aria-label', description);
+        }
         // This strip is independent of the history/camera panel and remains
         // anchored above the HUD mode bar.
         container.style.display = 'flex';
@@ -1237,17 +1285,14 @@
             `Move preview: selected ${location}; cost: ${apCost} AP; ${detail}`;
         if (preview) {
             const selected = preview.selected_destination || preview.source;
-            const location = selected
-                ? `q ${selected.hex.x}, r ${selected.hex.y}, layer ${selected.layer}`
-                : 'source cell';
-            const previewStatus = formatMovePreview(
-                location,
-                selected?.ap_cost ?? 0,
-                `${preview.reachable.length} reachable destinations. Use directional controls to change selection.`,
-            );
+            const location = `q ${selected.hex.x}, r ${selected.hex.y}, layer ${selected.layer}`;
+            const detail = `${preview.reachable.length} reachable destinations. Left/right change q; up/down change r.`;
+            const previewStatus = preview.selected_destination
+                ? formatMovePreview(location, preview.selected_destination.ap_cost, detail)
+                : `Move preview: reference ${location}; no destination selected. ${detail}`;
             window.previewLocation = location;
             window.previewReachableCount = preview.reachable.length;
-            window.previewApCost = selected?.ap_cost ?? 0;
+            window.previewApCost = preview.selected_destination?.ap_cost ?? 0;
             status.textContent = window.pendingActionFeedback
                 ? `${window.pendingActionFeedback} ${previewStatus}`
                 : previewStatus;

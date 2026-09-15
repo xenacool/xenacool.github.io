@@ -1,3 +1,4 @@
+mod assets;
 pub mod camera;
 mod playback_methods;
 pub mod scene;
@@ -80,12 +81,10 @@ impl LoopHandler {
         let phase_at = phase_started_at(&performance);
         self.process_commands();
         phase_ms[0] = performance.now() - phase_at;
-
         // 1. Playback & History Update
         let phase_at = phase_started_at(&performance);
         let (is_playing_anims, debug_mode, delta) = self.update_playback_and_history(now);
         phase_ms[1] = performance.now() - phase_at;
-
         // 2. Get State & Update Logic
         let phase_at = phase_started_at(&performance);
         let state = self.get_current_state(now, is_playing_anims);
@@ -94,7 +93,6 @@ impl LoopHandler {
         // 3. Canvas & Viewport
         let phase_at = phase_started_at(&performance);
         let (width, height) = viewport_size();
-
         // Publish the resolved pose after camera tween advancement. A native
         // browser renderer consumes this authoritative projection rather than
         // reimplementing Rust camera interpolation and aspect math.
@@ -125,15 +123,12 @@ impl LoopHandler {
             now,
         );
         phase_ms[3] = performance.now() - phase_at;
-
         // 4. HUD state and animation-barrier acknowledgement.
         let phase_at = phase_started_at(&performance);
         // Update Nav Buttons based on current camera neighbors
         self.sync_nav_buttons(&state);
-
         // Update Action Buttons based on current prompt entity
         self.sync_action_buttons(&state, debug_mode);
-
         // Acknowledging the visible barrier is latency-sensitive. Do this
         // before optional diagnostics serialization, which may be large.
         self.handle_sequence_number_acks(now);
@@ -313,6 +308,11 @@ impl LoopHandler {
                 }
                 AppCommand::UpdateHistory(history) => {
                     self.history_manager = *history;
+                    if let Ok(json) = serde_json::to_string(&assets::initial_character_assets(
+                        &self.history_manager.log,
+                    )) {
+                        crate::render::set_initial_actor_assets(&json);
+                    }
                     // A new match starts a new static-scene publication
                     // epoch; the first frame must carry map/material data.
                     self.render_tick = 0;
