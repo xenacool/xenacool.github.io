@@ -60,6 +60,9 @@ extern "C" {
 
     #[wasm_bindgen(js_namespace = window)]
     pub fn publish_render_worker_profile(json: &str);
+
+    #[wasm_bindgen(js_namespace = window)]
+    pub fn set_initial_actor_assets(json: &str);
 }
 #[derive(Debug, Clone, Serialize, PartialEq)]
 pub struct RenderFrame {

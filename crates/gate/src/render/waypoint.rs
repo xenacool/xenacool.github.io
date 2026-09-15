@@ -123,7 +123,52 @@ pub fn waypoint_preview(state: &WorldState, preview: &MovePreview) -> RenderWayp
     RenderWaypointPreviewFrame {
         unit_id: preview.unit_id,
         reachable: preview.reachable.iter().map(render_move).collect(),
-        path: preview.path.iter().map(render_move).collect(),
+        // The source is necessary for route semantics but belongs to the
+        // acting unit, not the viewport overlay. Waypoint materials ignore
+        // depth by design, so drawing it would visibly pierce that unit.
+        path: preview
+            .path
+            .iter()
+            .filter(|waypoint| {
+                waypoint.hex != preview.source.hex || waypoint.layer != preview.source.layer
+            })
+            .map(render_move)
+            .collect(),
         selected_destination: preview.selected_destination.as_ref().map(render_move),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::waypoint_preview;
+    use crate::MovePreview;
+    use hexx::Hex;
+    use pystral_core::log::{AvailableMove, WorldState};
+
+    fn cell(q: i32, r: i32) -> AvailableMove {
+        AvailableMove {
+            hex: Hex::new(q, r),
+            layer: 0,
+            ap_cost: 1,
+        }
+    }
+
+    #[test]
+    fn preview_projection_omits_the_actor_source_waypoint() {
+        let source = cell(0, 0);
+        let destination = cell(1, 0);
+        let frame = waypoint_preview(
+            &WorldState::default(),
+            &MovePreview {
+                request_id: 1,
+                unit_id: 7,
+                source: source.clone(),
+                reachable: vec![destination.clone()],
+                selected_destination: Some(destination.clone()),
+                path: vec![source, destination],
+            },
+        );
+        assert_eq!(frame.path.len(), 1);
+        assert_eq!((frame.path[0].q, frame.path[0].r), (1, 0));
     }
 }

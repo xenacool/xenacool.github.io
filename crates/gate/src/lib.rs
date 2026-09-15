@@ -89,11 +89,11 @@ pub enum WorkerInput {
     ),
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Default)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct MovePreview {
     pub request_id: u64,
     pub unit_id: u64,
-    pub source: Option<AvailableMove>,
+    pub source: AvailableMove,
     pub reachable: Vec<AvailableMove>,
     pub selected_destination: Option<AvailableMove>,
     pub path: Vec<AvailableMove>,

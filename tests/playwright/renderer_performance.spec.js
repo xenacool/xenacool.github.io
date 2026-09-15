@@ -393,7 +393,9 @@ test.describe('Three.js compositor performance contract', () => {
     });
     expect(started).toEqual(expect.objectContaining({ cue: 71, clip: 'Ranged_Magic_Shoot' }));
     // `syncGlbEntities` applies logical aim before it selects/starts the cue.
-    expect(started.yaw).toBeCloseTo(-Math.PI / 6 + Math.PI + 0.25, 8);
+    // North's pointy-top tactical yaw is +30°.  Mage models are authored
+    // 180° from the direction-marker mesh, then receive their per-event aim.
+    expect(started.yaw).toBeCloseTo(Math.PI / 6 + Math.PI + 0.25, 8);
     const acks = await page.evaluate(() => {
       const animation = window.__pystralThreeMixers.get('951');
       const before = [...window.__animationAcks];

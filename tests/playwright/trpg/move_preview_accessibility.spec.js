@@ -46,6 +46,24 @@ test('move preview exposes accessible status and returns to the top-level menu',
   await expect(status).toContainText('Focus a job and press Enter to open its abilities.');
 });
 
+test('move preview arrows expose bounded axial selection controls', async ({ page }) => {
+  await page.goto('/game.html');
+  await page.waitForFunction(() => window.app !== undefined, { timeout: 10000 });
+  const status = page.getByRole('status');
+  await expect(page.getByRole('region', { name: /unit \d+ action menu/i })).toBeVisible({ timeout: 60000 });
+  await page.getByRole('button', { name: 'Action', exact: true }).click({ force: true });
+  await expect(status).toContainText(/Move preview: selected q -?\d+, r -?\d+, layer -?\d+/);
+  await expect(page.locator('#action-left')).toHaveAttribute('aria-label', 'Decrease q');
+  await expect(page.locator('#action-right')).toHaveAttribute('aria-label', 'Increase q');
+  await expect(page.locator('#action-up')).toHaveAttribute('aria-label', 'Decrease r');
+  await expect(page.locator('#action-down')).toHaveAttribute('aria-label', 'Increase r');
+  const before = await status.innerText();
+  await page.locator('#action-left').click();
+  await expect(status).toContainText(/Move preview: selected/);
+  expect(await status.innerText()).not.toBe('');
+  expect(before).toContain('Left/right change q; up/down change r.');
+});
+
 test('ability descriptors open legal targets and restore focus through the menu path', async ({ page }) => {
   test.setTimeout(45000);
   await page.goto('/game.html');
@@ -184,7 +202,7 @@ test('stale preview rejection refreshes to the source cell', async ({ page }) =>
   }, { baseline: before }, { timeout: 10000 });
   const after = await protocolClock(page);
   expect(after.history).toBe(before.history);
-  await expect(status).toContainText(expectedSource);
+  await expect(status).toContainText(`Move preview: reference ${expectedSource.replace('selected ', '')}`);
 });
 
 test('committed movement waits for its animation barrier', async ({ page }) => {
@@ -213,7 +231,9 @@ test('committed movement waits for its animation barrier', async ({ page }) => {
   await waitForAnimationBarrier(page, { timeout: 15000, after: before });
   await expect(status).toContainText(/Move committed/);
   await waitForHistoryToSettle(page, before);
-  await expect(status).toContainText(/Move preview: selected/);
+  // The committed destination becomes the source reference. A new preview
+  // must not fabricate a cursor when this unit has no legal successor.
+  await expect(status).toContainText(/Move preview: reference q -?\d+, r -?\d+, layer -?\d+; no destination selected/);
   expect(await page.evaluate(() => window.__movementWalkFrames.length))
     .toBeGreaterThan(0);
   const translated = await page.evaluate(() => {

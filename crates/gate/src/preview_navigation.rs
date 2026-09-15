@@ -1,102 +1,84 @@
 use pystral_core::log::AvailableMove;
 
-const HEX_DIRECTIONS: [(i32, i32); 6] = [(1, 0), (1, -1), (0, -1), (-1, 0), (-1, 1), (0, 1)];
-
-fn hex_direction_index(source: &AvailableMove, candidate: &AvailableMove) -> usize {
-    let delta_q = candidate.hex.x - source.hex.x;
-    let delta_r = candidate.hex.y - source.hex.y;
-    HEX_DIRECTIONS
-        .iter()
-        .enumerate()
-        .max_by_key(|(_, (q, r))| {
-            // Dot product in the regular hex embedding. Plain axial dot
-            // products make adjacent ring cells tie and do not give arrows
-            // a stable clockwise/counter-clockwise ordering.
-            (2 * delta_q + delta_r) * (2 * q + r) + 3 * delta_r * r
-        })
-        .map(|(index, _)| index)
-        .unwrap_or(0)
-}
-
-pub(super) fn select_rotated_destination(
-    source: &AvailableMove,
-    current: &AvailableMove,
+pub(super) fn select_nearest_axial_destination(
+    reference: &AvailableMove,
     reachable: &[AvailableMove],
-    clockwise: bool,
+    direction: &str,
 ) -> Option<AvailableMove> {
-    let current_direction = hex_direction_index(source, current);
-    let current_distance = source.hex.distance_to(current.hex);
-    for offset in 1..=6 {
-        let direction = if clockwise {
-            (current_direction + offset) % 6
-        } else {
-            (current_direction + 6 - offset) % 6
-        };
-        let mut candidates = reachable
-            .iter()
-            .filter(|candidate| {
-                candidate.layer == current.layer
-                    && hex_direction_index(source, candidate) == direction
-            })
-            .cloned()
-            .collect::<Vec<_>>();
-        candidates.sort_by_key(|candidate| {
-            (
-                (source.hex.distance_to(candidate.hex) - current_distance).abs(),
-                source.hex.distance_to(candidate.hex),
+    let candidate_key = |candidate: &AvailableMove| match direction {
+        "left" if candidate.layer == reference.layer && candidate.hex.x < reference.hex.x => {
+            Some((
+                (candidate.hex.y - reference.hex.y).abs(),
+                reference.hex.x - candidate.hex.x,
                 candidate.hex.x,
                 candidate.hex.y,
-            )
-        });
-        if let Some(candidate) = candidates.into_iter().next() {
-            return Some(candidate);
+            ))
         }
-    }
-    None
-}
-
-pub(super) fn select_radial_destination(
-    source: &AvailableMove,
-    current: &AvailableMove,
-    reachable: &[AvailableMove],
-    away_from_source: bool,
-) -> Option<AvailableMove> {
-    let current_direction = hex_direction_index(source, current);
-    let current_distance = source.hex.distance_to(current.hex);
-    let mut candidates = reachable
-        .iter()
-        .filter(|candidate| {
-            candidate.layer == current.layer
-                && hex_direction_index(source, candidate) == current_direction
-                && if away_from_source {
-                    source.hex.distance_to(candidate.hex) > current_distance
-                } else {
-                    source.hex.distance_to(candidate.hex) < current_distance
-                }
-        })
-        .cloned()
-        .collect::<Vec<_>>();
-    candidates.sort_by_key(|candidate| {
-        (
-            source.hex.distance_to(candidate.hex),
+        "right" if candidate.layer == reference.layer && candidate.hex.x > reference.hex.x => {
+            Some((
+                (candidate.hex.y - reference.hex.y).abs(),
+                candidate.hex.x - reference.hex.x,
+                candidate.hex.x,
+                candidate.hex.y,
+            ))
+        }
+        "up" if candidate.layer == reference.layer && candidate.hex.y < reference.hex.y => Some((
+            (candidate.hex.x - reference.hex.x).abs(),
+            reference.hex.y - candidate.hex.y,
             candidate.hex.x,
             candidate.hex.y,
-        )
-    });
-    if away_from_source {
-        candidates.into_iter().next()
-    } else {
-        candidates.pop()
-    }
+        )),
+        "down" if candidate.layer == reference.layer && candidate.hex.y > reference.hex.y => {
+            Some((
+                (candidate.hex.x - reference.hex.x).abs(),
+                candidate.hex.y - reference.hex.y,
+                candidate.hex.x,
+                candidate.hex.y,
+            ))
+        }
+        _ => None,
+    };
+    reachable
+        .iter()
+        .filter_map(|candidate| candidate_key(candidate).map(|key| (key, candidate)))
+        .min_by_key(|(key, _)| *key)
+        .map(|(_, candidate)| candidate.clone())
+}
+
+pub(super) fn select_nearest_layer_destination(
+    reference: &AvailableMove,
+    reachable: &[AvailableMove],
+    direction: &str,
+) -> Option<AvailableMove> {
+    reachable
+        .iter()
+        .filter_map(|candidate| match direction {
+            "layer-up" if candidate.layer > reference.layer => Some((
+                candidate.layer - reference.layer,
+                reference.hex.distance_to(candidate.hex),
+                candidate.hex.x,
+                candidate.hex.y,
+                candidate,
+            )),
+            "layer-down" if candidate.layer < reference.layer => Some((
+                reference.layer - candidate.layer,
+                reference.hex.distance_to(candidate.hex),
+                candidate.hex.x,
+                candidate.hex.y,
+                candidate,
+            )),
+            _ => None,
+        })
+        .min_by_key(|(layer_distance, hex_distance, q, r, _)| {
+            (*layer_distance, *hex_distance, *q, *r)
+        })
+        .map(|(_, _, _, _, candidate)| candidate.clone())
 }
 
 pub(super) fn preview_path(
     source: &AvailableMove,
-    destination: Option<&AvailableMove>,
+    destination: &AvailableMove,
 ) -> Vec<AvailableMove> {
-    let Some(destination) = destination else {
-        return Vec::new();
-    };
     let mut path = source
         .hex
         .line_to(destination.hex)
@@ -132,26 +114,60 @@ mod tests {
     }
 
     #[test]
-    fn horizontal_preview_navigation_rotates_around_source() {
-        let source = cell(0, 0);
-        let current = cell(1, 0);
-        let reachable = vec![cell(1, 0), cell(1, -1), cell(0, -1), cell(-1, 0)];
-
-        let next = select_rotated_destination(&source, &current, &reachable, true);
-
-        assert_eq!(next.map(|move_| move_.hex), Some(hexx::Hex::new(1, -1)));
+    fn q_navigation_prefers_the_nearest_aligned_reachable_cell() {
+        let reference = cell(0, 0);
+        let aligned = cell(2, 0);
+        let off_axis = cell(1, 1);
+        assert_eq!(
+            select_nearest_axial_destination(&reference, &[off_axis, aligned.clone()], "right"),
+            Some(aligned)
+        );
     }
 
     #[test]
-    fn vertical_preview_navigation_changes_distance_on_current_ray() {
-        let source = cell(0, 0);
-        let current = cell(2, 0);
-        let reachable = vec![cell(1, 0), cell(2, 0), cell(3, 0), cell(1, -1)];
+    fn axial_navigation_uses_off_axis_then_stable_nearest_ties() {
+        let reference = cell(0, 0);
+        let first = cell(1, 1);
+        let second = cell(2, -1);
+        assert_eq!(
+            select_nearest_axial_destination(&reference, &[second, first.clone()], "right"),
+            Some(first)
+        );
+        assert_eq!(
+            select_nearest_axial_destination(&reference, &[cell(-1, 0)], "right"),
+            None
+        );
+    }
 
-        let closer = select_radial_destination(&source, &current, &reachable, false);
-        let farther = select_radial_destination(&source, &current, &reachable, true);
+    #[test]
+    fn r_navigation_and_layer_navigation_preserve_their_other_coordinates() {
+        let reference = cell(0, 0);
+        assert_eq!(
+            select_nearest_axial_destination(&reference, &[cell(1, -2), cell(0, -1)], "up")
+                .map(|candidate| candidate.hex),
+            Some(hexx::Hex::new(0, -1))
+        );
+        let mut upper = cell(1, 0);
+        upper.layer = 1;
+        assert_eq!(
+            select_nearest_layer_destination(&reference, &[upper.clone()], "layer-up"),
+            Some(upper)
+        );
+    }
 
-        assert_eq!(closer.map(|move_| move_.hex), Some(hexx::Hex::new(1, 0)));
-        assert_eq!(farther.map(|move_| move_.hex), Some(hexx::Hex::new(3, 0)));
+    #[test]
+    fn opposite_directions_stop_at_bounds_and_ignore_other_layers() {
+        let reference = cell(0, 0);
+        let mut other_layer = cell(-1, 0);
+        other_layer.layer = 1;
+        assert_eq!(
+            select_nearest_axial_destination(&reference, &[cell(1, 0), other_layer], "left"),
+            None
+        );
+        assert_eq!(
+            select_nearest_axial_destination(&reference, &[cell(0, 1), cell(1, -1)], "down")
+                .map(|candidate| candidate.hex),
+            Some(hexx::Hex::new(0, 1))
+        );
     }
 }

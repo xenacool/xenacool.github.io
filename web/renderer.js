@@ -2,7 +2,7 @@
 // Rust publishes authoritative simulation presentation data; Three.js owns the
 // visible WebGL2 canvas.
 import * as THREE from './vendor/three.module.min.js';
-import { advanceGlbAnimations, loadAnimationBundle, loadModel, syncGlbEntities } from './glb_actor.js';
+import { advanceGlbAnimations, glbAssetStates, loadAnimationBundle, loadModel, syncGlbEntities } from './glb_actor.js';
 import { facingYaw, HEX_DIRECTION_OFFSET } from './facing.js';
 
 const PRESENTATION_MOTION = Object.freeze({
@@ -100,6 +100,10 @@ export function createNativePresentation(canvas) {
     const teamMarkers = new Map();
     const waypointMarkers = new Map();
     const mixers = new Map();
+    let initialActors = null;
+    let initialActorAssets = null;
+    let initialActorReadiness = 'waiting';
+    let initialActorFailure = null;
     window.__pystralThreeMixers = mixers;
     window.__pystralThreeAdvanceAnimations = (seconds) => advanceGlbAnimations(mixers, seconds);
     window.__pystralThreePoseProfile = () => ({ ready: glbManifest !== null });
@@ -147,6 +151,79 @@ export function createNativePresentation(canvas) {
     window.__pystralThreeProfile = () => ({ ...profile });
     window.__pystralThreeFpsProfile = () => snapshotFps(profile);
     window.__pystralThreeGlbProfile = () => ({ ready: profile.nativeGlbReady, models: profile.nativeGlbModels });
+    const isDrawableActor = (record) => {
+        let drawable = false;
+        record?.instance?.traverse((child) => { drawable ||= child.isMesh; });
+        return Boolean(record?.loaded && drawable
+            && record.group.position.toArray().every(Number.isFinite));
+    };
+    const snapshotInitialActors = () => ({
+        status: initialActorReadiness,
+        clock: initialActors?.clock ?? null,
+        required: initialActors?.actors || [],
+        requiredAssets: initialActorAssets ? [...initialActorAssets] : [],
+        attached: initialActors?.actors.filter(({ id }) => isDrawableActor(nativeMeshes.get(String(id))))
+            .map(({ id }) => id) || [],
+        assets: glbAssetStates(),
+        error: initialActorFailure,
+    });
+    const refreshInitialActorReadiness = () => {
+        if (!initialActorAssets || initialActorReadiness === 'ready' || initialActorReadiness === 'failed') return;
+        const states = glbAssetStates();
+        const names = initialActorAssets;
+        const failed = states.find((state) => state.status === 'failed'
+            && (state.kind === 'animation bundle' || names.has(state.name)));
+        if (failed) {
+            initialActorReadiness = 'failed';
+            initialActorFailure = failed;
+            window.dispatchEvent(new CustomEvent('pystral-three-initial-actors-failed', {
+                detail: snapshotInitialActors(),
+            }));
+            return;
+        }
+        const bundlesReady = Object.keys(glbManifest?.animation_bundles || {}).every((name) =>
+            states.some((state) => state.kind === 'animation bundle' && state.name === name
+                && state.status === 'ready'));
+        const modelsReady = [...names].every((name) => states.some((state) => state.kind === 'model'
+            && state.name === name && state.status === 'ready'));
+        if (modelsReady && bundlesReady && initialActors?.actors.length > 0
+            && initialActors.actors.every(({ id }) => isDrawableActor(nativeMeshes.get(String(id))))) {
+            initialActorReadiness = 'ready';
+            window.dispatchEvent(new CustomEvent('pystral-three-initial-actors-ready', {
+                detail: snapshotInitialActors(),
+            }));
+        }
+    };
+    const captureInitialActors = (frame) => {
+        if (!initialActorAssets || !glbManifest) return;
+        const actors = (frame?.entities || []).filter((entity) => entity.asset
+            && initialActorAssets.has(entity.asset) && Array.isArray(entity.world_position))
+            .map((entity) => ({ id: entity.id, asset: entity.asset }));
+        if (actors.length > 0) {
+            if (!initialActors) initialActors = { clock: Number(frame.tick ?? 0), actors: [] };
+            for (const actor of actors) {
+                if (!initialActors.actors.some(({ id }) => id === actor.id)) initialActors.actors.push(actor);
+            }
+        }
+    };
+    window.__pystralThreeInitialActors = snapshotInitialActors;
+    const onGlbAssetState = () => refreshInitialActorReadiness();
+    const onGlbRecordAttached = () => refreshInitialActorReadiness();
+    const onInitialActorAssets = (event) => {
+        const assets = [...new Set(event.detail || [])].filter((asset) => glbManifest?.models?.[asset]);
+        if (assets.length === 0 || initialActorAssets) return;
+        initialActorAssets = new Set(assets);
+        initialActorReadiness = 'loading';
+        Promise.all([
+            ...assets.map((asset) => loadModel(glbManifest, asset)),
+            ...Object.keys(glbManifest.animation_bundles || {}).map((bundle) => loadAnimationBundle(glbManifest, bundle)),
+        ]).catch(() => refreshInitialActorReadiness());
+        captureInitialActors(window.__pystralThreeFrame);
+        refreshInitialActorReadiness();
+    };
+    window.addEventListener('pystral-glb-asset-state', onGlbAssetState);
+    window.addEventListener('pystral-glb-record-attached', onGlbRecordAttached);
+    window.addEventListener('pystral-initial-actor-assets', onInitialActorAssets);
     // The camera controller can mark a requested transition immediately;
     // frame ingress also marks changes observed in authoritative camera data.
     window.__pystralThreeMarkCameraMotion = () => {
@@ -232,7 +309,9 @@ export function createNativePresentation(canvas) {
             map: window.__pystralThreeStaticMap || null,
             materials: window.__pystralThreeStaticMaterials || {},
         };
+        captureInitialActors(window.__pystralThreeFrame);
         applyNativeFrame(window.__pystralThreeFrame);
+        refreshInitialActorReadiness();
         window.__pystralRenderFramePending = false;
     };
     window.addEventListener('pystral-render-frame', frameListener);
@@ -256,7 +335,14 @@ export function createNativePresentation(canvas) {
             profile.nativeGlbReady = true;
             profile.nativeGlbModels = Object.keys(manifest.models || {}).length;
             window.dispatchEvent(new CustomEvent('pystral-three-glb-ready'));
-            if (window.__pystralThreeFrame) applyNativeFrame(window.__pystralThreeFrame);
+            if (window.__pystralInitialActorAssets) {
+                onInitialActorAssets({ detail: window.__pystralInitialActorAssets });
+            }
+            if (window.__pystralThreeFrame) {
+                captureInitialActors(window.__pystralThreeFrame);
+                applyNativeFrame(window.__pystralThreeFrame);
+                refreshInitialActorReadiness();
+            }
         })
         .catch((error) => console.warn('Native GLB manifest unavailable:', error));
     let active = true;
@@ -355,6 +441,7 @@ export function createNativePresentation(canvas) {
             window.removeEventListener('pystral-render-frame', frameListener);
             delete window.__pystralThreeMarkCameraMotion;
             delete window.__pystralThreeGlbProfile;
+            delete window.__pystralThreeInitialActors;
             delete window.__pystralThreePoseProfile;
             delete window.__pystralThreeNativeScene;
             delete window.__pystralThreeNativeCamera;
@@ -372,6 +459,9 @@ export function createNativePresentation(canvas) {
             delete window.__pystralThreeLoadAnimationBundles;
             delete window.__pystralThreeAdvanceAnimations;
             delete window.__pystralThreeActorCatalog;
+            window.removeEventListener('pystral-glb-asset-state', onGlbAssetState);
+            window.removeEventListener('pystral-glb-record-attached', onGlbRecordAttached);
+            window.removeEventListener('pystral-initial-actor-assets', onInitialActorAssets);
             actorMaskMeshes.forEach((mesh) => mesh.material.dispose());
             actorMaskMeshes.clear();
             actorMask?.dispose();
