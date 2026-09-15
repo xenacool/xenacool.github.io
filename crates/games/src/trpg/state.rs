@@ -1,8 +1,8 @@
 use crate::{
     AbilityDef, AbilityId, AbilityModifierDeck, ActorClassId, CollisionMap, DerivedStat,
     DerivedStats, EquipmentSlots, Gender, JobDef, JobId, ModifierStacking, MoveProgram, MovementId,
-    PassiveDef, PassiveId, ReactionDef, ReactionId, SeededRng, TacticalDomain, TagBag, TagId,
-    TagRegistry, TimedModifier, UnitStats,
+    OccupiedTraversal, PassiveDef, PassiveId, ReactionDef, ReactionId, SeededRng, TacticalDomain,
+    TagBag, TagId, TagRegistry, TimedModifier, UnitStats,
 };
 use hexx::{Hex, HexBounds};
 pub use npc_engine_core::{AgentId, StateDiffRef, StateDiffRefMut};
@@ -246,8 +246,6 @@ impl GridMap {
         self.bounds.contains(cell) && self.tiles.contains_key(&cell)
     }
 
-    /// Units occupy their destination tile plus one tile-height above it.
-    /// An absent upper layer is open space; a tile there is a solid ceiling.
     pub fn has_unit_clearance(&self, cell: GridCell) -> bool {
         self.contains(cell) && !self.contains(GridCell::new(cell.hex, cell.layer.saturating_add(1)))
     }
@@ -281,8 +279,6 @@ pub struct UnitState {
 }
 
 impl UnitState {
-    /// Applies one already-resolved job level. Resolution belongs to the
-    /// ruleset/Rhai boundary; this method is the single tactical state update.
     pub fn apply_job_level(&mut self, job: &JobDef) -> Result<(), String> {
         self.stats = job.base_stats.clone();
         match self.job_history.last_mut() {
@@ -308,15 +304,10 @@ impl UnitState {
         Ok(())
     }
 
-    /// Apply resolved damage at the unit-state boundary. Damage effects must
-    /// never expose a negative health value to schedulers, evaluators, or
-    /// replay consumers.
     pub fn apply_damage(&mut self, damage: i32) {
         self.health = self.health.clamp(0, self.derived_stats.health_max);
         self.health = self.health.saturating_sub(damage.max(0)).max(0);
     }
-
-    /// Apply resolved healing while preserving the unit health invariant.
     pub fn apply_healing(&mut self, amount: i32) {
         self.health = self.health.clamp(0, self.derived_stats.health_max);
         self.health = self
@@ -324,7 +315,6 @@ impl UnitState {
             .saturating_add(amount.max(0))
             .min(self.derived_stats.health_max);
     }
-
     pub fn available_action_abilities(
         &self,
         job_registry: &HashMap<JobId, JobDef>,
@@ -350,7 +340,6 @@ impl UnitState {
         }
         Ok(abilities)
     }
-
     pub fn stats_with_passives(&self, passives: &HashMap<PassiveId, PassiveDef>) -> UnitStats {
         let mut stats = self.stats.clone();
         for passive in &self.passive_abilities {
@@ -371,7 +360,6 @@ impl UnitState {
         }
         stats
     }
-
     pub fn add_timed_modifier(&mut self, modifier: TimedModifier) -> Result<(), String> {
         if modifier.remaining_turns == 0 {
             return Err("Timed modifier must last at least one owner turn".to_string());
@@ -392,7 +380,6 @@ impl UnitState {
             .retain(|modifier| modifier.remaining_turns > 0);
     }
 }
-
 pub type TacticalGrid = GridMap;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -406,11 +393,18 @@ pub enum ActionError {
     InvalidFacing(String),
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ValidatedMove {
     pub agent: AgentId,
     pub destination: GridCell,
     pub ap_cost: u8,
+    pub path: Vec<GridCell>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct ReachableRoute {
+    ap_cost: u8,
+    path: Vec<GridCell>,
 }
 
 pub fn validate_move(
@@ -425,13 +419,13 @@ pub fn validate_move(
     if unit.health <= 0 {
         return Err(ActionError::DeadAgent(agent));
     }
-    let destinations = reachable_cells(state, agent)
+    let destinations = reachable_routes(state, agent)
         .map_err(|_| ActionError::UnknownMovement(unit.movement_ability))?;
-    let ap_cost = destinations
+    let route = destinations
         .get(&destination)
-        .copied()
+        .cloned()
         .ok_or(ActionError::IllegalDestination(destination))?;
-    if unit.action_points < i32::from(ap_cost) {
+    if unit.action_points < i32::from(route.ap_cost) {
         return Err(ActionError::InsufficientActionPoints);
     }
     let program = state
@@ -449,18 +443,25 @@ pub fn validate_move(
     Ok(ValidatedMove {
         agent,
         destination,
-        ap_cost,
+        ap_cost: route.ap_cost,
+        path: route.path,
     })
 }
 
-/// Computes destinations using the movement program rather than render or
-/// caller-specific neighbor logic. Missing tiles can be traversed only by a
-/// movement program that explicitly permits crossing holes; they are never
-/// returned as destinations.
 pub fn reachable_cells(
     state: &TacticalState,
     agent: AgentId,
 ) -> Result<HashMap<GridCell, u8>, String> {
+    Ok(reachable_routes(state, agent)?
+        .into_iter()
+        .map(|(cell, route)| (cell, route.ap_cost))
+        .collect())
+}
+
+fn reachable_routes(
+    state: &TacticalState,
+    agent: AgentId,
+) -> Result<HashMap<GridCell, ReachableRoute>, String> {
     let unit = state
         .agents
         .get(&agent)
@@ -472,12 +473,13 @@ pub fn reachable_cells(
     let can_pay_resources = |ap: u8| {
         i32::from(ap) <= unit.action_points && program.can_pay_resources(unit.health, unit.mana)
     };
-    let occupied: std::collections::HashSet<GridCell> = state
+    let occupied: HashMap<GridCell, u8> = state
         .agents
         .values()
-        .map(|other| other.position)
-        .filter(|&cell| cell != unit.position)
+        .filter(|other| other.health > 0 && other.position != unit.position)
+        .map(|other| (other.position, other.team_id))
         .collect();
+    let hex_is_occupied = |cell: GridCell| occupied.keys().any(|other| other.hex == cell.hex);
     if program.teleport_range.is_some() {
         let mut tags = unit.turn_tags.clone();
         let cost = program.get_ap_cost(0, &mut tags);
@@ -485,22 +487,28 @@ pub fn reachable_cells(
         for cell in movement_neighbors(unit.position, program) {
             if state.grid.bounds.contains(cell)
                 && state.grid.has_unit_clearance(cell)
-                && !occupied.contains(&cell)
+                && !hex_is_occupied(cell)
                 && can_pay_resources(cost)
             {
-                destinations.insert(cell, cost);
+                destinations.insert(
+                    cell,
+                    ReachableRoute {
+                        ap_cost: cost,
+                        path: vec![unit.position, cell],
+                    },
+                );
             }
         }
         return Ok(destinations);
     }
     let mut best = HashMap::from([(unit.position, 0)]);
+    let mut predecessor = HashMap::new();
     let mut frontier = vec![ReachabilityNode {
         cell: unit.position,
         ap: 0,
         steps: 0,
         tags: unit.turn_tags.clone(),
     }];
-
     while !frontier.is_empty() {
         let index = frontier
             .iter()
@@ -515,8 +523,12 @@ pub fn reachable_cells(
 
         let candidates = movement_neighbors(node.cell, program);
         for next in candidates {
-            if !state.grid.bounds.contains(next)
-                || occupied.contains(&next) && !program.crosses_occupied
+            if !state.grid.bounds.contains(next) {
+                continue;
+            }
+            if let Some(team_id) = occupied.get(&next)
+                && !(program.occupied_traversal == OccupiedTraversal::AlliesOnly
+                    && *team_id == unit.team_id)
             {
                 continue;
             }
@@ -535,6 +547,7 @@ pub fn reachable_cells(
                 continue;
             }
             best.insert(next, ap);
+            predecessor.insert(next, node.cell);
             frontier.push(ReachabilityNode {
                 cell: next,
                 ap,
@@ -545,8 +558,20 @@ pub fn reachable_cells(
     }
 
     best.remove(&unit.position);
-    best.retain(|cell, _| state.grid.has_unit_clearance(*cell) && !occupied.contains(cell));
-    Ok(best)
+    best.retain(|cell, _| state.grid.has_unit_clearance(*cell) && !hex_is_occupied(*cell));
+    Ok(best
+        .into_iter()
+        .map(|(destination, ap_cost)| {
+            let mut path = vec![destination];
+            let mut cursor = destination;
+            while cursor != unit.position {
+                cursor = predecessor[&cursor];
+                path.push(cursor);
+            }
+            path.reverse();
+            (destination, ReachableRoute { ap_cost, path })
+        })
+        .collect())
 }
 
 fn movement_neighbors(cell: GridCell, program: &MoveProgram) -> Vec<GridCell> {

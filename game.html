@@ -125,6 +125,14 @@
         }
         #hud-dock > * { pointer-events: auto; }
         #hud-dock > * { min-width: 0; }
+        #team-legend {
+            position: fixed; left: 12px; bottom: 12px; z-index: 145;
+            display: flex; gap: 8px; padding: 6px 8px; border-radius: 6px;
+            background: rgba(16, 27, 45, 0.84); border: 1px solid #31415e;
+            color: #eef6ff; font: 12px sans-serif;
+        }
+        #team-legend [data-team-id] { display: inline-flex; align-items: center; gap: 4px; }
+        #team-legend i { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
         #hud-dock .hud-scroll-region {
             overflow-y: auto;
             overscroll-behavior: contain;
@@ -502,6 +510,7 @@
     <button id="loading-retry" type="button" hidden>Retry</button>
 </section>
 <canvas id="canvas"></canvas>
+<section id="team-legend" aria-label="Team legend" hidden></section>
 <div id="entity-viewer"></div>
 <div id="history-viewer"></div>
 <section id="heartbeat-panel" aria-label="Worker heartbeat">

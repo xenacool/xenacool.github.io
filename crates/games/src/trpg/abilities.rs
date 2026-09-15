@@ -233,6 +233,12 @@ pub struct ReactionDef {
     pub self_heal: i32,
 }
 
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+pub enum OccupiedTraversal {
+    BlockAll,
+    AlliesOnly,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MoveProgram {
     pub id: MovementId,
@@ -240,7 +246,7 @@ pub struct MoveProgram {
     pub steps_ap_cost: Vec<(u8, u8)>, // (step-threshold, AP cost)
     pub vertical_deltas: Vec<i32>,
     pub crosses_holes: bool,
-    pub crosses_occupied: bool,
+    pub occupied_traversal: OccupiedTraversal,
     pub teleport_range: Option<u32>,
     pub emit_tags: Vec<(TagId, u8)>,
     pub consume_tags: Vec<(TagId, u8, u8)>,
@@ -319,7 +325,7 @@ mod cost_tests {
             steps_ap_cost: vec![(1, 0)],
             vertical_deltas: vec![],
             crosses_holes: false,
-            crosses_occupied: false,
+            occupied_traversal: super::OccupiedTraversal::AlliesOnly,
             teleport_range: None,
             emit_tags: vec![],
             consume_tags: vec![],
@@ -347,7 +353,7 @@ mod cost_tests {
             steps_ap_cost: vec![(1, 0)],
             vertical_deltas: vec![],
             crosses_holes: false,
-            crosses_occupied: false,
+            occupied_traversal: super::OccupiedTraversal::AlliesOnly,
             teleport_range: None,
             emit_tags: vec![],
             consume_tags: vec![(tag, 1, 1)],

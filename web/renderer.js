@@ -10,6 +10,30 @@ const PRESENTATION_MOTION = Object.freeze({
     walkAmplitude: 0.06,
     hitRecoil: 0.08,
 });
+const TEAM_COLORS = Object.freeze(['#1B9E77', '#D95F02', '#7570B3', '#E7298A', '#66A61E', '#E6AB02', '#A6761D']);
+
+function teamColor(teamId, fallback = 0xffffff) {
+    const id = Number(teamId);
+    return Number.isInteger(id) && id > 0
+        ? new THREE.Color(TEAM_COLORS[(id - 1) % TEAM_COLORS.length])
+        : new THREE.Color(fallback);
+}
+
+function syncTeamLegend(frame) {
+    const legend = document.getElementById('team-legend');
+    if (!legend) return;
+    const teams = [...new Set((frame.entities || []).map((entity) => Number(entity.team_id))
+        .filter((teamId) => Number.isInteger(teamId) && teamId > 0))].sort((a, b) => a - b);
+    legend.hidden = teams.length === 0;
+    legend.replaceChildren(...teams.map((teamId) => {
+        const entry = document.createElement('span');
+        entry.dataset.teamId = String(teamId);
+        const swatch = document.createElement('i');
+        swatch.style.backgroundColor = TEAM_COLORS[(teamId - 1) % TEAM_COLORS.length];
+        entry.append(swatch, `Team ${teamId}`);
+        return entry;
+    }));
+}
 export function hexCenter(q, r, pointy, sizeX, sizeZ) {
     return pointy
         ? [Math.sqrt(3) * (q + r / 2) * sizeX, 1.5 * r * sizeZ]
@@ -89,6 +113,8 @@ export function createNativePresentation(canvas) {
         window.__pystralThreeNativeCamera = camera;
         window.__pystralThreeNativeMeshes = nativeMeshes;
     window.__pystralThreeNativeProfile = { entities: 0, mapTiles: 0 };
+    window.__pystralPresentationTrace = [];
+    const activePresentationTransitions = new Map();
     window.__pystralThreeMaskEnabled = true;
     const profile = {
         // 60 Hz is the highest stable target across supported WebGL2 browsers;
@@ -142,6 +168,46 @@ export function createNativePresentation(canvas) {
         // may resolve static atlas UVs for the supplied slice indices, never
         // gameplay or animation decisions.
         const frame = event.detail;
+        const debug = frame.presentation_debug;
+        if (debug) {
+            const clock = Number(debug.presentation_clock ?? frame.tick ?? 0);
+            const transitions = debug.movement_tweens || [];
+            const activeKeys = new Set();
+            const lifecycle = [];
+            for (const transition of transitions) {
+                const key = `${debug.playback_epoch ?? 0}:${transition.event_index}:${transition.entity_id}`;
+                if (!activePresentationTransitions.has(key)) {
+                    activePresentationTransitions.set(key, transition);
+                    lifecycle.push({ kind: 'started', key, entityId: transition.entity_id, eventIndex: transition.event_index });
+                }
+                if (transition.completed) {
+                    activePresentationTransitions.delete(key);
+                    lifecycle.push({ kind: 'completed', key, entityId: transition.entity_id, eventIndex: transition.event_index });
+                } else {
+                    activeKeys.add(key);
+                }
+            }
+            for (const [key, transition] of activePresentationTransitions) {
+                if (!activeKeys.has(key)) {
+                    activePresentationTransitions.delete(key);
+                    lifecycle.push({ kind: 'completed', key, entityId: transition.entity_id, eventIndex: transition.event_index });
+                }
+            }
+            window.__pystralPresentationTrace.push({
+                clock,
+                historyIndex: Number(debug.history_index ?? 0),
+                epoch: Number(debug.playback_epoch ?? 0),
+                transitions,
+                lifecycle,
+                acknowledgedBarrier: debug.last_sent_animation_ack ?? null,
+                walkers: (frame.entities || [])
+                    .filter((entity) => entity.animation_state === 'walk')
+                    .map((entity) => ({ id: entity.id, position: entity.world_position })),
+            });
+            if (window.__pystralPresentationTrace.length > 512) {
+                window.__pystralPresentationTrace.shift();
+            }
+        }
         profile.frameSamples += 1;
         profile.appliedFrameSamples += 1;
         if (Array.isArray(frame.entities) && frame.entities.length > 0
@@ -410,8 +476,8 @@ function syncNativeIndicators(frame) {
         if (!indicator || !entity.world_position) return;
         if (indicator.kind === 'facing' && (!entity.asset || !isActorEntity(entity))) return;
         const id = String(entity.id);
-        const color = Array.isArray(indicator.color)
-            ? new THREE.Color(...indicator.color) : new THREE.Color(indicator.color || 0xffffff);
+        const color = teamColor(entity.team_id, Array.isArray(indicator.color)
+            ? new THREE.Color(...indicator.color) : indicator.color || 0xffffff);
         const state = String(indicator.state || 'committed');
         let marker = markers.get(id);
         if (!marker) {
@@ -466,6 +532,7 @@ function applyNativeFrame(frame) {
         camera.matrixWorld.decompose(camera.position, camera.quaternion, camera.scale);
     }
     applyNativeMap(frame, scene);
+    syncTeamLegend(frame);
     syncNativeWaypoints(frame);
     syncNativeIndicators(frame);
     const manifest = window.__pystralThreeGlbManifest;

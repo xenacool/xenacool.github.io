@@ -231,6 +231,22 @@ test('committed movement waits for its animation barrier', async ({ page }) => {
     return false;
   });
   expect(translated).toBe(true);
+  const causalTrace = await page.evaluate(() => window.__pystralPresentationTrace.filter((entry) =>
+    entry.transitions.length > 0 && entry.walkers.length > 0));
+  expect(causalTrace.length).toBeGreaterThan(1);
+  expect(causalTrace.every((entry, index) => index === 0 || entry.clock > causalTrace[index - 1].clock)).toBe(true);
+  const lifecycle = await page.evaluate(() => window.__pystralPresentationTrace.flatMap((entry) =>
+    entry.lifecycle.map((event) => ({ ...event, clock: entry.clock, acknowledgedBarrier: entry.acknowledgedBarrier }))));
+  const started = lifecycle.find((event) => event.kind === 'started');
+  const completed = lifecycle.find((event) => event.kind === 'completed' && event.key === started?.key);
+  expect(started).toBeTruthy();
+  expect(completed).toBeTruthy();
+  expect(completed.clock).toBeGreaterThan(started.clock);
+  // This deadline-bounded predicate establishes the actual happens-before
+  // chain; it does not rely on an arbitrary sleep matching the tween length.
+  await page.waitForFunction(({ completedClock }) => window.__pystralPresentationTrace
+    .some((entry) => entry.clock > completedClock && entry.acknowledgedBarrier !== null),
+  { completedClock: completed.clock }, { timeout: 15000 });
 });
 
 test('End Turn opens facing after the implicit wait settles', async ({ page }) => {

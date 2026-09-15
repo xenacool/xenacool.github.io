@@ -243,6 +243,43 @@ test.describe('Three.js compositor performance contract', () => {
     expect(walkingAfterCue).toBe('Walking_A');
   });
 
+  test('a completed ability cue restores a repeating idle clip', async ({ page }) => {
+    await page.goto('/game.html');
+    await page.waitForFunction(() => window.__pystralThreeGlbProfile?.().ready);
+    await page.waitForFunction(() => window.__pystralThreeGlbLoadedModels?.has('Mage'));
+    await page.evaluate(() => { window.publish_render_frame = () => {}; });
+    await page.evaluate(() => {
+      const frame = (state) => window.dispatchEvent(new CustomEvent('pystral-render-frame', {
+        detail: { version: 1, tick: Math.floor(performance.now()), cameras: [], map: null, materials: {},
+          entities: [{ id: 956, kind: 'character', asset: 'Mage', world_position: [0, 0, 0], scale: 1,
+            animation_clip: 'general:Idle_A', animation_cue: 77,
+            animation_cue_clip: 'ranged:Ranged_Magic_Shoot', animation_barrier: 77, ...state }] },
+      }));
+      frame({});
+    });
+    await page.waitForFunction(() => window.__pystralThreeMixers?.get('956')?.clips?.has('general:Idle_A'));
+    const result = await page.evaluate(() => {
+      const frame = (state) => window.dispatchEvent(new CustomEvent('pystral-render-frame', {
+        detail: { version: 1, tick: Math.floor(performance.now()), cameras: [], map: null, materials: {},
+          entities: [{ id: 956, kind: 'character', asset: 'Mage', world_position: [0, 0, 0], scale: 1,
+            animation_clip: 'general:Idle_A', animation_cue: 77,
+            animation_cue_clip: 'ranged:Ranged_Magic_Shoot', animation_barrier: 77, ...state }] },
+      }));
+      frame({});
+      window.__pystralThreeAdvanceAnimations(20);
+      frame({});
+      window.__pystralThreeAdvanceAnimations(20);
+      const animation = window.__pystralThreeMixers.get('956');
+      return { clip: animation.activeClip.name, repeating: animation.activeAction.loop === 2201,
+        clamped: animation.activeAction.clampWhenFinished, time: animation.activeAction.time,
+        duration: animation.activeClip.duration };
+    });
+    expect(result.clip).toBe('Idle_A');
+    expect(result.repeating).toBe(true);
+    expect(result.clamped).toBe(false);
+    expect(result.time).toBeLessThan(result.duration);
+  });
+
   test('idle animation advances between static runtime frames', async ({ page }) => {
     await page.goto('/game.html');
     await page.waitForFunction(() => window.__pystralThreeGlbProfile?.().ready);
@@ -256,12 +293,8 @@ test.describe('Three.js compositor performance contract', () => {
     // The GLB load is asynchronous; replay the retained static state just as
     // the production frame stream does after a model becomes available.
     await page.evaluate((detail) => window.dispatchEvent(new CustomEvent('pystral-render-frame', { detail })), idleFrame);
-    await page.waitForTimeout(100);
-    const elapsed = await page.evaluate((detail) => {
-      window.dispatchEvent(new CustomEvent('pystral-render-frame', { detail }));
-      return window.__pystralThreeMixers.get('954').activeAction?.time ?? 0;
-    }, idleFrame);
-    expect(elapsed).toBeGreaterThan(0.02);
+    await page.waitForFunction(() => window.__pystralThreeMixers.get('954').activeAction?.time > 0.02,
+      { timeout: 10000 });
   });
 
   test('walk animation advances while authoritative movement frames are static', async ({ page }) => {
@@ -276,12 +309,12 @@ test.describe('Three.js compositor performance contract', () => {
     await page.evaluate((detail) => window.dispatchEvent(new CustomEvent('pystral-render-frame', { detail })), walkFrame);
     await page.waitForFunction(() => window.__pystralThreeMixers?.get('957')?.clips?.has('movement:Walking_A'));
     await page.evaluate((detail) => window.dispatchEvent(new CustomEvent('pystral-render-frame', { detail })), walkFrame);
-    await page.waitForTimeout(100);
-    const walking = await page.evaluate((detail) => {
-      window.dispatchEvent(new CustomEvent('pystral-render-frame', { detail }));
+    await page.waitForFunction(() => window.__pystralThreeMixers.get('957').activeAction?.time > 0.02,
+      { timeout: 10000 });
+    const walking = await page.evaluate(() => {
       const animation = window.__pystralThreeMixers.get('957');
       return { clip: animation?.activeClip?.name, time: animation?.activeAction?.time ?? 0 };
-    }, walkFrame);
+    });
     expect(walking.clip).toBe('Walking_A');
     expect(walking.time).toBeGreaterThan(0.02);
   });
@@ -299,7 +332,10 @@ test.describe('Three.js compositor performance contract', () => {
     await page.evaluate((detail) => window.dispatchEvent(new CustomEvent('pystral-render-frame', { detail })), frame);
     await page.waitForFunction(() => window.__pystralThreeMixers?.has('955') && window.__pystralThreeMixers?.has('956'));
     await page.evaluate((detail) => window.dispatchEvent(new CustomEvent('pystral-render-frame', { detail })), frame);
-    await page.waitForTimeout(100);
+    await page.waitForFunction(() => [955, 956].every((id) =>
+      window.__pystralThreeMixers.get(String(id))?.activeAction?.time > 0.02), { timeout: 10000 });
+    await page.waitForFunction(() => [955, 956].every((id) =>
+      (window.__pystralThreeMixers.get(String(id))?.loopCount || 0) >= 1), { timeout: 30000 });
     const actors = await page.evaluate((detail) => {
       window.dispatchEvent(new CustomEvent('pystral-render-frame', { detail }));
       return [955, 956].map((id) => {
@@ -316,7 +352,7 @@ test.describe('Three.js compositor performance contract', () => {
       expect.objectContaining({ clip: 'Idle_A', boneBindings: expect.any(Number) }),
       expect.objectContaining({ clip: 'Skeletons_Idle', boneBindings: expect.any(Number) }),
     ]);
-    expect(actors.every((actor) => actor.time > 0.02 && actor.boneBindings > 0)).toBe(true);
+    expect(actors.every((actor) => actor.boneBindings > 0)).toBe(true);
   });
 
   test('releases a one-shot barrier only after its matching animation cue finishes', async ({ page }) => {

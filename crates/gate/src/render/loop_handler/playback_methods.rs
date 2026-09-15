@@ -95,6 +95,7 @@ impl LoopHandler {
         if let Event::MoveSprite {
             id,
             destination,
+            path,
             transition,
         } = event
         {
@@ -115,12 +116,16 @@ impl LoopHandler {
                         _ => None,
                     })
                     .unwrap_or(0);
+                let waypoints = if path.is_empty() {
+                    vec![pystral_core::log::MovementWaypoint {
+                        hex: from_hex,
+                        layer: from_layer,
+                    }]
+                } else {
+                    path.clone()
+                };
                 if let Some(tween) = ctx.movement_tweens.get_mut(id) {
-                    tween
-                        .path
-                        .extend(tween.to_hex.line_to(*destination).skip(1));
-                    tween.to_hex = *destination;
-                    tween.to_layer = from_layer;
+                    tween.path.extend(waypoints.into_iter().skip(1));
                     tween.duration_ms += f64::from(transition.duration_ms);
                     tween.event_index = event_index;
                 } else {
@@ -129,11 +134,7 @@ impl LoopHandler {
                         MovementTween {
                             playback_epoch,
                             event_index,
-                            from_hex,
-                            to_hex: *destination,
-                            path: from_hex.line_to(*destination).collect(),
-                            from_layer,
-                            to_layer: from_layer,
+                            path: waypoints,
                             start_time_ms: now,
                             duration_ms: f64::from(transition.duration_ms),
                             transition: transition.clone(),
@@ -141,15 +142,6 @@ impl LoopHandler {
                     );
                 }
             }
-        } else if let Event::UpdateProperty {
-            id,
-            property,
-            value: pystral_core::log::PropertyValue::Float(layer),
-        } = event
-            && property == "layer"
-            && let Some(tween) = ctx.movement_tweens.get_mut(id)
-        {
-            tween.to_layer = *layer as i32;
         } else if let Event::TweenProperty {
             id,
             property,

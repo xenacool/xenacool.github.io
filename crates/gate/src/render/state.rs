@@ -1,5 +1,4 @@
-use hexx::Hex;
-use pystral_core::log::{PropertyValue, TransitionConfig};
+use pystral_core::log::{MovementWaypoint, PropertyValue, TransitionConfig};
 use tween::{SineInOut, Tweener};
 
 pub struct PlaybackState {
@@ -40,11 +39,7 @@ impl Default for PlaybackState {
 pub struct MovementTween {
     pub playback_epoch: u64,
     pub event_index: usize,
-    pub from_hex: Hex,
-    pub to_hex: Hex,
-    pub path: Vec<Hex>,
-    pub from_layer: i32,
-    pub to_layer: i32,
+    pub path: Vec<MovementWaypoint>,
     pub start_time_ms: f64,
     pub duration_ms: f64,
     pub transition: TransitionConfig,
@@ -53,7 +48,7 @@ pub struct MovementTween {
 impl MovementTween {
     /// Returns the active axial edge and its local progress. A vertical-only
     /// move has no edge and therefore preserves the existing facing.
-    pub fn segment_at(&self, elapsed_ms: f64) -> Option<(Hex, Hex, f32)> {
+    pub fn segment_at(&self, elapsed_ms: f64) -> Option<(MovementWaypoint, MovementWaypoint, f32)> {
         let segments = self.path.len().saturating_sub(1);
         if segments == 0 {
             return None;
@@ -116,7 +111,11 @@ mod tests {
     use super::{CameraTween, MovementTween, sequence_ack_due};
     use hexx::Hex;
     use proptest::prelude::*;
-    use pystral_core::log::{TransitionConfig, TweenKind};
+    use pystral_core::log::{MovementWaypoint, TransitionConfig, TweenKind};
+
+    fn waypoint(hex: Hex, layer: i32) -> MovementWaypoint {
+        MovementWaypoint { hex, layer }
+    }
 
     #[test]
     fn camera_tween_uses_sine_in_out_and_completes() {
@@ -149,11 +148,10 @@ mod tests {
         let tween = MovementTween {
             playback_epoch: 0,
             event_index: 0,
-            from_hex: Hex::ZERO,
-            to_hex: Hex::new(2, -1),
-            path: Hex::ZERO.line_to(Hex::new(2, -1)).collect(),
-            from_layer: 0,
-            to_layer: 0,
+            path: Hex::ZERO
+                .line_to(Hex::new(2, -1))
+                .map(|hex| waypoint(hex, 0))
+                .collect(),
             start_time_ms: 0.0,
             duration_ms: 600.0,
             transition: TransitionConfig {
@@ -164,11 +162,35 @@ mod tests {
         };
         assert_eq!(
             tween.segment_at(0.0),
-            Some((Hex::ZERO, Hex::new(1, 0), 0.0))
+            Some((waypoint(Hex::ZERO, 0), waypoint(Hex::new(1, 0), 0), 0.0))
         );
         assert_eq!(
             tween.segment_at(450.0),
-            Some((Hex::new(1, 0), Hex::new(2, -1), 0.5))
+            Some((
+                waypoint(Hex::new(1, 0), 0),
+                waypoint(Hex::new(2, -1), 0),
+                0.5
+            ))
+        );
+    }
+
+    #[test]
+    fn movement_segment_preserves_vertical_waypoint_layers() {
+        let tween = MovementTween {
+            playback_epoch: 0,
+            event_index: 0,
+            path: vec![waypoint(Hex::ZERO, 0), waypoint(Hex::ZERO, 2)],
+            start_time_ms: 0.0,
+            duration_ms: 500.0,
+            transition: TransitionConfig {
+                duration_ms: 500,
+                delta_time_ms: 16.0,
+                tween: TweenKind::SineInOut,
+            },
+        };
+        assert_eq!(
+            tween.segment_at(250.0),
+            Some((waypoint(Hex::ZERO, 0), waypoint(Hex::ZERO, 2), 0.5))
         );
     }
 
@@ -178,15 +200,11 @@ mod tests {
             duration_ms in 1.0f64..10_000.0,
             elapsed_ms in 0.0f64..20_000.0,
         ) {
-            let path = Hex::ZERO.line_to(Hex::new(3, -1)).collect::<Vec<_>>();
+            let path = Hex::ZERO.line_to(Hex::new(3, -1)).map(|hex| waypoint(hex, 0)).collect::<Vec<_>>();
             let tween = MovementTween {
                 playback_epoch: 7,
                 event_index: 12,
-                from_hex: Hex::ZERO,
-                to_hex: Hex::new(3, -1),
                 path: path.clone(),
-                from_layer: 0,
-                to_layer: 0,
                 start_time_ms: 0.0,
                 duration_ms,
                 transition: TransitionConfig { duration_ms: duration_ms as u32, delta_time_ms: 16.0, tween: TweenKind::SineInOut },

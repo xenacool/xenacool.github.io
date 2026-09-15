@@ -60,6 +60,55 @@
     }
 
     #[test]
+    fn ally_only_traversal_keeps_the_authoritative_route_and_blocks_enemies() {
+        let source = GridCell::new(Hex::ZERO, 0);
+        let occupied = GridCell::new(Hex::new(1, 0), 0);
+        let destination = GridCell::new(Hex::new(2, 0), 0);
+        let mut config = SkirmishConfig::new(42);
+        config.add_unit(1, 1, "Caveman", source).unwrap();
+        config.add_unit(2, 1, "Mage", occupied).unwrap();
+        let mut state = config.build_state().unwrap();
+        state.grid.tiles.retain(|cell, _| *cell == source || *cell == occupied || *cell == destination);
+
+        let route = validate_move(&state, AgentId(1), destination).unwrap();
+        assert_eq!(route.path, vec![source, occupied, destination]);
+        assert!(!reachable_cells(&state, AgentId(1)).unwrap().contains_key(&occupied));
+
+        state.agents.get_mut(&AgentId(2)).unwrap().team_id = 2;
+        assert_eq!(
+            validate_move(&state, AgentId(1), destination),
+            Err(ActionError::IllegalDestination(destination))
+        );
+    }
+
+    proptest! {
+        #[test]
+        fn sampled_occupied_routes_never_cross_an_enemy(
+            distance in 2i32..5,
+            ally in proptest::bool::ANY,
+        ) {
+            let source = GridCell::new(Hex::ZERO, 0);
+            let occupied = GridCell::new(Hex::new(1, 0), 0);
+            let destination = GridCell::new(Hex::new(distance, 0), 0);
+            let mut config = SkirmishConfig::new(42);
+            config.add_unit(1, 1, "Caveman", source).unwrap();
+            config.add_unit(2, if ally { 1 } else { 2 }, "Mage", occupied).unwrap();
+            let mut state = config.build_state().unwrap();
+            state.grid.tiles.retain(|cell, _| cell.hex.x >= 0 && cell.hex.x <= distance && cell.hex.y == 0);
+
+            let result = validate_move(&state, AgentId(1), destination);
+            if ally {
+                let route = result.unwrap();
+                prop_assert_eq!(route.path.first(), Some(&source));
+                prop_assert_eq!(route.path.last(), Some(&destination));
+                prop_assert!(route.path.contains(&occupied));
+            } else {
+                prop_assert_eq!(result, Err(ActionError::IllegalDestination(destination)));
+            }
+        }
+    }
+
+    #[test]
     fn reachable_cells_uses_movement_defined_vertical_transitions() {
         let mut config = SkirmishConfig::new(42);
         config
@@ -86,7 +135,7 @@
                 steps_ap_cost: vec![(1, 1)],
                 vertical_deltas: vec![1],
                 crosses_holes: false,
-                crosses_occupied: false,
+                occupied_traversal: OccupiedTraversal::BlockAll,
                 teleport_range: None,
                 emit_tags: vec![],
                 consume_tags: vec![],
@@ -102,6 +151,32 @@
 
         let reachable = reachable_cells(&state, AgentId(1)).unwrap();
         assert_eq!(reachable.get(&upper), Some(&1));
+    }
+
+    #[test]
+    fn reachable_cells_never_offers_an_occupied_hex_at_another_layer() {
+        let mut config = SkirmishConfig::new(42);
+        let shared_hex = Hex::ZERO;
+        config.grid.bounds.max_layer = 1;
+        config
+            .grid
+            .set_tile(GridCell::new(shared_hex, 1), TileType::Rock)
+            .unwrap();
+        config.add_unit(1, 1, "Caveman", GridCell::new(shared_hex, 0)).unwrap();
+        config.add_unit(2, 1, "Mage", GridCell::new(shared_hex, 1)).unwrap();
+        let mut state = config.build_state().unwrap();
+        state.movement_registry.insert(MovementId(999), MoveProgram {
+            id: MovementId(999), name: "Climb".into(), steps_ap_cost: vec![(1, 1)],
+            vertical_deltas: vec![1], crosses_holes: false,
+            occupied_traversal: OccupiedTraversal::AlliesOnly, teleport_range: None,
+            emit_tags: vec![], consume_tags: vec![], mana_gain: 0, mana_cost: 0,
+            health_cost: 0, health_floor: 1,
+        });
+        state.agents.get_mut(&AgentId(1)).unwrap().movement_ability = MovementId(999);
+        assert_eq!(
+            validate_move(&state, AgentId(1), GridCell::new(shared_hex, 1)),
+            Err(ActionError::IllegalDestination(GridCell::new(shared_hex, 1)))
+        );
     }
 
     #[test]

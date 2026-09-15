@@ -48,7 +48,9 @@ protocol state with the default menu prompt.
 `PlaybackPresentation.tla` models the renderer-local history cursor and
 movement overlays. It exhaustively checks the bounded scrub/pause/restart
 interleavings: a tween belongs only to its playback epoch, a paused cursor has
-no active overlay, and history remains the authoritative cursor.
+no active overlay, and history remains the authoritative cursor. Its logical
+clock additionally proves start < completion < ACK; wall-clock time is only a
+failure deadline, not ordering evidence.
 
 `WorkerReplication.tla` models the gloo worker/main replication boundary in
 `crates/gate/src/worker.rs` and `crates/gate/src/main.rs`. `Watermark` is the
