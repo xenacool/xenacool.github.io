@@ -90,10 +90,13 @@ export function init_worker() {
 }
 
 /**
+ * @param {string} workspace_json
  * @returns {AppHandle}
  */
-export function run_app() {
-    const ret = wasm.run_app();
+export function run_app_with_workspace(workspace_json) {
+    const ptr0 = passStringToWasm0(workspace_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.run_app_with_workspace(ptr0, len0);
     if (ret[2]) {
         throw takeFromExternrefTable0(ret[1]);
     }
