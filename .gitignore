@@ -1,6 +1,9 @@
-# WASM example binaries — only committed to gh-pages branch, never main
+# WASM binaries — only committed to gh-pages branch, never main
 demos/examples/**/*.wasm
 demos/examples/**/*.js
+demos/wasm/**/*.wasm
+demos/wasm/**/*.js
+demos/wasm/**/*.d.ts
 
 # Rust build artifacts
 target/
