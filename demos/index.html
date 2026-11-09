@@ -36,19 +36,118 @@
 
   <!-- Main Content -->
   <main class="main">
-    <div class="demos-placeholder">
-      <div class="demos-placeholder__icon">🚀</div>
-      <h1 class="demos-placeholder__title">Interactive Demos</h1>
-      <p class="demos-placeholder__text">
-        Interactive WebAssembly demos are coming soon. These will showcase composable dragging,
-        procedural mesh generation, and their composition with third-party libraries like Avian —
-        all running directly in your browser.
+    <section class="hero">
+      <h1 class="hero__title">Interactive Demos</h1>
+      <p class="hero__subtitle">
+        Live WebAssembly demos running Bevy in your browser. Select a demo below to start it.
       </p>
-      <a href="/" class="demos-placeholder__back">
-        ← Back to home
-      </a>
+    </section>
+
+    <!-- Demo Tabs -->
+    <div class="demo-tabs">
+      <input type="radio" name="demo-tab" id="tab-cozy" value="cozy" checked>
+      <label for="tab-cozy" class="demo-tab__label">🏠 Cozy Castle</label>
+      <input type="radio" name="demo-tab" id="tab-kart" value="kart">
+      <label for="tab-kart" class="demo-tab__label">🏎️ Kart Racer Editor</label>
+      <input type="radio" name="demo-tab" id="tab-physics" value="physics">
+      <label for="tab-physics" class="demo-tab__label">⚡ Physics Lab</label>
+      <input type="radio" name="demo-tab" id="tab-examples" value="examples">
+      <label for="tab-examples" class="demo-tab__label">📚 All Examples</label>
+    </div>
+
+    <!-- Cozy Castle Demo -->
+    <div class="demo-panel demo-panel--cozy">
+      <div class="demo-panel__header">
+        <h2>Cozy Castle</h2>
+        <p>A drag-and-drop castle builder using composable dragging with gradient meshes. Move walls, place terrain, and design your own cozy castle.</p>
+      </div>
+      <div class="demo-panel__canvas">
+        <canvas class="bevy-example" data-lib="bevy_composable_dragging" data-example="cozy_castle_3d" data-width="1280" data-height="720" width="640" height="360"></canvas>
+      </div>
+      <div class="demo-panel__links">
+        <a href="https://github.com/xenacool/bevy_composable_dragging/tree/main/examples/cozy_castle" target="_blank" rel="noopener noreferrer">View source →</a>
+      </div>
+    </div>
+
+    <!-- Kart Racer Editor Demo -->
+    <div class="demo-panel demo-panel--kart">
+      <div class="demo-panel__header">
+        <h2>Kart Racer Editor</h2>
+        <p>Design and edit kart racing tracks with drag-and-drop placement. Build tracks, place karts, and test your race layouts.</p>
+      </div>
+      <div class="demo-panel__canvas">
+        <canvas class="bevy-example" data-lib="bevy_composable_dragging" data-example="kart_racer_editor" data-width="1280" data-height="720" width="640" height="360"></canvas>
+      </div>
+      <div class="demo-panel__links">
+        <a href="https://github.com/xenacool/bevy_composable_dragging/tree/main/examples/kart_racer_editor" target="_blank" rel="noopener noreferrer">View source →</a>
+      </div>
+    </div>
+
+    <!-- Physics Lab Demo -->
+    <div class="demo-panel demo-panel--physics">
+      <div class="demo-panel__header">
+        <h2>Physics Lab</h2>
+        <p>Interactive physics simulation using composable dragging with Avian3D. Drag objects, test collisions, and experiment with physics properties.</p>
+      </div>
+      <div class="demo-panel__canvas">
+        <canvas class="bevy-example" data-lib="bevy_composable_dragging" data-example="physics_lab" data-width="1280" data-height="720" width="640" height="360"></canvas>
+      </div>
+      <div class="demo-panel__links">
+        <a href="https://github.com/xenacool/bevy_composable_dragging/tree/main/examples/physics_lab" target="_blank" rel="noopener noreferrer">View source →</a>
+      </div>
+    </div>
+
+    <!-- All Examples List -->
+    <div class="demo-panel demo-panel--examples">
+      <div class="demo-panel__header">
+        <h2>All Examples</h2>
+        <p>Complete list of interactive examples from both libraries.</p>
+      </div>
+      <div class="demo-examples-grid">
+        <div class="demo-examples-group">
+          <h3>bevy_composable_dragging</h3>
+          <ul class="demo-example-list">
+            <li><a href="#" class="demo-example-link" data-lib="bevy_composable_dragging" data-example="hello">Hello</a></li>
+            <li><a href="#" class="demo-example-link" data-lib="bevy_composable_dragging" data-example="toggle">Toggle</a></li>
+            <li><a href="#" class="demo-example-link" data-lib="bevy_composable_dragging" data-example="three_way">Three Way</a></li>
+            <li><a href="#" class="demo-example-link" data-lib="bevy_composable_dragging" data-example="reorder_list">Reorder List</a></li>
+            <li><a href="#" class="demo-example-link" data-lib="bevy_composable_dragging" data-example="slider">Slider</a></li>
+            <li><a href="#" class="demo-example-link" data-lib="bevy_composable_dragging" data-example="clock">Clock</a></li>
+            <li><a href="#" class="demo-example-link" data-lib="bevy_composable_dragging" data-example="scheduler">Scheduler</a></li>
+            <li><a href="#" class="demo-example-link" data-lib="bevy_composable_dragging" data-example="tessellations">Tessellations</a></li>
+            <li><a href="#" class="demo-example-link" data-lib="bevy_composable_dragging" data-example="gradient_kanban_2d">Gradient Kanban 2D</a></li>
+            <li><a href="#" class="demo-example-link" data-lib="bevy_composable_dragging" data-example="gizmo_3d">Gizmo 3D</a></li>
+            <li><a href="#" class="demo-example-link" data-lib="bevy_composable_dragging" data-example="gradient_hanoi_3d">Gradient Hanoi 3D</a></li>
+          </ul>
+        </div>
+        <div class="demo-examples-group">
+          <h3>bevy_gradmesh</h3>
+          <ul class="demo-example-list">
+            <li><a href="#" class="demo-example-link" data-lib="bevy_gradmesh" data-example="shapes">Shapes</a></li>
+            <li><a href="#" class="demo-example-link" data-lib="bevy_gradmesh" data-example="styles">Styles</a></li>
+            <li><a href="#" class="demo-example-link" data-lib="bevy_gradmesh" data-example="sdf_2d">SDF 2D</a></li>
+            <li><a href="#" class="demo-example-link" data-lib="bevy_gradmesh" data-example="curves">Curves</a></li>
+            <li><a href="#" class="demo-example-link" data-lib="bevy_gradmesh" data-example="sweep">Sweep</a></li>
+            <li><a href="#" class="demo-example-link" data-lib="bevy_gradmesh" data-example="terrain">Terrain</a></li>
+            <li><a href="#" class="demo-example-link" data-lib="bevy_gradmesh" data-example="deformation">Deformation</a></li>
+            <li><a href="#" class="demo-example-link" data-lib="bevy_gradmesh" data-example="appearance">Appearance</a></li>
+          </ul>
+        </div>
+      </div>
     </div>
   </main>
+
+  <!-- Load Bevy runner for demo canvases -->
+  <link rel="stylesheet" href="../css/book_canvas.css">
+  <script src="../js/bevy_runner.js"></script>
+  <script>
+    // Initialize Bevy runner for demo canvases
+    document.addEventListener('DOMContentLoaded', function() {
+      if (window.BevyRunner) {
+        BevyRunner.observe();
+      }
+    });
+  </script>
 
   <!-- Footer -->
   <footer class="footer">

@@ -39,7 +39,8 @@
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-cbf67a2d.js"></script>
-    </head>
+        <link rel="stylesheet" href="../../css/book_canvas.css">
+</head>
     <body>
     <div id="mdbook-help-container">
         <div id="mdbook-help-popup">
@@ -102,6 +103,11 @@
         </script>
 
         <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="book-version-toggle">
+                <a href="wasm/index.html" class="version-link" title="Switch to interactive WASM version">
+                    ⚡ WASM version
+                </a>
+            </div>
             <!-- populated by js -->
             <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
             <noscript>

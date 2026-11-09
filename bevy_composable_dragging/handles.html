@@ -35,11 +35,12 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-4cfe65ca.js";
+            window.path_to_searchindex_js = "searchindex-fa909787.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-7c2b1b42.js"></script>
-    </head>
+        <script src="toc-d11337db.js"></script>
+        <link rel="stylesheet" href="../../css/book_canvas.css">
+</head>
     <body>
     <div id="mdbook-help-container">
         <div id="mdbook-help-popup">
@@ -102,6 +103,11 @@
         </script>
 
         <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="book-version-toggle">
+                <a href="wasm/index.html" class="version-link" title="Switch to interactive WASM version">
+                    ⚡ WASM version
+                </a>
+            </div>
             <!-- populated by js -->
             <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
             <noscript>
@@ -262,7 +268,7 @@ fn view(road: &amp;Road) -&gt; View&lt;Road&gt; {
 <p>Each handle takes a closure that receives the original state, the point index, and the measured value, and returns the new state. Pressing a handle also selects its point, so the closure can use this for selection.</p>
 <h2 id="footprint"><a class="header" href="#footprint">Footprint</a></h2>
 <p><code>CurveHandles::footprint(index)</code> returns the 2D bounds of the handles for a specific control point, useful for HUD layout to avoid overlapping elements.</p>
-<p><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_kart_racer_editor_menu.webp" alt="Kart Racer Editor"><span class="img-wrapper"><img src="screenshots/screenshot_kart_racer_editor_menu.webp" alt="Kart Racer Editor"></span></label></p>
+<p><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_kart_racer_editor.webp" alt="Kart Racer Editor"><span class="img-wrapper"><img src="screenshots/screenshot_kart_racer_editor.webp" alt="Kart Racer Editor"></span></label></p>
 <p><em>Curve handles editing a race track. Run <code>cargo run --example kart_racer_editor --features shapes-3d</code>.</em></p>
 <h2 id="next-steps"><a class="header" href="#next-steps">Next Steps</a></h2>
 <ul>

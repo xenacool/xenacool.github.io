@@ -689,6 +689,169 @@ input:focus-visible {
 }
 
 /* ============================================
+   Demo tabs (CSS-only, no JS)
+   ============================================ */
+.demo-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 2rem auto 1.5rem;
+  max-width: 800px;
+  padding: 0 1.5rem;
+}
+
+.demo-tabs input[type="radio"] {
+  display: none;
+}
+
+.demo-tab__label {
+  padding: 0.6rem 1.2rem;
+  border-radius: 8px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  font-family: var(--font-heading);
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.demo-tab__label:hover {
+  background: var(--color-accent);
+  color: #fff;
+  border-color: var(--color-accent);
+}
+
+#tab-cozy:checked ~ .demo-tab__label[for="tab-cozy"],
+#tab-kart:checked ~ .demo-tab__label[for="tab-kart"],
+#tab-physics:checked ~ .demo-tab__label[for="tab-physics"],
+#tab-examples:checked ~ .demo-tab__label[for="tab-examples"] {
+  background: var(--color-accent);
+  color: #fff;
+  border-color: var(--color-accent);
+}
+
+/* Demo panels — show/hide based on tab selection */
+.demo-panel {
+  display: none;
+  max-width: 900px;
+  margin: 0 auto 2rem;
+  padding: 0 1.5rem;
+}
+
+#tab-cozy:checked ~ .demo-panel--cozy,
+#tab-kart:checked ~ .demo-panel--kart,
+#tab-physics:checked ~ .demo-panel--physics,
+#tab-examples:checked ~ .demo-panel--examples {
+  display: block;
+}
+
+.demo-panel__header {
+  margin-bottom: 1.5rem;
+}
+
+.demo-panel__header h2 {
+  font-family: var(--font-heading);
+  font-size: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.demo-panel__header p {
+  color: var(--color-text-muted);
+  line-height: 1.6;
+}
+
+.demo-panel__canvas {
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  aspect-ratio: 16 / 9;
+}
+
+.demo-panel__canvas canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.demo-panel__links {
+  margin-top: 1rem;
+}
+
+.demo-panel__links a {
+  color: var(--color-accent);
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.demo-panel__links a:hover {
+  text-decoration: underline;
+}
+
+/* All examples grid */
+.demo-examples-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 2rem;
+}
+
+.demo-examples-group h3 {
+  font-family: var(--font-heading);
+  font-size: 1.1rem;
+  margin-bottom: 0.75rem;
+  color: var(--color-accent);
+}
+
+.demo-example-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.5rem;
+}
+
+.demo-example-link {
+  display: block;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  text-decoration: none;
+  font-size: 0.85rem;
+  transition: all 0.2s ease;
+}
+
+.demo-example-link:hover {
+  background: var(--color-accent);
+  color: #fff;
+  border-color: var(--color-accent);
+}
+
+/* ============================================
+   Card badges
+   ============================================ */
+.card__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-bottom: 0.75rem;
+}
+
+.card__badges img {
+  height: 20px;
+  width: auto;
+}
+
+.badge-static img {
+  height: 20px;
+  width: auto;
+}
+
+/* ============================================
    Print styles
    ============================================ */
 @media print {

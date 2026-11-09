@@ -35,11 +35,12 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-4cfe65ca.js";
+            window.path_to_searchindex_js = "searchindex-fa909787.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-7c2b1b42.js"></script>
-    </head>
+        <script src="toc-d11337db.js"></script>
+        <link rel="stylesheet" href="../../css/book_canvas.css">
+</head>
     <body>
     <div id="mdbook-help-container">
         <div id="mdbook-help-popup">
@@ -102,6 +103,11 @@
         </script>
 
         <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="book-version-toggle">
+                <a href="wasm/index.html" class="version-link" title="Switch to interactive WASM version">
+                    ⚡ WASM version
+                </a>
+            </div>
             <!-- populated by js -->
             <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
             <noscript>
@@ -293,7 +299,7 @@ ViewNode::sdf("panel", SdfShape::rect(Vec2::new(200.0, 100.0)).with_corner_radiu
 <ul>
 <li>Views are plain data — no ECS overhead for speculative evaluation</li>
 <li>Geometry morphing is quantized to 32 steps</li>
-<li>Heightmap chunks are shared — only edited chunks copy</li>
+<li>A heightmap is two flat buffers, so a copy is two memory copies and an edit names only the chunks it reaches</li>
 <li>Gizmo handles use a dedicated render layer for fast picking</li>
 </ul>
 <h2 id="differences-from-dragology"><a class="header" href="#differences-from-dragology">Differences from Dragology</a></h2>
@@ -328,10 +334,10 @@ ViewNode::sdf("panel", SdfShape::rect(Vec2::new(200.0, 100.0)).with_corner_radiu
 <tr><td><code>gradient_hanoi_3d</code>: <code>shapes-3d</code></td><td><code>gradient_kanban_2d</code>: <code>shapes-2d</code></td><td><code>hello</code>: minimal <code>state</code> example</td></tr>
 <tr><td><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_chain_of_cells.webp" alt="chain_of_cells"><span class="img-wrapper"><img src="screenshots/screenshot_chain_of_cells.webp" alt="chain_of_cells"></span></label></td><td><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_blend_square.webp" alt="blend_square"><span class="img-wrapper"><img src="screenshots/screenshot_blend_square.webp" alt="blend_square"></span></label></td><td><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_tactile_tessellations.webp" alt="tactile_tessellations"><span class="img-wrapper"><img src="screenshots/screenshot_tactile_tessellations.webp" alt="tactile_tessellations"></span></label></td></tr>
 <tr><td><code>chain_of_cells</code>: <code>with_chaining</code>, overlay underline, drop transition</td><td><code>blend_square</code>: <code>between_with</code> natural neighbor and sharpness</td><td><code>tactile_tessellations</code>: edge-to-edge snaps with rotation</td></tr>
-<tr><td><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_gizmo_3d.webp" alt="gizmo_3d"><span class="img-wrapper"><img src="screenshots/screenshot_gizmo_3d.webp" alt="gizmo_3d"></span></label></td><td><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_cozy_castle_menu.webp" alt="cozy_castle"><span class="img-wrapper"><img src="screenshots/screenshot_cozy_castle_menu.webp" alt="cozy_castle"></span></label></td><td><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_kart_racer_editor_menu.webp" alt="kart_racer_editor"><span class="img-wrapper"><img src="screenshots/screenshot_kart_racer_editor_menu.webp" alt="kart_racer_editor"></span></label></td></tr>
-<tr><td><code>gizmo_3d</code>: translate, rotate and scale gizmos in 3D drag spaces</td><td><code>cozy_castle</code>: terrain, walls and radial menu</td><td><code>kart_racer_editor</code>: track editor with sweep road and heightfield</td></tr>
-<tr><td><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_physics_lab.webp" alt="physics_lab"><span class="img-wrapper"><img src="screenshots/screenshot_physics_lab.webp" alt="physics_lab"></span></label></td><td><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_cozy_castle.webp" alt="cozy_castle"><span class="img-wrapper"><img src="screenshots/screenshot_cozy_castle.webp" alt="cozy_castle"></span></label></td><td><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_kart_racer_editor.webp" alt="kart_racer_editor"><span class="img-wrapper"><img src="screenshots/screenshot_kart_racer_editor.webp" alt="kart_racer_editor"></span></label></td></tr>
-<tr><td><code>physics_lab</code>: 3D physics shapes dragged onto a grid, simulated with avian</td><td><code>cozy_castle</code>: empty ground before building</td><td><code>kart_racer_editor</code>: track view without menu</td></tr>
+<tr><td><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_gizmo_3d.webp" alt="gizmo_3d"><span class="img-wrapper"><img src="screenshots/screenshot_gizmo_3d.webp" alt="gizmo_3d"></span></label></td><td><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_physics_lab.webp" alt="physics_lab"><span class="img-wrapper"><img src="screenshots/screenshot_physics_lab.webp" alt="physics_lab"></span></label></td><td><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_cozy_castle.webp" alt="cozy_castle"><span class="img-wrapper"><img src="screenshots/screenshot_cozy_castle.webp" alt="cozy_castle"></span></label></td></tr>
+<tr><td><code>gizmo_3d</code>: translate, rotate and scale gizmos in 3D drag spaces</td><td><code>physics_lab</code>: 3D physics shapes dragged onto a grid, simulated with avian</td><td><code>cozy_castle</code>: radial menu, stacking rooms speculatively, an arch carved into a swept wall</td></tr>
+<tr><td><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_kart_racer_editor.webp" alt="kart_racer_editor"><span class="img-wrapper"><img src="screenshots/screenshot_kart_racer_editor.webp" alt="kart_racer_editor"></span></label></td><td></td><td></td></tr>
+<tr><td><code>kart_racer_editor</code>: a pulled curve, a scaled sweep road, hills and a radial menu</td><td></td><td></td></tr>
 </tbody>
 </table>
 </div>
@@ -347,10 +353,13 @@ ViewNode::sdf("panel", SdfShape::rect(Vec2::new(200.0, 100.0)).with_corner_radiu
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="radial.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="app-content.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                             </a>
 
+                            <a rel="next prefetch" href="migrating.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
 
                         <div style="clear: both"></div>
                     </nav>
@@ -358,10 +367,13 @@ ViewNode::sdf("panel", SdfShape::rect(Vec2::new(200.0, 100.0)).with_corner_radiu
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="radial.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="app-content.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                     </a>
 
+                    <a rel="next prefetch" href="migrating.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
             </nav>
 
         </div>

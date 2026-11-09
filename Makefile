@@ -79,14 +79,37 @@ build-examples: build-examples-dragging build-examples-gradmesh
 build-examples-dragging:
 	@echo "Building bevy_composable_dragging examples to WASM..."
 	@mkdir -p demos/examples/bevy_composable_dragging
-	@for example in hello toggle three_way reorder_list ring_of_beads slider clock scheduler lists_in_lists tessellations chain_of_cells blend_square tactile_tessellations gradient_kanban_2d; do \
-		echo "  Building $$example..."; \
+	# Examples requiring pbr feature
+	@for example in hello toggle three_way reorder_list ring_of_beads slider clock scheduler lists_in_lists tessellations chain_of_cells blend_square; do \
+		echo "  Building $$example (pbr)..."; \
 		mkdir -p demos/examples/bevy_composable_dragging/$$example; \
 		cd $(DRAGGING_SUBMODULE) && \
 		cargo build --target wasm32-unknown-unknown --release --example $$example --features pbr 2>&1 && \
 		cd ../.. && \
-		wasm-bindgen $(DRAGGING_SUBMODULE)/target/wasm32-unknown-unknown/release/$$example.wasm --out-dir demos/examples/bevy_composable_dragging/$$example --target web && \
-		wasm-opt -Oz --converge -o demos/examples/bevy_composable_dragging/$$example/$${example}_bg.wasm demos/examples/bevy_composable_dragging/$$example/$${example}_bg.wasm && \
+		wasm-bindgen $(DRAGGING_SUBMODULE)/target/wasm32-unknown-unknown/release/examples/$$example.wasm --out-dir demos/examples/bevy_composable_dragging/$$example --target web && \
+		wasm-opt -Oz --converge --enable-bulk-memory --enable-nontrapping-float-to-int -o demos/examples/bevy_composable_dragging/$$example/$${example}_bg.wasm demos/examples/bevy_composable_dragging/$$example/$${example}_bg.wasm && \
+		echo "  Done: $$example"; \
+	done
+	# Examples requiring shapes-2d feature
+	@for example in tactile_tessellations gradient_kanban_2d; do \
+		echo "  Building $$example (shapes-2d)..."; \
+		mkdir -p demos/examples/bevy_composable_dragging/$$example; \
+		cd $(DRAGGING_SUBMODULE) && \
+		cargo build --target wasm32-unknown-unknown --release --example $$example --features shapes-2d 2>&1 && \
+		cd ../.. && \
+		wasm-bindgen $(DRAGGING_SUBMODULE)/target/wasm32-unknown-unknown/release/examples/$$example.wasm --out-dir demos/examples/bevy_composable_dragging/$$example --target web && \
+		wasm-opt -Oz --converge --enable-bulk-memory --enable-nontrapping-float-to-int -o demos/examples/bevy_composable_dragging/$$example/$${example}_bg.wasm demos/examples/bevy_composable_dragging/$$example/$${example}_bg.wasm && \
+		echo "  Done: $$example"; \
+	done
+	# Examples requiring shapes-3d feature
+	@for example in gradient_hanoi_3d gizmo_3d cozy_castle_3d kart_racer_editor physics_lab; do \
+		echo "  Building $$example (shapes-3d)..."; \
+		mkdir -p demos/examples/bevy_composable_dragging/$$example; \
+		cd $(DRAGGING_SUBMODULE) && \
+		cargo build --target wasm32-unknown-unknown --release --example $$example --features shapes-3d 2>&1 && \
+		cd ../.. && \
+		wasm-bindgen $(DRAGGING_SUBMODULE)/target/wasm32-unknown-unknown/release/examples/$$example.wasm --out-dir demos/examples/bevy_composable_dragging/$$example --target web && \
+		wasm-opt -Oz --converge --enable-bulk-memory --enable-nontrapping-float-to-int -o demos/examples/bevy_composable_dragging/$$example/$${example}_bg.wasm demos/examples/bevy_composable_dragging/$$example/$${example}_bg.wasm && \
 		echo "  Done: $$example"; \
 	done
 	@echo "Done: demos/examples/bevy_composable_dragging/"
@@ -101,8 +124,8 @@ build-examples-gradmesh:
 		cd $(GRADMESH_SUBMODULE) && \
 		cargo build --target wasm32-unknown-unknown --release --example $$example 2>&1 && \
 		cd ../.. && \
-		wasm-bindgen $(GRADMESH_SUBMODULE)/target/wasm32-unknown-unknown/release/$$example.wasm --out-dir demos/examples/bevy_gradmesh/$$example --target web && \
-		wasm-opt -Oz --converge -o demos/examples/bevy_gradmesh/$$example/$${example}_bg.wasm demos/examples/bevy_gradmesh/$$example/$${example}_bg.wasm && \
+		wasm-bindgen $(GRADMESH_SUBMODULE)/target/wasm32-unknown-unknown/release/examples/$$example.wasm --out-dir demos/examples/bevy_gradmesh/$$example --target web && \
+		wasm-opt -Oz --converge --enable-bulk-memory --enable-nontrapping-float-to-int -o demos/examples/bevy_gradmesh/$$example/$${example}_bg.wasm demos/examples/bevy_gradmesh/$$example/$${example}_bg.wasm && \
 		echo "  Done: $$example"; \
 	done
 	@echo "Done: demos/examples/bevy_gradmesh/"

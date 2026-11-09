@@ -35,11 +35,12 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-4cfe65ca.js";
+            window.path_to_searchindex_js = "searchindex-fa909787.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-7c2b1b42.js"></script>
-    </head>
+        <script src="toc-d11337db.js"></script>
+        <link rel="stylesheet" href="../../css/book_canvas.css">
+</head>
     <body>
     <div id="mdbook-help-container">
         <div id="mdbook-help-popup">
@@ -102,6 +103,11 @@
         </script>
 
         <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="book-version-toggle">
+                <a href="wasm/index.html" class="version-link" title="Switch to interactive WASM version">
+                    ⚡ WASM version
+                </a>
+            </div>
             <!-- populated by js -->
             <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
             <noscript>
@@ -263,8 +269,8 @@ ViewNode::sphere("brush", 0.3)
         }),
     )
 <span class="boring">}</span></code></pre>
-<p><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_cozy_castle_menu.webp" alt="Cozy Castle"><span class="img-wrapper"><img src="screenshots/screenshot_cozy_castle_menu.webp" alt="Cozy Castle"></span></label></p>
-<p><em>Terrain editing with heightmap and radial menu. Run <code>cargo run --example cozy_castle_3d --features shapes-3d</code>.</em></p>
+<p><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_kart_racer_editor.webp" alt="Kart Racer Editor"><span class="img-wrapper"><img src="screenshots/screenshot_kart_racer_editor.webp" alt="Kart Racer Editor"></span></label></p>
+<p><em>Raising hills with a heightmap, picked from a radial menu. Run <code>cargo run --example kart_racer_editor --features shapes-3d</code>.</em></p>
 <h2 id="next-steps"><a class="header" href="#next-steps">Next Steps</a></h2>
 <ul>
 <li>Build UI with <a href="./huds.html">HUDs</a></li>
