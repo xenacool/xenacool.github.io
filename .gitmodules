@@ -1,0 +1,6 @@
+[submodule "libs/bevy_composable_dragging"]
+	path = libs/bevy_composable_dragging
+	url = git@github.com:xenacool/bevy_composable_dragging.git
+[submodule "libs/bevy_gradmesh"]
+	path = libs/bevy_gradmesh
+	url = git@github.com:xenacool/bevy_gradmesh.git

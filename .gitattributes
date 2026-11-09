@@ -1,0 +1,17 @@
+*.wasm filter=lfs diff=lfs merge=lfs -text
+*.png filter=lfs diff=lfs merge=lfs -text
+*.webp filter=lfs diff=lfs merge=lfs -text
+*.jpg filter=lfs diff=lfs merge=lfs -text
+*.jpeg filter=lfs diff=lfs merge=lfs -text
+*.gif filter=lfs diff=lfs merge=lfs -text
+*.ico filter=lfs diff=lfs merge=lfs -text
+*.svg filter=lfs diff=lfs merge=lfs -text
+*.zip filter=lfs diff=lfs merge=lfs -text
+*.tar.gz filter=lfs diff=lfs merge=lfs -text
+*.js filter=lfs diff=lfs merge=lfs -text
+demos/**/*.wasm filter=lfs diff=lfs merge=lfs -text
+demos/**/*.js filter=lfs diff=lfs merge=lfs -text
+bevy_composable_dragging/**/*.png filter=lfs diff=lfs merge=lfs -text
+bevy_composable_dragging/**/*.webp filter=lfs diff=lfs merge=lfs -text
+bevy_gradmesh/**/*.png filter=lfs diff=lfs merge=lfs -text
+bevy_gradmesh/**/*.webp filter=lfs diff=lfs merge=lfs -text
