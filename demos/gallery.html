@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Interactive gallery of Bevy examples running in your browser via WebAssembly">
+  <title>Example Gallery — xenacool</title>
+  <link rel="stylesheet" href="../css/main.css">
+  <style>
+    /* Gallery-specific styles */
+    .gallery-intro {
+      max-width: 800px;
+      margin: 0 auto 2rem;
+      text-align: center;
+      color: var(--color-text-secondary);
+    }
+
+    .gallery-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+      gap: 2rem;
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 0 1rem;
+    }
+
+    .gallery-item {
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      background: var(--color-bg-secondary);
+      box-shadow: var(--color-card-shadow);
+      transition: box-shadow var(--transition-normal);
+    }
+
+    .gallery-item:hover {
+      box-shadow: var(--color-card-shadow-hover);
+    }
+
+    .gallery-item__header {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--color-border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--color-bg-tertiary);
+    }
+
+    .gallery-item__name {
+      font-family: var(--font-heading);
+      font-weight: 600;
+      font-size: 0.95rem;
+      color: var(--color-text);
+    }
+
+    .gallery-item__lib {
+      font-size: 0.75rem;
+      color: var(--color-text-muted);
+      background: var(--color-bg);
+      padding: 0.2rem 0.5rem;
+      border-radius: var(--radius-sm);
+    }
+
+    .gallery-item__iframe {
+      width: 100%;
+      height: 225px;
+      border: none;
+      display: block;
+      background: #1a1a2e;
+    }
+
+    .gallery-item__footer {
+      padding: 0.5rem 1rem;
+      border-top: 1px solid var(--color-border);
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .gallery-item__source {
+      font-size: 0.8rem;
+      color: var(--color-accent);
+      text-decoration: none;
+    }
+
+    .gallery-item__source:hover {
+      text-decoration: underline;
+    }
+
+    .gallery-section-title {
+      font-family: var(--font-heading);
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: var(--color-text);
+      margin: 3rem 0 1.5rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 2px solid var(--color-accent);
+      max-width: 1400px;
+      margin-left: auto;
+      margin-right: auto;
+      padding-left: 1rem;
+    }
+
+    @media (max-width: 768px) {
+      .gallery-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <input type="checkbox" id="theme-toggle" class="theme-toggle__input" aria-label="Toggle dark mode">
+
+  <!-- Navigation -->
+  <nav class="nav">
+    <div class="nav__inner">
+      <a href="/" class="nav__brand">xenacool</a>
+
+      <ul class="nav__links">
+        <li><a href="/bevy_composable_dragging/index.html" class="nav__link">Dragging Book</a></li>
+        <li><a href="/bevy_gradmesh/index.html" class="nav__link">Gradmesh Book</a></li>
+        <li><a href="/demos/gallery.html" class="nav__link">Gallery</a></li>
+      </ul>
+
+      <div class="nav__personal">
+        <a href="https://github.com/xenacool" class="nav__social" target="_blank" rel="noopener noreferrer" title="GitHub">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+          </svg>
+        </a>
+        <label class="theme-toggle" for="theme-toggle" aria-label="Toggle dark mode">
+          <span class="theme-toggle__label"></span>
+        </label>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="main">
+    <section class="hero">
+      <h1 class="hero__title">Example Gallery</h1>
+      <p class="hero__subtitle">
+        Live interactive examples running Bevy in your browser via WebAssembly.
+        Each example loads the shared runtime once, then switches instantly.
+      </p>
+    </section>
+
+    <p class="gallery-intro">
+      Click an example to interact with it. The first example downloads the shared runtime (~12 MB compressed),
+      after that all examples load instantly from cache.
+    </p>
+
+    <!-- Gallery content is auto-generated from examples.json -->
+    <div id="gallery-content"></div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer__inner">
+      <ul class="footer__links">
+        <li><a href="https://github.com/xenacool" class="footer__link" target="_blank" rel="noopener noreferrer">GitHub</a></li>
+        <li><a href="#" class="footer__link" title="Coming soon">LinkedIn</a></li>
+        <li><a href="#" class="footer__link" title="Coming soon">Stack Overflow</a></li>
+      </ul>
+      <p class="footer__copyright">
+        (c) 2024 xenacool. Built with Bevy and Rust.
+      </p>
+    </div>
+  </footer>
+
+  <!-- Gallery renderer: loads examples.json and builds the grid -->
+  <script>
+    (function() {
+      var container = document.getElementById('gallery-content');
+      if (!container) return;
+
+      fetch('wasm/examples.json')
+        .then(function(r) { return r.json(); })
+        .then(function(examples) {
+          var byLib = {};
+          examples.forEach(function(ex) {
+            var lib = ex.lib;
+            if (!byLib[lib]) byLib[lib] = [];
+            byLib[lib].push(ex);
+          });
+
+          var html = '';
+          var libOrder = ['bevy_gradmesh', 'bevy_composable_dragging'];
+          Object.keys(byLib).forEach(function(lib) {
+            if (libOrder.indexOf(lib) === -1) libOrder.push(lib);
+          });
+
+          libOrder.forEach(function(lib) {
+            var list = byLib[lib];
+            if (!list) return;
+            var libLabel = lib.replace('bevy_', '').replace(/_/g, ' ');
+            html += '<h2 class="gallery-section-title">' + lib + '</h2>';
+            html += '<div class="gallery-grid">';
+            list.forEach(function(ex) {
+              var libShort = lib === 'bevy_gradmesh' ? 'gradmesh' : 'dragging';
+              html += '<div class="gallery-item">';
+              html += '<div class="gallery-item__header">';
+              html += '<span class="gallery-item__name">' + ex.title + '</span>';
+              html += '<span class="gallery-item__lib">' + libShort + '</span>';
+              html += '</div>';
+              html += '<iframe class="gallery-item__iframe" src="wasm/demo-frame.html?example=' + ex.name + '" loading="lazy" title="' + ex.title + ' example"></iframe>';
+              html += '<div class="gallery-item__footer">';
+              html += '<a class="gallery-item__source" href="' + ex.source + '" target="_blank" rel="noopener noreferrer">View source</a>';
+              html += '</div>';
+              html += '</div>';
+            });
+            html += '</div>';
+          });
+
+          container.innerHTML = html;
+        })
+        .catch(function(err) {
+          container.innerHTML = '<p class="gallery-intro">Failed to load example list: ' + err.message + '</p>';
+        });
+    })();
+  </script>
+
+  <!-- Theme persistence script -->
+  <script>
+    (function() {
+      var toggle = document.getElementById('theme-toggle');
+      var html = document.documentElement;
+
+      var saved = localStorage.getItem('theme');
+      if (saved) {
+        html.setAttribute('data-theme', saved);
+        if (saved === 'dark') toggle.checked = true;
+      } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        toggle.checked = true;
+      }
+
+      toggle.addEventListener('change', function() {
+        var theme = this.checked ? 'dark' : 'light';
+        html.setAttribute('data-theme', theme);
+        localStorage.setItem('theme', theme);
+      });
+
+      if (!saved && window.matchMedia) {
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(e) {
+          toggle.checked = e.matches;
+          html.setAttribute('data-theme', e.matches ? 'dark' : 'light');
+        });
+      }
+    })();
+  </script>
+</body>
+</html>

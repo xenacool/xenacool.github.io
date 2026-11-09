@@ -64,7 +64,7 @@ build-wasm-gradmesh: build-gradmesh build-wasm-runner
 	cp -r $(GRADMESH_OUTPUT) $(GRADMESH_WASM_OUTPUT)
 	@echo "Done: $(GRADMESH_WASM_OUTPUT)/"
 
-## Build the shared WASM runtime (single binary with all 37 examples)
+## Build the shared WASM runtime (single binary with all examples)
 build-wasm-runner:
 	@echo "Building shared WASM runtime (build.rs auto-generates examples)..."
 	cd demos/wasm_runner && cargo build --target wasm32-unknown-unknown --release
@@ -72,6 +72,10 @@ build-wasm-runner:
 	wasm-bindgen demos/wasm_runner/target/wasm32-unknown-unknown/release/wasm_runner.wasm --out-dir demos/wasm --target web
 	wasm-opt -Oz --converge --enable-bulk-memory --enable-nontrapping-float-to-int -o demos/wasm/wasm_runner_bg.wasm demos/wasm/wasm_runner_bg.wasm
 	@cp demos/wasm_runner/dist/demo-frame.html demos/wasm/ 2>/dev/null || true
+	@# Copy the auto-generated examples.json manifest for the gallery
+	@if [ -f demos/wasm/examples.json ]; then \
+		echo "Gallery manifest: demos/wasm/examples.json"; \
+	fi
 	@size=$$(wc -c < demos/wasm/wasm_runner_bg.wasm); \
 	echo "Shared WASM runtime: $$size bytes ($$(( size / 1024 / 1024 )) MB)"
 	@echo "Done: demos/wasm/"
@@ -137,6 +141,7 @@ build-examples-gradmesh:
 ## Serve the site locally using Python's http.server
 serve:
 	@echo "Starting local server on http://localhost:$(PORT)"
+	@open http://localhost:$(PORT)
 	python3 -m http.server $(PORT)
 
 ## Publish: rebuild both books and WASM runtime, commit, and push to gh-pages

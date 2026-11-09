@@ -74,6 +74,38 @@ fn main() {
 
     fs::write(examples_dir.join("mod.rs"), mod_lines.join("")).unwrap();
 
+    // Generate gallery manifest JSON for the web gallery page
+    // This ensures the gallery always matches what compiles
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap();
+    let manifest_path = root.join("demos/wasm/examples.json");
+    
+    let mut examples: Vec<(&str, &str, String, String)> = Vec::new();
+    for name in gradmesh {
+        examples.push((
+            name,
+            "bevy_gradmesh",
+            format_title(name),
+            format!("https://github.com/xenacool/bevy_gradmesh/tree/main/examples/{}.rs", name),
+        ));
+    }
+    for name in dragging {
+        examples.push((
+            name,
+            "bevy_composable_dragging",
+            format_title(name),
+            format!("https://github.com/xenacool/bevy_composable_dragging/tree/main/examples/{}.rs", name),
+        ));
+    }
+    
+    let json = build_json(&examples);
+    fs::write(&manifest_path, json).unwrap_or_else(|e| {
+        eprintln!("cargo:warning=Failed to write gallery manifest: {}", e);
+    });
+
     // Tell Cargo to re-run build.rs if any example file changes
     for name in gradmesh {
         println!(
@@ -91,6 +123,44 @@ fn main() {
     }
 
     println!("cargo:warning=Generated {} example wrappers", gradmesh.len() + dragging.len());
+}
+
+fn format_title(name: &str) -> String {
+    name.replace('_', " ")
+        .split_whitespace()
+        .map(|w| {
+            let mut c = w.chars();
+            match c.next() {
+                None => String::new(),
+                Some(first) => {
+                    let upper = first.to_ascii_uppercase();
+                    format!("{}{}", upper, c.as_str().to_ascii_lowercase())
+                }
+            }
+        })
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+fn build_json(examples: &[(&str, &str, String, String)]) -> String {
+    let mut out = String::from("[\n");
+    for (i, (name, lib, title, source)) in examples.iter().enumerate() {
+        if i > 0 {
+            out.push_str(",\n");
+        }
+        out.push_str("  {\"name\":\"");
+        out.push_str(name);
+        out.push_str("\",\"lib\":\"");
+        out.push_str(lib);
+        out.push_str("\",\"title\":\"");
+        out.push_str(title);
+        out.push_str("\",\"source\":\"");
+        out.push_str(source);
+        out.push('"');
+        out.push('}');
+    }
+    out.push_str("\n]");
+    out
 }
 
 fn generate_wrapper(lib: &str, name: &str, example_path: &Path) -> String {

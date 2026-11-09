@@ -57,7 +57,7 @@ const BevyRunner = (function() {
         const errorDiv = document.createElement('div');
         errorDiv.className = 'bevy-error-message';
         errorDiv.innerHTML = `
-            <div class="bevy-error-icon">⚠️</div>
+            <div class="bevy-error-icon">Warning</div>
             <div class="bevy-error-text">${message}</div>
             ${sourceLink ? `<a href="${sourceLink}" target="_blank" class="bevy-source-link">View source code</a>` : ''}
         `;
