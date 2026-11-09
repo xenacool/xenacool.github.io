@@ -1,0 +1,17 @@
+# WASM example binaries — only committed to gh-pages branch, never main
+demos/examples/**/*.wasm
+demos/examples/**/*.js
+
+# Rust build artifacts
+target/
+**/target/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
