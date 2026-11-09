@@ -44,17 +44,13 @@ serve:
 	@echo "Starting local server on http://localhost:$(PORT)"
 	python3 -m http.server $(PORT)
 
-## Publish to gh-pages branch
+## Publish: rebuild books, commit, and push to gh-pages
 publish: build
 	@echo "Publishing to gh-pages..."
-	git checkout --orphan gh-pages-publish
-	git rm -rf .
-	git checkout main -- index.html css/ demos/ .gitattributes .gitmodules Makefile README.md
 	git add $(DRAGGING_OUTPUT) $(GRADMESH_OUTPUT)
-	git commit -m "Publish site: build books $(shell date +%Y-%m-%d)"
-	git checkout main
-	git branch -D gh-pages-publish
-	@echo "Done. Push with: git push origin gh-pages-publish:gh-pages"
+	git commit -m "Rebuild books: $(shell date +%Y-%m-%d)" || echo "No changes to commit"
+	git push origin gh-pages
+	@echo "Done."
 
 ## Clean all built book output
 clean:
