@@ -16,7 +16,7 @@ GRADMESH_WASM_OUTPUT := bevy_gradmesh/wasm
 # Default port for local server
 PORT ?= 8000
 
-.PHONY: all build-dragging build-gradmesh build build-wasm build-wasm-dragging build-wasm-gradmesh build-examples build-examples-dragging build-examples-gradmesh serve clean clean-examples publish push-wasm-gh-pages check-links check-links-local help
+.PHONY: all build-dragging build-gradmesh build build-wasm build-wasm-dragging build-wasm-gradmesh build-examples build-examples-dragging build-examples-gradmesh serve clean clean-examples publish push-wasm-gh-pages check-links check-links-local check-versions help
 
 all: build
 
@@ -136,7 +136,7 @@ serve:
 	python3 -m http.server $(PORT)
 
 ## Publish: rebuild both static and WASM books, commit, and push to gh-pages
-publish: build build-wasm
+publish: check-versions build build-wasm
 	@echo "Publishing to gh-pages..."
 	git add $(DRAGGING_OUTPUT) $(GRADMESH_OUTPUT) $(DRAGGING_WASM_OUTPUT) $(GRADMESH_WASM_OUTPUT)
 	git commit -m "Rebuild books: $(shell date +%Y-%m-%d)" || echo "No changes to commit"
@@ -179,6 +179,11 @@ check-links-local:
 	@echo "Note: Run 'make serve' in another terminal first, then this target."
 	python3 scripts/check_links.py --local --port $(PORT)
 
+## Check that book version references match Cargo.toml versions
+check-versions:
+	@echo "Checking book versions..."
+	python3 scripts/check_versions.py
+
 ## Clean all built book output
 clean:
 	@echo "Cleaning built book output..."
@@ -210,6 +215,7 @@ help:
 	@echo "  publish        Build both static and WASM books, push to gh-pages"
 	@echo "  check-links    Pull submodules, build books, check all links against live site"
 	@echo "  check-links-local  Pull submodules, build books, check links against local server"
+	@echo "  check-versions Check that book version references match Cargo.toml"
 	@echo "  clean          Remove all built book output"
 	@echo "  clean-examples Remove all WASM example output"
 	@echo "  push-wasm-gh-pages  Push WASM examples to gh-pages (DANGER: gh-pages branch only)"
@@ -230,6 +236,7 @@ help:
 	@echo "  make publish   Build and push both versions"
 	@echo "  make build-examples  Compile all examples to WASM"
 	@echo "  make check-links    Check all links on live site"
+	@echo "  make check-versions Verify book versions match Cargo.toml"
 	@echo "  make PORT=9000 serve  Start server on port 9000"
 	@echo ""
 	@echo "WARNING: push-wasm-gh-pages will FAIL on any branch other than gh-pages."
