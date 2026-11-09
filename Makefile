@@ -16,7 +16,7 @@ GRADMESH_WASM_OUTPUT := bevy_gradmesh/wasm
 # Default port for local server
 PORT ?= 8000
 
-.PHONY: all build-dragging build-gradmesh build build-wasm build-wasm-dragging build-wasm-gradmesh build-examples build-examples-dragging build-examples-gradmesh serve clean clean-examples publish push-wasm-gh-pages check-links check-links-local check-versions help
+.PHONY: all build-dragging build-gradmesh build build-wasm build-wasm-dragging build-wasm-gradmesh build-examples build-examples-dragging build-examples-gradmesh build-wasm-runner serve clean clean-examples publish push-wasm-gh-pages check-links check-links-local check-versions help
 
 all: build
 
@@ -72,8 +72,21 @@ build-wasm-gradmesh:
 	python3 scripts/postprocess_book.py $(GRADMESH_WASM_OUTPUT) bevy_gradmesh --depth 3
 	@echo "Done: $(GRADMESH_WASM_OUTPUT)/"
 
-## Build all examples to WASM
-build-examples: build-examples-dragging build-examples-gradmesh
+## Build the shared WASM runtime (single binary with all 37 examples)
+build-wasm-runner:
+	@echo "Building shared WASM runtime..."
+	cd demos/wasm_runner && python3 gen_examples.py
+	cd demos/wasm_runner && cargo build --target wasm32-unknown-unknown --release
+	@mkdir -p demos/wasm
+	wasm-bindgen demos/wasm_runner/target/wasm32-unknown-unknown/release/wasm_runner.wasm --out-dir demos/wasm --target web
+	wasm-opt -Oz --converge --enable-bulk-memory --enable-nontrapping-float-to-int --enable-reference-types --enable-multivalue -o demos/wasm/wasm_runner_bg.wasm demos/wasm/wasm_runner_bg.wasm
+	@cp demos/wasm_runner/dist/demo-frame.html demos/wasm/ 2>/dev/null || true
+	@size=$$(wc -c < demos/wasm/wasm_runner_bg.wasm); \
+	echo "Shared WASM runtime: $$size bytes ($$(( size / 1024 / 1024 )) MB)"
+	@echo "Done: demos/wasm/"
+
+## Build all examples to WASM (deprecated — use build-wasm-runner instead)
+build-examples: build-wasm-runner
 
 ## Build bevy_composable_dragging examples to WASM
 build-examples-dragging:
@@ -148,9 +161,9 @@ publish: check-versions build build-wasm
 ## Usage: make push-wasm-gh-pages (only after confirming you are on gh-pages branch)
 push-wasm-gh-pages:
 	@if git branch --show-current | grep -q '^gh-pages$$'; then \
-		echo "Pushing WASM examples to gh-pages..."; \
-		git add demos/examples/; \
-		git commit -m "Update WASM examples: $(shell date +%Y-%m-%d)" || echo "No WASM changes to commit"; \
+		echo "Pushing WASM files to gh-pages..."; \
+		git add demos/wasm/ demos/examples/; \
+		git commit -m "Update WASM runtime: $(shell date +%Y-%m-%d)" || echo "No WASM changes to commit"; \
 		git push origin gh-pages; \
 		echo "Done."; \
 	else \
@@ -184,11 +197,12 @@ check-versions:
 	@echo "Checking book versions..."
 	python3 scripts/check_versions.py
 
-## Clean all built book output
+## Clean all built book output and WASM runtime
 clean:
 	@echo "Cleaning built book output..."
 	rm -rf $(DRAGGING_OUTPUT)
 	rm -rf $(GRADMESH_OUTPUT)
+	rm -rf demos/wasm/
 	@echo "Done."
 
 ## Clean all WASM example output
@@ -208,9 +222,8 @@ help:
 	@echo "  build-wasm     Build both books with WASM canvas post-processing"
 	@echo "  build-wasm-dragging  Build dragging book with WASM canvases"
 	@echo "  build-wasm-gradmesh  Build gradmesh book with WASM canvases"
-	@echo "  build-examples Build all examples to WASM"
-	@echo "  build-examples-dragging  Build dragging examples to WASM"
-	@echo "  build-examples-gradmesh  Build gradmesh examples to WASM"
+	@echo "  build-wasm-runner Build shared WASM runtime (single binary, 37 examples)"
+	@echo "  build-examples Build shared WASM runtime (alias for build-wasm-runner)"
 	@echo "  serve          Start local HTTP server on port $(PORT)"
 	@echo "  publish        Build both static and WASM books, push to gh-pages"
 	@echo "  check-links    Pull submodules, build books, check all links against live site"
