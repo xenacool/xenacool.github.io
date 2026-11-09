@@ -4,7 +4,10 @@
 use bevy::prelude::*;
 use bevy::render::RenderPlugin;
 
-mod examples;
+// Include auto-generated examples module from build.rs
+mod examples {
+    include!(concat!(env!("OUT_DIR"), "/examples/mod.rs"));
+}
 
 fn get_example_name() -> String {
     let search = web_sys::window()

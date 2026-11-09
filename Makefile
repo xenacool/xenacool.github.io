@@ -66,12 +66,11 @@ build-wasm-gradmesh: build-gradmesh build-wasm-runner
 
 ## Build the shared WASM runtime (single binary with all 37 examples)
 build-wasm-runner:
-	@echo "Building shared WASM runtime..."
-	cd demos/wasm_runner && python3 gen_examples.py
+	@echo "Building shared WASM runtime (build.rs auto-generates examples)..."
 	cd demos/wasm_runner && cargo build --target wasm32-unknown-unknown --release
 	@mkdir -p demos/wasm
 	wasm-bindgen demos/wasm_runner/target/wasm32-unknown-unknown/release/wasm_runner.wasm --out-dir demos/wasm --target web
-	wasm-opt -Oz --converge --enable-bulk-memory --enable-nontrapping-float-to-int --enable-reference-types --enable-multivalue -o demos/wasm/wasm_runner_bg.wasm demos/wasm/wasm_runner_bg.wasm
+	wasm-opt -Oz --converge --enable-bulk-memory --enable-nontrapping-float-to-int -o demos/wasm/wasm_runner_bg.wasm demos/wasm/wasm_runner_bg.wasm
 	@cp demos/wasm_runner/dist/demo-frame.html demos/wasm/ 2>/dev/null || true
 	@size=$$(wc -c < demos/wasm/wasm_runner_bg.wasm); \
 	echo "Shared WASM runtime: $$size bytes ($$(( size / 1024 / 1024 )) MB)"
