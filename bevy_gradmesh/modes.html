@@ -35,12 +35,11 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-70343dba.js";
+            window.path_to_searchindex_js = "searchindex-77679fc6.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-cbf67a2d.js"></script>
-        <link rel="stylesheet" href="../../css/book_canvas.css">
-</head>
+    </head>
     <body>
     <div id="mdbook-help-container">
         <div id="mdbook-help-popup">
@@ -103,11 +102,6 @@
         </script>
 
         <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
-            <div class="book-version-toggle">
-                <a href="wasm/index.html" class="version-link" title="Switch to interactive WASM version">
-                    ⚡ WASM version
-                </a>
-            </div>
             <!-- populated by js -->
             <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
             <noscript>
@@ -218,7 +212,6 @@ fn draw_frame(mut commands: Commands, mut meshes: ResMut&lt;Assets&lt;Mesh&gt;&g
 }
 <span class="boring">}</span></code></pre>
 <p><strong>Best for</strong>: Particle systems, animated effects, debug visualization.</p>
-<p><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_immediate.webp" alt="Immediate mode"><span class="img-wrapper"><img src="screenshots/screenshot_immediate.webp" alt="Immediate mode"></span></label></p>
 <p><em>Per-frame particles, push/pop state, billboarding and line drawing. Run <code>cargo run --example immediate</code> to reproduce it.</em></p>
 <h2 id="retained-mode"><a class="header" href="#retained-mode">Retained Mode</a></h2>
 <p>Persistent shapes managed by handle. Create once, update per-frame.</p>
@@ -242,7 +235,6 @@ fn update(mut retained: ResMut&lt;RetainedWorld&gt;, time: Res&lt;Time&gt;,
 }
 <span class="boring">}</span></code></pre>
 <p><strong>Best for</strong>: Scenes with persistent shapes that change position or properties each frame.</p>
-<p><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_retained.webp" alt="Retained mode"><span class="img-wrapper"><img src="screenshots/screenshot_retained.webp" alt="Retained mode"></span></label></p>
 <p><em>Persistent shapes updated each frame through handles. Run <code>cargo run --example retained</code> to reproduce it.</em></p>
 <h2 id="batched-mode"><a class="header" href="#batched-mode">Batched Mode</a></h2>
 <p>Groups instances into batches for GPU instancing - thousands of shapes in far fewer draw calls.</p>
@@ -272,7 +264,6 @@ fn draw_frame(mut recorder: ResMut&lt;BatchRecorder&gt;) {
 }
 <span class="boring">}</span></code></pre>
 <p><strong>Best for</strong>: Large numbers of similar shapes (terrain, crowds, particles).</p>
-<p><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_instanced.webp" alt="Batched mode"><span class="img-wrapper"><img src="screenshots/screenshot_instanced.webp" alt="Batched mode"></span></label></p>
 <p><em>500 spheres drawn in one GPU batch with <code>BatchRecorder</code>. Run <code>cargo run --example instanced</code> to reproduce it.</em></p>
 <h3 id="dirty-tracking"><a class="header" href="#dirty-tracking">Dirty Tracking</a></h3>
 <p>Batched mode tracks which batches changed each frame, uploading only dirty data:</p>

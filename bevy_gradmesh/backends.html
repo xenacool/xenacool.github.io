@@ -35,12 +35,11 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-70343dba.js";
+            window.path_to_searchindex_js = "searchindex-77679fc6.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-cbf67a2d.js"></script>
-        <link rel="stylesheet" href="../../css/book_canvas.css">
-</head>
+    </head>
     <body>
     <div id="mdbook-help-container">
         <div id="mdbook-help-popup">
@@ -103,11 +102,6 @@
         </script>
 
         <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
-            <div class="book-version-toggle">
-                <a href="wasm/index.html" class="version-link" title="Switch to interactive WASM version">
-                    ⚡ WASM version
-                </a>
-            </div>
             <!-- populated by js -->
             <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
             <noscript>
@@ -221,7 +215,6 @@ own camera bind group and pipeline, and finds meshes through <code>MeshAllocator
 There is no lighting, no alpha blending and no culling. It is the path to use on
 GPUs where the PBR pipeline is a problem (it was verified on a Mali-G715 with
 Bevy’s <code>PbrPlugin</code> disabled).</p>
-<p><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_standalone.webp" alt="Standalone pipeline"><span class="img-wrapper"><img src="screenshots/screenshot_standalone.webp" alt="Standalone pipeline"></span></label></p>
 <p><em>Gradient shapes drawn with one shader pipeline, no PBR material and no lights. Run <code>cargo run --example standalone</code> to reproduce it.</em></p>
 <h2 id="mesh2d-gradient"><a class="header" href="#mesh2d-gradient">Mesh2d gradient</a></h2>
 <p><code>Shape::build_2d()</code> returns flat geometry in the XY plane. Pair it with
@@ -263,9 +256,7 @@ starts at the arc start and the last dash ends at the arc end.</li>
 rectangles and a partial arc. Two things to know: on an eccentric ellipse dashes
 are spaced by angle, not by arc length, and at a sharp rectangle corner the
 dashes meet in a mitre. <code>Transform</code> scale must be <code>SdfMaterial2d::quad_scale()</code>.</p>
-<p><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_sdf_2d.webp" alt="SDF 2D"><span class="img-wrapper"><img src="screenshots/screenshot_sdf_2d.webp" alt="SDF 2D"></span></label></p>
 <p><em>Discs, ellipses, rounded rectangles, rims and animated arcs on one shared quad. Run <code>cargo run --example sdf_2d</code> to reproduce it.</em></p>
-<p><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_sdf_dash_gallery.png" alt="SDF dash gallery"><span class="img-wrapper"><img src="screenshots/screenshot_sdf_dash_gallery.png" alt="SDF dash gallery"></span></label></p>
 <p><em>Dashed rims compared across <code>Off</code>, <code>Tiling</code>, <code>EndToEnd</code> and count-based snap modes. Run <code>cargo run --example sdf_dash_gallery</code> to reproduce it.</em></p>
 <h2 id="without-pbr-the-pbr-feature-and-for_mobile"><a class="header" href="#without-pbr-the-pbr-feature-and-for_mobile">Without PBR: the <code>pbr</code> feature and <code>for_mobile()</code></a></h2>
 <p>The crate has a <code>pbr</code> cargo feature that is on by default. It gates <code>material.rs</code>,

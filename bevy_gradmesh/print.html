@@ -36,12 +36,11 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-70343dba.js";
+            window.path_to_searchindex_js = "searchindex-77679fc6.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-cbf67a2d.js"></script>
-        <link rel="stylesheet" href="../../css/book_canvas.css">
-</head>
+    </head>
     <body>
     <div id="mdbook-help-container">
         <div id="mdbook-help-popup">
@@ -104,11 +103,6 @@
         </script>
 
         <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
-            <div class="book-version-toggle">
-                <a href="wasm/index.html" class="version-link" title="Switch to interactive WASM version">
-                    ⚡ WASM version
-                </a>
-            </div>
             <!-- populated by js -->
             <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
             <noscript>
@@ -188,7 +182,6 @@
 <p>BevyGradmesh is a procedural mesh generation library for <a href="https://bevyengine.org/">Bevy</a> that provides clean APIs for creating 3D primitives with gradient shading, inspired by Freya Holmér’s work.</p>
 <h2 id="what-it-solves"><a class="header" href="#what-it-solves">What It Solves</a></h2>
 <p>Instead of manually creating mesh assets for every shape, BevyGradmesh generates watertight geometry at runtime with proper normals and UVs. Combined with dual-directional gradient materials, you get stylized 3D-looking characters and objects without any external assets.</p>
-<p><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_shapes.png" alt="Shape showcase"><span class="img-wrapper"><img src="screenshots/screenshot_shapes.png" alt="Shape showcase"></span></label></p>
 <p><em>Every procedural primitive with dual-directional gradient shading. Run <code>cargo run --example shapes</code> to reproduce it.</em></p>
 <h2 id="key-concepts"><a class="header" href="#key-concepts">Key Concepts</a></h2>
 <ul>
@@ -270,7 +263,6 @@ fn setup(
     // Spawn the shape
     commands.spawn((Mesh3d(mesh), MeshMaterial3d(mat)));
 }</code></pre>
-<p><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_character_creator.webp" alt="Character creator"><span class="img-wrapper"><img src="screenshots/screenshot_character_creator.webp" alt="Character creator"></span></label></p>
 <p><em>Character parts built from gradient-shaded primitives. Run <code>cargo run --example character_creator</code> to reproduce it.</em></p>
 <h2 id="understanding-the-api"><a class="header" href="#understanding-the-api">Understanding the API</a></h2>
 <p>The core API has three main types:</p>
@@ -358,7 +350,6 @@ Shape::sphere(1.0, ShapeDetail::Extreme)  // 32 segments
 </span>Shape::tapered_cylinder(top_radius, bottom_radius, height, detail)
 <span class="boring">}</span></code></pre>
 <p>A cone-frustum with flat top and bottom. When radii are equal, equivalent to a regular cylinder.</p>
-<p><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_shapes.png" alt="Shape showcase"><span class="img-wrapper"><img src="screenshots/screenshot_shapes.png" alt="Shape showcase"></span></label></p>
 <p><em>The 3D primitives, shaded with dual-directional gradients. Run <code>cargo run --example shapes</code> to reproduce it.</em></p>
 <h2 id="2d-primitives"><a class="header" href="#2d-primitives">2D Primitives</a></h2>
 <p>All 2D shapes are flat quads facing the camera (billboarded).</p>
@@ -400,7 +391,6 @@ Shape::sphere(1.0, ShapeDetail::Extreme)  // 32 segments
 </span>Shape::wedge(radius, angle, detail)
 <span class="boring">}</span></code></pre>
 <p>Pie-slice shape. Angle is in radians (0 to 2π).</p>
-<p><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_arbitrary_shapes.png" alt="Arbitrary shapes"><span class="img-wrapper"><img src="screenshots/screenshot_arbitrary_shapes.png" alt="Arbitrary shapes"></span></label></p>
 <p><em>Custom polygons with per-vertex colours, stars, rings, wedges and a tapered cylinder. Run <code>cargo run --example arbitrary_shapes</code> to reproduce it.</em></p>
 <h3 id="arbitrary-polygon"><a class="header" href="#arbitrary-polygon">Arbitrary Polygon</a></h3>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
@@ -464,8 +454,6 @@ let mat = with_mix_space(
 <p><code>Style</code> takes the same setting (<code>Style::with_mix_space</code>), and
 <code>MixSpace::mix</code> / <code>Style::lerp</code> blend on the CPU in the same space, so an
 animated blend matches the shader gradient. See <code>examples/mix_spaces.rs</code>.</p>
-<p><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_mix_spaces.png" alt="The same gradient in four colour spaces"><span class="img-wrapper"><img src="screenshots/screenshot_mix_spaces.png" alt="The same gradient in four colour spaces"></span></label></p>
-<p><em>One gradient in each <code>MixSpace</code> for two colour pairs: sRGB goes grey in the middle, OKLAB keeps the lightness steady and OKLCH sweeps through the hues. <code>tests/mix_space_screenshot.rs</code> checks this picture against reference pixels and against the shader’s blend maths. Run <code>cargo run --example mix_spaces</code> to reproduce it.</em></p>
 <h2 id="blending-styles-and-shapes"><a class="header" href="#blending-styles-and-shapes">Blending Styles and Shapes</a></h2>
 <p><code>Style::lerp(&amp;other, t)</code> mixes colors in the style’s space, interpolates
 continuous values and snaps discrete ones (blend mode, dash count) to the
@@ -496,7 +484,6 @@ let mat = dual_radial(
 );
 <span class="boring">}</span></code></pre>
 <h2 id="blend-modes"><a class="header" href="#blend-modes">Blend Modes</a></h2>
-<p><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_styles.png" alt="Style variants"><span class="img-wrapper"><img src="screenshots/screenshot_styles.png" alt="Style variants"></span></label></p>
 <p><em>Opaque, transparent, additive, multiplicative, screen, dither and dashed styles. Run <code>cargo run --example styles</code> to reproduce it.</em></p>
 <h3 id="opaque"><a class="header" href="#opaque">Opaque</a></h3>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
@@ -562,7 +549,6 @@ mat.roughness = 0.1;    // Polished surface
 mat.metallic = 1.0;     // Metallic
 mat.emissive = Color::srgb(1.0, 0.0, 0.0).to_linear(); // Glow
 <span class="boring">}</span></code></pre>
-<p><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_pbr_effects.png" alt="PBR effects"><span class="img-wrapper"><img src="screenshots/screenshot_pbr_effects.png" alt="PBR effects"></span></label></p>
 <p><em>Transparency, emissive glow, metallic surfaces and combinations. Run <code>cargo run --example pbr_effects</code> to reproduce it.</em></p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="composing-shapes-2d-and-ghost-previews"><a class="header" href="#composing-shapes-2d-and-ghost-previews">Composing Shapes, 2D and Ghost Previews</a></h1>
@@ -591,7 +577,6 @@ computed from the mesh UVs.</li>
 <li><code>Shape::polyline_2d</code> and <code>Shape::bezier_2d</code> build flat curves with thickness (<code>u</code> runs along the
 curve, <code>v</code> across it).</li>
 </ul>
-<p><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_gradient_2d.webp" alt="2D gradients"><span class="img-wrapper"><img src="screenshots/screenshot_gradient_2d.webp" alt="2D gradients"></span></label></p>
 <p><em>Gradient cards, a translucent dragged card layered by z, a radial disc, a pulsing star, a dashed ring and a polygon with a hole. Run <code>cargo run --example gradient_2d</code> to reproduce it.</em></p>
 <h2 id="outlines-extrusion-holes"><a class="header" href="#outlines-extrusion-holes">Outlines, extrusion, holes</a></h2>
 <p><code>arch</code>, <code>rounded_rectangle</code> and <code>blob</code> return counter-clockwise outlines centred on the origin.</p>
@@ -617,7 +602,6 @@ optional tint that multiplies the gradient through vertex colours, so parts keep
 Compounds are <code>Hash + Eq</code> and work with <code>MeshCache</code>.</p>
 <p><code>Shape::lathe(profile, segments, detail)</code> revolves <code>(radius, height)</code> points around Y. Crisp corners stay
 crisp, gentle ones are smoothed, and open ends away from the axis get caps.</p>
-<p><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_composed_shapes.png" alt="Composed shapes"><span class="img-wrapper"><img src="screenshots/screenshot_composed_shapes.png" alt="Composed shapes"></span></label></p>
 <p><em>A compound tower, a wall with an arched opening, extruded cobbles, an emissive torch, a metallic gem and a ghost piece that casts no shadow. Run <code>cargo run --example composed_shapes</code> to reproduce it.</em></p>
 <h2 id="sharing-meshes-and-materials"><a class="header" href="#sharing-meshes-and-materials">Sharing meshes and materials</a></h2>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
@@ -698,7 +682,6 @@ fn draw_frame(mut commands: Commands, mut meshes: ResMut&lt;Assets&lt;Mesh&gt;&g
 }
 <span class="boring">}</span></code></pre>
 <p><strong>Best for</strong>: Particle systems, animated effects, debug visualization.</p>
-<p><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_immediate.webp" alt="Immediate mode"><span class="img-wrapper"><img src="screenshots/screenshot_immediate.webp" alt="Immediate mode"></span></label></p>
 <p><em>Per-frame particles, push/pop state, billboarding and line drawing. Run <code>cargo run --example immediate</code> to reproduce it.</em></p>
 <h2 id="retained-mode"><a class="header" href="#retained-mode">Retained Mode</a></h2>
 <p>Persistent shapes managed by handle. Create once, update per-frame.</p>
@@ -722,7 +705,6 @@ fn update(mut retained: ResMut&lt;RetainedWorld&gt;, time: Res&lt;Time&gt;,
 }
 <span class="boring">}</span></code></pre>
 <p><strong>Best for</strong>: Scenes with persistent shapes that change position or properties each frame.</p>
-<p><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_retained.webp" alt="Retained mode"><span class="img-wrapper"><img src="screenshots/screenshot_retained.webp" alt="Retained mode"></span></label></p>
 <p><em>Persistent shapes updated each frame through handles. Run <code>cargo run --example retained</code> to reproduce it.</em></p>
 <h2 id="batched-mode"><a class="header" href="#batched-mode">Batched Mode</a></h2>
 <p>Groups instances into batches for GPU instancing - thousands of shapes in far fewer draw calls.</p>
@@ -752,7 +734,6 @@ fn draw_frame(mut recorder: ResMut&lt;BatchRecorder&gt;) {
 }
 <span class="boring">}</span></code></pre>
 <p><strong>Best for</strong>: Large numbers of similar shapes (terrain, crowds, particles).</p>
-<p><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_instanced.webp" alt="Batched mode"><span class="img-wrapper"><img src="screenshots/screenshot_instanced.webp" alt="Batched mode"></span></label></p>
 <p><em>500 spheres drawn in one GPU batch with <code>BatchRecorder</code>. Run <code>cargo run --example instanced</code> to reproduce it.</em></p>
 <h3 id="dirty-tracking"><a class="header" href="#dirty-tracking">Dirty Tracking</a></h3>
 <p>Batched mode tracks which batches changed each frame, uploading only dirty data:</p>
@@ -814,7 +795,6 @@ own camera bind group and pipeline, and finds meshes through <code>MeshAllocator
 There is no lighting, no alpha blending and no culling. It is the path to use on
 GPUs where the PBR pipeline is a problem (it was verified on a Mali-G715 with
 Bevy’s <code>PbrPlugin</code> disabled).</p>
-<p><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_standalone.webp" alt="Standalone pipeline"><span class="img-wrapper"><img src="screenshots/screenshot_standalone.webp" alt="Standalone pipeline"></span></label></p>
 <p><em>Gradient shapes drawn with one shader pipeline, no PBR material and no lights. Run <code>cargo run --example standalone</code> to reproduce it.</em></p>
 <h2 id="mesh2d-gradient"><a class="header" href="#mesh2d-gradient">Mesh2d gradient</a></h2>
 <p><code>Shape::build_2d()</code> returns flat geometry in the XY plane. Pair it with
@@ -856,9 +836,7 @@ starts at the arc start and the last dash ends at the arc end.</li>
 rectangles and a partial arc. Two things to know: on an eccentric ellipse dashes
 are spaced by angle, not by arc length, and at a sharp rectangle corner the
 dashes meet in a mitre. <code>Transform</code> scale must be <code>SdfMaterial2d::quad_scale()</code>.</p>
-<p><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_sdf_2d.webp" alt="SDF 2D"><span class="img-wrapper"><img src="screenshots/screenshot_sdf_2d.webp" alt="SDF 2D"></span></label></p>
 <p><em>Discs, ellipses, rounded rectangles, rims and animated arcs on one shared quad. Run <code>cargo run --example sdf_2d</code> to reproduce it.</em></p>
-<p><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_sdf_dash_gallery.png" alt="SDF dash gallery"><span class="img-wrapper"><img src="screenshots/screenshot_sdf_dash_gallery.png" alt="SDF dash gallery"></span></label></p>
 <p><em>Dashed rims compared across <code>Off</code>, <code>Tiling</code>, <code>EndToEnd</code> and count-based snap modes. Run <code>cargo run --example sdf_dash_gallery</code> to reproduce it.</em></p>
 <h2 id="without-pbr-the-pbr-feature-and-for_mobile"><a class="header" href="#without-pbr-the-pbr-feature-and-for_mobile">Without PBR: the <code>pbr</code> feature and <code>for_mobile()</code></a></h2>
 <p>The crate has a <code>pbr</code> cargo feature that is on by default. It gates <code>material.rs</code>,
@@ -956,7 +934,6 @@ nothing, and it is part of the shape’s identity like the mask.</p>
 <p>The terrain picture below cuts the same round hole and the same one-cell hole
 three ways; the labels are the triangle counts of the built meshes, which the
 example asserts grow with the smoothness.</p>
-<p><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_terrain.png" alt="Terrain chunks and hole edges"><span class="img-wrapper"><img src="screenshots/screenshot_terrain.png" alt="Terrain chunks and hole edges"></span></label></p>
 <p><em>Four chunks meeting at a peak with shared edge normals, and the same round hole cut three ways with <code>HoleEdge::Cells</code>, <code>Rounded</code> and <code>Smooth</code>; each label shows its triangle count. Run <code>cargo run --example terrain</code> to reproduce it.</em></p>
 <h2 id="shapesweep"><a class="header" href="#shapesweep"><code>Shape::sweep</code></a></h2>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
@@ -1018,9 +995,7 @@ as given (no parallel transport) and blends them where it needs extra rings.
 <code>right × up</code> should point along the path; a left-handed frame keeps its <code>up</code> and
 gets its <code>right</code> flipped, so the surface never turns inside out. A closed sweep
 joins the last frame to the first without correcting the frames at the seam.</p>
-<p><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_sweep.png" alt="Sweeps"><span class="img-wrapper"><img src="screenshots/screenshot_sweep.png" alt="Sweeps"></span></label></p>
 <p><em>A wall along a baked spline loop with an arched gate, a kerbed road and a tapering pipe on a helix. Run <code>cargo run --example sweep</code> to reproduce it.</em></p>
-<p><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_road.png" alt="Banked road"><span class="img-wrapper"><img src="screenshots/screenshot_road.png" alt="Banked road"></span></label></p>
 <p><em>An open spline with width and roll channels baked into <code>Shape::sweep_frames</code>, and a ribbon turning with <code>SweepOptions::roll_with</code>. Run <code>cargo run --example road</code> to reproduce it.</em></p>
 <h3 id="openings"><a class="header" href="#openings">Openings</a></h3>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
@@ -1148,7 +1123,6 @@ let mesh = Shape::bezier_curve(control_points, 0.1, 8, ShapeDetail::Medium).buil
     // Rebuild curve with new control points
 }
 <span class="boring">}</span></code></pre>
-<p><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_curves.png" alt="Curves"><span class="img-wrapper"><img src="screenshots/screenshot_curves.png" alt="Curves"></span></label></p>
 <p><em>Spline and parametric curves rendered as smooth tubes. Run <code>cargo run --example curves</code> to reproduce it.</em></p>
 <h2 id="3d-polylines"><a class="header" href="#3d-polylines">3D Polylines</a></h2>
 <p>Connect points with tube geometry:</p>
@@ -1169,7 +1143,6 @@ let mesh = Shape::polyline3d(points, 0.05, false, 8, ShapeDetail::Medium).build(
 </span><span class="boring">fn main() {
 </span>let mesh = Shape::polyline3d(points, 0.05, true, 8, ShapeDetail::Medium).build();
 <span class="boring">}</span></code></pre>
-<p><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_polyline.webp" alt="Polylines"><span class="img-wrapper"><img src="screenshots/screenshot_polyline.webp" alt="Polylines"></span></label></p>
 <p><em>Joint styles, width variation, gradient colours and an animated reveal. Run <code>cargo run --example polyline</code> to reproduce it.</em></p>
 <h2 id="use-cases"><a class="header" href="#use-cases">Use Cases</a></h2>
 <ul>
@@ -1214,7 +1187,6 @@ let deform = DeformationParams::wobble(
     0.5,  // phase
 );
 <span class="boring">}</span></code></pre>
-<p><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_deformation.webp" alt="Deformation"><span class="img-wrapper"><img src="screenshots/screenshot_deformation.webp" alt="Deformation"></span></label></p>
 <p><em>Wobble, pulse and morph compared against static originals. Run <code>cargo run --example deformation</code> to reproduce it.</em></p>
 <h2 id="using-with-batchrecorder"><a class="header" href="#using-with-batchrecorder">Using with BatchRecorder</a></h2>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
@@ -1280,7 +1252,6 @@ let appearance = AppearanceSnapshot::color_pulse(
 </span><span class="boring">fn main() {
 </span>let appearance = AppearanceSnapshot::static_appearance();
 <span class="boring">}</span></code></pre>
-<p><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_appearance.webp" alt="Appearance animation"><span class="img-wrapper"><img src="screenshots/screenshot_appearance.webp" alt="Appearance animation"></span></label></p>
 <p><em>Static, colour pulse, colour cycle and gradient shift rows; the phase is staggered over the instances, and the shader animates what the CPU uploaded once. Run <code>cargo run --example appearance</code> to reproduce it.</em></p>
 <h2 id="using-with-batchrecorder-1"><a class="header" href="#using-with-batchrecorder-1">Using with BatchRecorder</a></h2>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
@@ -1419,7 +1390,6 @@ fn render(mut commands: Commands, mut meshes: ResMut&lt;Assets&lt;Mesh&gt;&gt;) 
     let _entities = render_standalone_batches(&amp;mut recorder, &amp;mut commands, meshes, None);
 }
 <span class="boring">}</span></code></pre>
-<p><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_standalone.webp" alt="Standalone pipeline"><span class="img-wrapper"><img src="screenshots/screenshot_standalone.webp" alt="Standalone pipeline"></span></label></p>
 <p><em>The standalone pipeline: one shader pipeline and one bind group. Run <code>cargo run --example standalone</code> to reproduce it.</em></p>
 <h3 id="standalone-vs-pbr-pipeline"><a class="header" href="#standalone-vs-pbr-pipeline">Standalone vs PBR Pipeline</a></h3>
 <div class="table-wrapper">
@@ -1530,36 +1500,34 @@ let collider = Collider::convex_hull_from_mesh(&amp;mesh);
 <div class="table-wrapper">
 <table>
 <thead>
-<tr><th>Screenshot</th><th>Example</th><th>Description</th></tr>
+<tr><th>Example</th><th>Description</th></tr>
 </thead>
 <tbody>
-<tr><td><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_shapes.png" alt="shapes"><span class="img-wrapper"><img src="screenshots/screenshot_shapes.png" alt="shapes"></span></label></td><td><code>shapes</code></td><td>All procedural primitives with dual-directional gradient shading</td></tr>
-<tr><td><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_character_creator.webp" alt="character_creator"><span class="img-wrapper"><img src="screenshots/screenshot_character_creator.webp" alt="character_creator"></span></label></td><td><code>character_creator</code></td><td>Character parts built from gradient-shaded primitives</td></tr>
-<tr><td><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_styles.png" alt="styles"><span class="img-wrapper"><img src="screenshots/screenshot_styles.png" alt="styles"></span></label></td><td><code>styles</code></td><td>Opaque, transparent, additive, multiplicative, screen, dither, and dashed blend modes</td></tr>
-<tr><td><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_mix_spaces.png" alt="mix_spaces"><span class="img-wrapper"><img src="screenshots/screenshot_mix_spaces.png" alt="mix_spaces"></span></label></td><td><code>mix_spaces</code></td><td>The same gradient in each <code>MixSpace</code> (OKLAB, OKLCH, linear RGB, sRGB)</td></tr>
-<tr><td><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_pbr_effects.png" alt="pbr_effects"><span class="img-wrapper"><img src="screenshots/screenshot_pbr_effects.png" alt="pbr_effects"></span></label></td><td><code>pbr_effects</code></td><td>Transparency, emissive glow, metallic surfaces, and combined effects</td></tr>
-<tr><td><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_gradient_2d.webp" alt="gradient_2d"><span class="img-wrapper"><img src="screenshots/screenshot_gradient_2d.webp" alt="gradient_2d"></span></label></td><td><code>gradient_2d</code></td><td><code>Camera2d</code> and <code>Mesh2d</code> with gradient cards, a radial disc, a pulsing star, a dashed ring and a polygon with a hole</td></tr>
-<tr><td><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_sdf_2d.webp" alt="sdf_2d"><span class="img-wrapper"><img src="screenshots/screenshot_sdf_2d.webp" alt="sdf_2d"></span></label></td><td><code>sdf_2d</code></td><td>One shared unit quad mesh: filled discs, ellipses, rounded rectangles, rims, animated partial arcs, radial and angular gradients</td></tr>
-<tr><td><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_sdf_dash_gallery.png" alt="sdf_dash_gallery"><span class="img-wrapper"><img src="screenshots/screenshot_sdf_dash_gallery.png" alt="sdf_dash_gallery"></span></label></td><td><code>sdf_dash_gallery</code></td><td>Dashed rim outlines comparing <code>Off</code>, <code>Tiling</code>, <code>EndToEnd</code> and count-based snap modes</td></tr>
-<tr><td><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_immediate.webp" alt="immediate"><span class="img-wrapper"><img src="screenshots/screenshot_immediate.webp" alt="immediate"></span></label></td><td><code>immediate</code></td><td>Per-frame animated particles, push/pop state stacking, billboarding, and line drawing</td></tr>
-<tr><td><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_retained.webp" alt="retained"><span class="img-wrapper"><img src="screenshots/screenshot_retained.webp" alt="retained"></span></label></td><td><code>retained</code></td><td>Persistent shapes updated each frame via handles without recreating entities</td></tr>
-<tr><td><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_instanced.webp" alt="instanced"><span class="img-wrapper"><img src="screenshots/screenshot_instanced.webp" alt="instanced"></span></label></td><td><code>instanced</code></td><td>500 spheres rendered in a single GPU batch via <code>BatchRecorder</code></td></tr>
-<tr><td><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_standalone.webp" alt="standalone"><span class="img-wrapper"><img src="screenshots/screenshot_standalone.webp" alt="standalone"></span></label></td><td><code>standalone</code></td><td>Gradient shapes drawn without any PBR material or lights — one shader pipeline, one bind group</td></tr>
-<tr><td><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_curves.png" alt="curves"><span class="img-wrapper"><img src="screenshots/screenshot_curves.png" alt="curves"></span></label></td><td><code>curves</code></td><td>Spline and parametric curves rendered as smooth tubes</td></tr>
-<tr><td><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_polyline.webp" alt="polyline"><span class="img-wrapper"><img src="screenshots/screenshot_polyline.webp" alt="polyline"></span></label></td><td><code>polyline</code></td><td>Polylines with joint styles, width variation, gradient colors, and animated reveal</td></tr>
-<tr><td><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_sweep.png" alt="sweep"><span class="img-wrapper"><img src="screenshots/screenshot_sweep.png" alt="sweep"></span></label></td><td><code>sweep</code></td><td>Profiles swept along 3D paths: a wall with an arched gate and windows, a kerbed road, and a tapering pipe on a helix</td></tr>
-<tr><td><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_road.png" alt="road"><span class="img-wrapper"><img src="screenshots/screenshot_road.png" alt="road"></span></label></td><td><code>road</code></td><td>Banked road using <code>Shape::sweep_frames</code> with width and roll channels</td></tr>
-<tr><td><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_composed_shapes.png" alt="composed_shapes"><span class="img-wrapper"><img src="screenshots/screenshot_composed_shapes.png" alt="composed_shapes"></span></label></td><td><code>composed_shapes</code></td><td>Compound tower, wall with arched opening, extruded cobbles, emissive torch, metallic gem, and translucent ghost piece</td></tr>
-<tr><td><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_terrain.png" alt="terrain"><span class="img-wrapper"><img src="screenshots/screenshot_terrain.png" alt="terrain"></span></label></td><td><code>terrain</code></td><td>Heightfield chunks with shared edge normals, relative height bands, and hole edges</td></tr>
-<tr><td><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_deformation.webp" alt="deformation"><span class="img-wrapper"><img src="screenshots/screenshot_deformation.webp" alt="deformation"></span></label></td><td><code>deformation</code></td><td>Vertex shader animations: wobble, pulse, and morph effects</td></tr>
-<tr><td><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_appearance.webp" alt="appearance"><span class="img-wrapper"><img src="screenshots/screenshot_appearance.webp" alt="appearance"></span></label></td><td><code>appearance</code></td><td>Per-instance colour animation: static, pulse, cycle, and gradient shift</td></tr>
-<tr><td><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_arbitrary_shapes.png" alt="arbitrary_shapes"><span class="img-wrapper"><img src="screenshots/screenshot_arbitrary_shapes.png" alt="arbitrary_shapes"></span></label></td><td><code>arbitrary_shapes</code></td><td>Custom polygons with per-vertex colors, star shapes, annular rings, pie-slice wedges, and tapered cylinders</td></tr>
+<tr><td><code>shapes</code></td><td>All procedural primitives with dual-directional gradient shading</td></tr>
+<tr><td><code>character_creator</code></td><td>Character parts built from gradient-shaded primitives</td></tr>
+<tr><td><code>styles</code></td><td>Opaque, transparent, additive, multiplicative, screen, dither, and dashed blend modes</td></tr>
+<tr><td><code>mix_spaces</code></td><td>The same gradient in each <code>MixSpace</code> (OKLAB, OKLCH, linear RGB, sRGB)</td></tr>
+<tr><td><code>pbr_effects</code></td><td>Transparency, emissive glow, metallic surfaces, and combined effects</td></tr>
+<tr><td><code>gradient_2d</code></td><td><code>Camera2d</code> and <code>Mesh2d</code> with gradient cards, a radial disc, a pulsing star, a dashed ring and a polygon with a hole</td></tr>
+<tr><td><code>sdf_2d</code></td><td>One shared unit quad mesh: filled discs, ellipses, rounded rectangles, rims, animated partial arcs, radial and angular gradients</td></tr>
+<tr><td><code>sdf_dash_gallery</code></td><td>Dashed rim outlines comparing <code>Off</code>, <code>Tiling</code>, <code>EndToEnd</code> and count-based snap modes</td></tr>
+<tr><td><code>immediate</code></td><td>Per-frame animated particles, push/pop state stacking, billboarding, and line drawing</td></tr>
+<tr><td><code>retained</code></td><td>Persistent shapes updated each frame via handles without recreating entities</td></tr>
+<tr><td><code>instanced</code></td><td>500 spheres rendered in a single GPU batch via <code>BatchRecorder</code></td></tr>
+<tr><td><code>standalone</code></td><td>Gradient shapes drawn without any PBR material or lights — one shader pipeline, one bind group</td></tr>
+<tr><td><code>curves</code></td><td>Spline and parametric curves rendered as smooth tubes</td></tr>
+<tr><td><code>polyline</code></td><td>Polylines with joint styles, width variation, gradient colors, and animated reveal</td></tr>
+<tr><td><code>sweep</code></td><td>Profiles swept along 3D paths: a wall with an arched gate and windows, a kerbed road, and a tapering pipe on a helix</td></tr>
+<tr><td><code>road</code></td><td>Banked road using <code>Shape::sweep_frames</code> with width and roll channels</td></tr>
+<tr><td><code>composed_shapes</code></td><td>Compound tower, wall with arched opening, extruded cobbles, emissive torch, metallic gem, and translucent ghost piece</td></tr>
+<tr><td><code>terrain</code></td><td>Heightfield chunks with shared edge normals, relative height bands, and hole edges</td></tr>
+<tr><td><code>deformation</code></td><td>Vertex shader animations: wobble, pulse, and morph effects</td></tr>
+<tr><td><code>appearance</code></td><td>Per-instance colour animation: static, pulse, cycle, and gradient shift</td></tr>
+<tr><td><code>arbitrary_shapes</code></td><td>Custom polygons with per-vertex colors, star shapes, annular rings, pie-slice wedges, and tapered cylinders</td></tr>
 </tbody>
 </table>
 </div>
 <p>Run any example with <code>cargo run --example &lt;name&gt;</code>.</p>
-<p><code>make screenshots</code> regenerates every image (headless with <code>xvfb-run</code> when no display is available). A PNG is captured for a still scene, and an animated WebP (lossy, downscaled to 480 px wide) for one that changes over time. Use <code>make screenshot-&lt;example&gt;</code> to refresh a single one, for example <code>make screenshot-appearance</code>.</p>
-<p><code>cargo test</code> checks the pictures: <code>tests/docs_screenshots.rs</code> fails if an example has no picture in the README or the book, or if an animation is not a multi-frame WebP, and <code>tests/mix_space_screenshot.rs</code> compares the Mix Spaces picture with reference pixel values.</p>
 
                     </main>
 

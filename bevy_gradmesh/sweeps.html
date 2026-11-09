@@ -35,12 +35,11 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-70343dba.js";
+            window.path_to_searchindex_js = "searchindex-77679fc6.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-cbf67a2d.js"></script>
-        <link rel="stylesheet" href="../../css/book_canvas.css">
-</head>
+    </head>
     <body>
     <div id="mdbook-help-container">
         <div id="mdbook-help-popup">
@@ -103,11 +102,6 @@
         </script>
 
         <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
-            <div class="book-version-toggle">
-                <a href="wasm/index.html" class="version-link" title="Switch to interactive WASM version">
-                    ⚡ WASM version
-                </a>
-            </div>
             <!-- populated by js -->
             <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
             <noscript>
@@ -267,7 +261,6 @@ nothing, and it is part of the shape’s identity like the mask.</p>
 <p>The terrain picture below cuts the same round hole and the same one-cell hole
 three ways; the labels are the triangle counts of the built meshes, which the
 example asserts grow with the smoothness.</p>
-<p><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_terrain.png" alt="Terrain chunks and hole edges"><span class="img-wrapper"><img src="screenshots/screenshot_terrain.png" alt="Terrain chunks and hole edges"></span></label></p>
 <p><em>Four chunks meeting at a peak with shared edge normals, and the same round hole cut three ways with <code>HoleEdge::Cells</code>, <code>Rounded</code> and <code>Smooth</code>; each label shows its triangle count. Run <code>cargo run --example terrain</code> to reproduce it.</em></p>
 <h2 id="shapesweep"><a class="header" href="#shapesweep"><code>Shape::sweep</code></a></h2>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
@@ -329,9 +322,7 @@ as given (no parallel transport) and blends them where it needs extra rings.
 <code>right × up</code> should point along the path; a left-handed frame keeps its <code>up</code> and
 gets its <code>right</code> flipped, so the surface never turns inside out. A closed sweep
 joins the last frame to the first without correcting the frames at the seam.</p>
-<p><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_sweep.png" alt="Sweeps"><span class="img-wrapper"><img src="screenshots/screenshot_sweep.png" alt="Sweeps"></span></label></p>
 <p><em>A wall along a baked spline loop with an arched gate, a kerbed road and a tapering pipe on a helix. Run <code>cargo run --example sweep</code> to reproduce it.</em></p>
-<p><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_road.png" alt="Banked road"><span class="img-wrapper"><img src="screenshots/screenshot_road.png" alt="Banked road"></span></label></p>
 <p><em>An open spline with width and roll channels baked into <code>Shape::sweep_frames</code>, and a ribbon turning with <code>SweepOptions::roll_with</code>. Run <code>cargo run --example road</code> to reproduce it.</em></p>
 <h3 id="openings"><a class="header" href="#openings">Openings</a></h3>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]

@@ -35,12 +35,11 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-70343dba.js";
+            window.path_to_searchindex_js = "searchindex-77679fc6.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-cbf67a2d.js"></script>
-        <link rel="stylesheet" href="../../css/book_canvas.css">
-</head>
+    </head>
     <body>
     <div id="mdbook-help-container">
         <div id="mdbook-help-popup">
@@ -103,11 +102,6 @@
         </script>
 
         <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
-            <div class="book-version-toggle">
-                <a href="wasm/index.html" class="version-link" title="Switch to interactive WASM version">
-                    ⚡ WASM version
-                </a>
-            </div>
             <!-- populated by js -->
             <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
             <noscript>
@@ -190,36 +184,34 @@
 <div class="table-wrapper">
 <table>
 <thead>
-<tr><th>Screenshot</th><th>Example</th><th>Description</th></tr>
+<tr><th>Example</th><th>Description</th></tr>
 </thead>
 <tbody>
-<tr><td><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_shapes.png" alt="shapes"><span class="img-wrapper"><img src="screenshots/screenshot_shapes.png" alt="shapes"></span></label></td><td><code>shapes</code></td><td>All procedural primitives with dual-directional gradient shading</td></tr>
-<tr><td><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_character_creator.webp" alt="character_creator"><span class="img-wrapper"><img src="screenshots/screenshot_character_creator.webp" alt="character_creator"></span></label></td><td><code>character_creator</code></td><td>Character parts built from gradient-shaded primitives</td></tr>
-<tr><td><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_styles.png" alt="styles"><span class="img-wrapper"><img src="screenshots/screenshot_styles.png" alt="styles"></span></label></td><td><code>styles</code></td><td>Opaque, transparent, additive, multiplicative, screen, dither, and dashed blend modes</td></tr>
-<tr><td><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_mix_spaces.png" alt="mix_spaces"><span class="img-wrapper"><img src="screenshots/screenshot_mix_spaces.png" alt="mix_spaces"></span></label></td><td><code>mix_spaces</code></td><td>The same gradient in each <code>MixSpace</code> (OKLAB, OKLCH, linear RGB, sRGB)</td></tr>
-<tr><td><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_pbr_effects.png" alt="pbr_effects"><span class="img-wrapper"><img src="screenshots/screenshot_pbr_effects.png" alt="pbr_effects"></span></label></td><td><code>pbr_effects</code></td><td>Transparency, emissive glow, metallic surfaces, and combined effects</td></tr>
-<tr><td><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_gradient_2d.webp" alt="gradient_2d"><span class="img-wrapper"><img src="screenshots/screenshot_gradient_2d.webp" alt="gradient_2d"></span></label></td><td><code>gradient_2d</code></td><td><code>Camera2d</code> and <code>Mesh2d</code> with gradient cards, a radial disc, a pulsing star, a dashed ring and a polygon with a hole</td></tr>
-<tr><td><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_sdf_2d.webp" alt="sdf_2d"><span class="img-wrapper"><img src="screenshots/screenshot_sdf_2d.webp" alt="sdf_2d"></span></label></td><td><code>sdf_2d</code></td><td>One shared unit quad mesh: filled discs, ellipses, rounded rectangles, rims, animated partial arcs, radial and angular gradients</td></tr>
-<tr><td><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_sdf_dash_gallery.png" alt="sdf_dash_gallery"><span class="img-wrapper"><img src="screenshots/screenshot_sdf_dash_gallery.png" alt="sdf_dash_gallery"></span></label></td><td><code>sdf_dash_gallery</code></td><td>Dashed rim outlines comparing <code>Off</code>, <code>Tiling</code>, <code>EndToEnd</code> and count-based snap modes</td></tr>
-<tr><td><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_immediate.webp" alt="immediate"><span class="img-wrapper"><img src="screenshots/screenshot_immediate.webp" alt="immediate"></span></label></td><td><code>immediate</code></td><td>Per-frame animated particles, push/pop state stacking, billboarding, and line drawing</td></tr>
-<tr><td><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_retained.webp" alt="retained"><span class="img-wrapper"><img src="screenshots/screenshot_retained.webp" alt="retained"></span></label></td><td><code>retained</code></td><td>Persistent shapes updated each frame via handles without recreating entities</td></tr>
-<tr><td><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_instanced.webp" alt="instanced"><span class="img-wrapper"><img src="screenshots/screenshot_instanced.webp" alt="instanced"></span></label></td><td><code>instanced</code></td><td>500 spheres rendered in a single GPU batch via <code>BatchRecorder</code></td></tr>
-<tr><td><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_standalone.webp" alt="standalone"><span class="img-wrapper"><img src="screenshots/screenshot_standalone.webp" alt="standalone"></span></label></td><td><code>standalone</code></td><td>Gradient shapes drawn without any PBR material or lights — one shader pipeline, one bind group</td></tr>
-<tr><td><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_curves.png" alt="curves"><span class="img-wrapper"><img src="screenshots/screenshot_curves.png" alt="curves"></span></label></td><td><code>curves</code></td><td>Spline and parametric curves rendered as smooth tubes</td></tr>
-<tr><td><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_polyline.webp" alt="polyline"><span class="img-wrapper"><img src="screenshots/screenshot_polyline.webp" alt="polyline"></span></label></td><td><code>polyline</code></td><td>Polylines with joint styles, width variation, gradient colors, and animated reveal</td></tr>
-<tr><td><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_sweep.png" alt="sweep"><span class="img-wrapper"><img src="screenshots/screenshot_sweep.png" alt="sweep"></span></label></td><td><code>sweep</code></td><td>Profiles swept along 3D paths: a wall with an arched gate and windows, a kerbed road, and a tapering pipe on a helix</td></tr>
-<tr><td><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_road.png" alt="road"><span class="img-wrapper"><img src="screenshots/screenshot_road.png" alt="road"></span></label></td><td><code>road</code></td><td>Banked road using <code>Shape::sweep_frames</code> with width and roll channels</td></tr>
-<tr><td><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_composed_shapes.png" alt="composed_shapes"><span class="img-wrapper"><img src="screenshots/screenshot_composed_shapes.png" alt="composed_shapes"></span></label></td><td><code>composed_shapes</code></td><td>Compound tower, wall with arched opening, extruded cobbles, emissive torch, metallic gem, and translucent ghost piece</td></tr>
-<tr><td><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_terrain.png" alt="terrain"><span class="img-wrapper"><img src="screenshots/screenshot_terrain.png" alt="terrain"></span></label></td><td><code>terrain</code></td><td>Heightfield chunks with shared edge normals, relative height bands, and hole edges</td></tr>
-<tr><td><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_deformation.webp" alt="deformation"><span class="img-wrapper"><img src="screenshots/screenshot_deformation.webp" alt="deformation"></span></label></td><td><code>deformation</code></td><td>Vertex shader animations: wobble, pulse, and morph effects</td></tr>
-<tr><td><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_appearance.webp" alt="appearance"><span class="img-wrapper"><img src="screenshots/screenshot_appearance.webp" alt="appearance"></span></label></td><td><code>appearance</code></td><td>Per-instance colour animation: static, pulse, cycle, and gradient shift</td></tr>
-<tr><td><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_arbitrary_shapes.png" alt="arbitrary_shapes"><span class="img-wrapper"><img src="screenshots/screenshot_arbitrary_shapes.png" alt="arbitrary_shapes"></span></label></td><td><code>arbitrary_shapes</code></td><td>Custom polygons with per-vertex colors, star shapes, annular rings, pie-slice wedges, and tapered cylinders</td></tr>
+<tr><td><code>shapes</code></td><td>All procedural primitives with dual-directional gradient shading</td></tr>
+<tr><td><code>character_creator</code></td><td>Character parts built from gradient-shaded primitives</td></tr>
+<tr><td><code>styles</code></td><td>Opaque, transparent, additive, multiplicative, screen, dither, and dashed blend modes</td></tr>
+<tr><td><code>mix_spaces</code></td><td>The same gradient in each <code>MixSpace</code> (OKLAB, OKLCH, linear RGB, sRGB)</td></tr>
+<tr><td><code>pbr_effects</code></td><td>Transparency, emissive glow, metallic surfaces, and combined effects</td></tr>
+<tr><td><code>gradient_2d</code></td><td><code>Camera2d</code> and <code>Mesh2d</code> with gradient cards, a radial disc, a pulsing star, a dashed ring and a polygon with a hole</td></tr>
+<tr><td><code>sdf_2d</code></td><td>One shared unit quad mesh: filled discs, ellipses, rounded rectangles, rims, animated partial arcs, radial and angular gradients</td></tr>
+<tr><td><code>sdf_dash_gallery</code></td><td>Dashed rim outlines comparing <code>Off</code>, <code>Tiling</code>, <code>EndToEnd</code> and count-based snap modes</td></tr>
+<tr><td><code>immediate</code></td><td>Per-frame animated particles, push/pop state stacking, billboarding, and line drawing</td></tr>
+<tr><td><code>retained</code></td><td>Persistent shapes updated each frame via handles without recreating entities</td></tr>
+<tr><td><code>instanced</code></td><td>500 spheres rendered in a single GPU batch via <code>BatchRecorder</code></td></tr>
+<tr><td><code>standalone</code></td><td>Gradient shapes drawn without any PBR material or lights — one shader pipeline, one bind group</td></tr>
+<tr><td><code>curves</code></td><td>Spline and parametric curves rendered as smooth tubes</td></tr>
+<tr><td><code>polyline</code></td><td>Polylines with joint styles, width variation, gradient colors, and animated reveal</td></tr>
+<tr><td><code>sweep</code></td><td>Profiles swept along 3D paths: a wall with an arched gate and windows, a kerbed road, and a tapering pipe on a helix</td></tr>
+<tr><td><code>road</code></td><td>Banked road using <code>Shape::sweep_frames</code> with width and roll channels</td></tr>
+<tr><td><code>composed_shapes</code></td><td>Compound tower, wall with arched opening, extruded cobbles, emissive torch, metallic gem, and translucent ghost piece</td></tr>
+<tr><td><code>terrain</code></td><td>Heightfield chunks with shared edge normals, relative height bands, and hole edges</td></tr>
+<tr><td><code>deformation</code></td><td>Vertex shader animations: wobble, pulse, and morph effects</td></tr>
+<tr><td><code>appearance</code></td><td>Per-instance colour animation: static, pulse, cycle, and gradient shift</td></tr>
+<tr><td><code>arbitrary_shapes</code></td><td>Custom polygons with per-vertex colors, star shapes, annular rings, pie-slice wedges, and tapered cylinders</td></tr>
 </tbody>
 </table>
 </div>
 <p>Run any example with <code>cargo run --example &lt;name&gt;</code>.</p>
-<p><code>make screenshots</code> regenerates every image (headless with <code>xvfb-run</code> when no display is available). A PNG is captured for a still scene, and an animated WebP (lossy, downscaled to 480 px wide) for one that changes over time. Use <code>make screenshot-&lt;example&gt;</code> to refresh a single one, for example <code>make screenshot-appearance</code>.</p>
-<p><code>cargo test</code> checks the pictures: <code>tests/docs_screenshots.rs</code> fails if an example has no picture in the README or the book, or if an animation is not a multi-frame WebP, and <code>tests/mix_space_screenshot.rs</code> compares the Mix Spaces picture with reference pixel values.</p>
 
                     </main>
 

@@ -35,12 +35,11 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-f6907466.js";
+            window.path_to_searchindex_js = "searchindex-5e46b0c3.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-d11337db.js"></script>
-        <link rel="stylesheet" href="../../css/book_canvas.css">
-</head>
+    </head>
     <body>
     <div id="mdbook-help-container">
         <div id="mdbook-help-popup">
@@ -103,11 +102,6 @@
         </script>
 
         <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
-            <div class="book-version-toggle">
-                <a href="wasm/index.html" class="version-link" title="Switch to interactive WASM version">
-                    ⚡ WASM version
-                </a>
-            </div>
             <!-- populated by js -->
             <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
             <noscript>
@@ -215,8 +209,6 @@ between_with([a, b, c, d], BetweenOptions::new()
     .with_interpolation(Interpolation::NaturalNeighbor)
 )
 
-![Three-way toggle](screenshots/screenshot_three_way.webp)
-
 *Three states arranged in a triangle. Run `cargo run --example three_way --features pbr`.*
 
 # `closest` — Pick the Nearest State
@@ -233,7 +225,6 @@ ViewNode::circle("item", 0.3)
         s
     })))
 <span class="boring">}</span></code></pre>
-<p><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_reorder_list.webp" alt="Reorder list"><span class="img-wrapper"><img src="screenshots/screenshot_reorder_list.webp" alt="Reorder list"></span></label></p>
 <p><em>Drag items to reorder a list. Run <code>cargo run --example reorder_list --features pbr</code>.</em></p>
 <h2 id="vary--continuously-change-a-value"><a class="header" href="#vary--continuously-change-a-value"><code>vary</code> — Continuously Change a Value</a></h2>
 <p>Continuously change a numeric parameter of your state as you drag.</p>
@@ -257,7 +248,6 @@ vary_constrained(
     constraint::in_range(param!(Slider, value), 0.0, 10.0),
 )
 <span class="boring">}</span></code></pre>
-<p><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_slider.webp" alt="Slider"><span class="img-wrapper"><img src="screenshots/screenshot_slider.webp" alt="Slider"></span></label></p>
 <p><em>A continuous slider. Run <code>cargo run --example slider --features pbr</code>.</em></p>
 <h2 id="substate--delegate-to-a-nested-state"><a class="header" href="#substate--delegate-to-a-nested-state"><code>substate</code> — Delegate to a Nested State</a></h2>
 <p>Apply an operator to a field of your state, using a <code>Lens</code>:</p>

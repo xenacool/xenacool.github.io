@@ -35,12 +35,11 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-70343dba.js";
+            window.path_to_searchindex_js = "searchindex-77679fc6.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-cbf67a2d.js"></script>
-        <link rel="stylesheet" href="../../css/book_canvas.css">
-</head>
+    </head>
     <body>
     <div id="mdbook-help-container">
         <div id="mdbook-help-popup">
@@ -103,11 +102,6 @@
         </script>
 
         <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
-            <div class="book-version-toggle">
-                <a href="wasm/index.html" class="version-link" title="Switch to interactive WASM version">
-                    ⚡ WASM version
-                </a>
-            </div>
             <!-- populated by js -->
             <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
             <noscript>
@@ -223,7 +217,6 @@ let appearance = AppearanceSnapshot::color_pulse(
 </span><span class="boring">fn main() {
 </span>let appearance = AppearanceSnapshot::static_appearance();
 <span class="boring">}</span></code></pre>
-<p><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_appearance.webp" alt="Appearance animation"><span class="img-wrapper"><img src="screenshots/screenshot_appearance.webp" alt="Appearance animation"></span></label></p>
 <p><em>Static, colour pulse, colour cycle and gradient shift rows; the phase is staggered over the instances, and the shader animates what the CPU uploaded once. Run <code>cargo run --example appearance</code> to reproduce it.</em></p>
 <h2 id="using-with-batchrecorder"><a class="header" href="#using-with-batchrecorder">Using with BatchRecorder</a></h2>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]

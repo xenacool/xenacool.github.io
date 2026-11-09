@@ -20,10 +20,10 @@ PORT ?= 8000
 
 all: build
 
-## Build both mdBook docs with static screenshots (default)
+## Build both mdBook docs (plain text, no images)
 build: build-dragging build-gradmesh
 
-## Build bevy_composable_dragging book (static screenshots)
+## Build bevy_composable_dragging book
 build-dragging:
 	@echo "Building bevy_composable_dragging book..."
 	rm -rf $(DRAGGING_OUTPUT)
@@ -31,11 +31,11 @@ build-dragging:
 	cd $(DRAGGING_SUBMODULE)/book && mdbook build --dest-dir ../../../$(DRAGGING_OUTPUT)
 	mv $(DRAGGING_OUTPUT)/html/* $(DRAGGING_OUTPUT)/
 	rm -rf $(DRAGGING_OUTPUT)/html $(DRAGGING_OUTPUT)/linkcheck
-	@echo "Injecting WASM version toggle..."
-	python3 scripts/postprocess_book.py $(DRAGGING_OUTPUT) bevy_composable_dragging --static-toggle
+	find $(DRAGGING_OUTPUT) -type f \( -name "*.png" -o -name "*.webp" -o -name "*.jpg" \) -delete
+	find $(DRAGGING_OUTPUT) -type d -empty -delete
 	@echo "Done: $(DRAGGING_OUTPUT)/"
 
-## Build bevy_gradmesh book (static screenshots)
+## Build bevy_gradmesh book
 build-gradmesh:
 	@echo "Building bevy_gradmesh book..."
 	rm -rf $(GRADMESH_OUTPUT)
@@ -43,33 +43,25 @@ build-gradmesh:
 	cd $(GRADMESH_SUBMODULE)/book && mdbook build --dest-dir ../../../$(GRADMESH_OUTPUT)
 	mv $(GRADMESH_OUTPUT)/html/* $(GRADMESH_OUTPUT)/
 	rm -rf $(GRADMESH_OUTPUT)/html $(GRADMESH_OUTPUT)/linkcheck
-	@echo "Injecting WASM version toggle..."
-	python3 scripts/postprocess_book.py $(GRADMESH_OUTPUT) bevy_gradmesh --static-toggle
+	find $(GRADMESH_OUTPUT) -type f \( -name "*.png" -o -name "*.webp" -o -name "*.jpg" \) -delete
+	find $(GRADMESH_OUTPUT) -type d -empty -delete
 	@echo "Done: $(GRADMESH_OUTPUT)/"
 
-## Build both books with WASM canvas post-processing
+## Build both books with WASM canvases (copies plain text + adds WASM runtime)
 build-wasm: build-wasm-dragging build-wasm-gradmesh
 
-## Build bevy_composable_dragging book with WASM canvases
-build-wasm-dragging:
-	@echo "Building bevy_composable_dragging book with WASM canvases..."
-	mkdir -p $(DRAGGING_WASM_OUTPUT)
-	cd $(DRAGGING_SUBMODULE)/book && mdbook build --dest-dir ../../../$(DRAGGING_WASM_OUTPUT)
-	mv $(DRAGGING_WASM_OUTPUT)/html/* $(DRAGGING_WASM_OUTPUT)/
-	rm -rf $(DRAGGING_WASM_OUTPUT)/html $(DRAGGING_WASM_OUTPUT)/linkcheck
-	@echo "Post-processing for WASM canvases..."
-	python3 scripts/postprocess_book.py $(DRAGGING_WASM_OUTPUT) bevy_composable_dragging --depth 3
+## Build bevy_composable_dragging WASM version
+build-wasm-dragging: build-dragging build-wasm-runner
+	@echo "Creating WASM version for bevy_composable_dragging..."
+	rm -rf $(DRAGGING_WASM_OUTPUT)
+	cp -r $(DRAGGING_OUTPUT) $(DRAGGING_WASM_OUTPUT)
 	@echo "Done: $(DRAGGING_WASM_OUTPUT)/"
 
-## Build bevy_gradmesh book with WASM canvases
-build-wasm-gradmesh:
-	@echo "Building bevy_gradmesh book with WASM canvases..."
-	mkdir -p $(GRADMESH_WASM_OUTPUT)
-	cd $(GRADMESH_SUBMODULE)/book && mdbook build --dest-dir ../../../$(GRADMESH_WASM_OUTPUT)
-	mv $(GRADMESH_WASM_OUTPUT)/html/* $(GRADMESH_WASM_OUTPUT)/
-	rm -rf $(GRADMESH_WASM_OUTPUT)/html $(GRADMESH_WASM_OUTPUT)/linkcheck
-	@echo "Post-processing for WASM canvases..."
-	python3 scripts/postprocess_book.py $(GRADMESH_WASM_OUTPUT) bevy_gradmesh --depth 3
+## Build bevy_gradmesh WASM version
+build-wasm-gradmesh: build-gradmesh build-wasm-runner
+	@echo "Creating WASM version for bevy_gradmesh..."
+	rm -rf $(GRADMESH_WASM_OUTPUT)
+	cp -r $(GRADMESH_OUTPUT) $(GRADMESH_WASM_OUTPUT)
 	@echo "Done: $(GRADMESH_WASM_OUTPUT)/"
 
 ## Build the shared WASM runtime (single binary with all 37 examples)
@@ -148,10 +140,10 @@ serve:
 	@echo "Starting local server on http://localhost:$(PORT)"
 	python3 -m http.server $(PORT)
 
-## Publish: rebuild both static and WASM books, commit, and push to gh-pages
+## Publish: rebuild both books and WASM runtime, commit, and push to gh-pages
 publish: check-versions build build-wasm
 	@echo "Publishing to gh-pages..."
-	git add $(DRAGGING_OUTPUT) $(GRADMESH_OUTPUT) $(DRAGGING_WASM_OUTPUT) $(GRADMESH_WASM_OUTPUT)
+	git add $(DRAGGING_OUTPUT) $(GRADMESH_OUTPUT) $(DRAGGING_WASM_OUTPUT) $(GRADMESH_WASM_OUTPUT) demos/wasm/
 	git commit -m "Rebuild books: $(shell date +%Y-%m-%d)" || echo "No changes to commit"
 	git push origin gh-pages
 	@echo "Done."
@@ -216,40 +208,30 @@ help:
 	@echo "xenacool.github.io Makefile"
 	@echo ""
 	@echo "Targets:"
-	@echo "  build          Build both mdBook docs with static screenshots (default)"
-	@echo "  build-dragging Build bevy_composable_dragging book (static)"
-	@echo "  build-gradmesh Build bevy_gradmesh book (static)"
-	@echo "  build-wasm     Build both books with WASM canvas post-processing"
-	@echo "  build-wasm-dragging  Build dragging book with WASM canvases"
-	@echo "  build-wasm-gradmesh  Build gradmesh book with WASM canvases"
+	@echo "  build          Build both mdBook docs (plain text, no images)"
+	@echo "  build-dragging Build bevy_composable_dragging book"
+	@echo "  build-gradmesh Build bevy_gradmesh book"
+	@echo "  build-wasm     Build both books + WASM runtime (interactive version)"
 	@echo "  build-wasm-runner Build shared WASM runtime (single binary, 37 examples)"
-	@echo "  build-examples Build shared WASM runtime (alias for build-wasm-runner)"
 	@echo "  serve          Start local HTTP server on port $(PORT)"
-	@echo "  publish        Build both static and WASM books, push to gh-pages"
-	@echo "  check-links    Pull submodules, build books, check all links against live site"
-	@echo "  check-links-local  Pull submodules, build books, check links against local server"
+	@echo "  publish        Build both versions, push to gh-pages"
+	@echo "  check-links    Pull submodules, build books, check all links"
 	@echo "  check-versions Check that book version references match Cargo.toml"
 	@echo "  clean          Remove all built book output"
-	@echo "  clean-examples Remove all WASM example output"
-	@echo "  push-wasm-gh-pages  Push WASM examples to gh-pages (DANGER: gh-pages branch only)"
+	@echo "  push-wasm-gh-pages  Push WASM to gh-pages (DANGER: gh-pages branch only)"
 	@echo "  help           Show this help message"
 	@echo ""
 	@echo "Book versions:"
-	@echo "  Each book has two versions:"
-	@echo "    /bevy_gradmesh/              - Static screenshots (default)"
-	@echo "    /bevy_gradmesh/wasm/         - Live WASM canvases"
-	@echo "    /bevy_composable_dragging/   - Static screenshots (default)"
-	@echo "    /bevy_composable_dragging/wasm/ - Live WASM canvases"
-	@echo "  Each version has a sidebar link to switch to the other."
+	@echo "  /bevy_gradmesh/              - Plain text (default)"
+	@echo "  /bevy_gradmesh/wasm/         - Interactive WASM canvases"
+	@echo "  /bevy_composable_dragging/   - Plain text (default)"
+	@echo "  /bevy_composable_dragging/wasm/ - Interactive WASM canvases"
 	@echo ""
 	@echo "Examples:"
-	@echo "  make           Build both books (static screenshots)"
-	@echo "  make build-wasm  Build both books (WASM canvases)"
+	@echo "  make           Build both books (plain text)"
+	@echo "  make build-wasm  Build both + WASM runtime"
 	@echo "  make serve     Start local server"
 	@echo "  make publish   Build and push both versions"
-	@echo "  make build-examples  Compile all examples to WASM"
-	@echo "  make check-links    Check all links on live site"
-	@echo "  make check-versions Verify book versions match Cargo.toml"
 	@echo "  make PORT=9000 serve  Start server on port 9000"
 	@echo ""
 	@echo "WARNING: push-wasm-gh-pages will FAIL on any branch other than gh-pages."

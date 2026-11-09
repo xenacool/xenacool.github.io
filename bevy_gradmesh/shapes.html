@@ -35,12 +35,11 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-70343dba.js";
+            window.path_to_searchindex_js = "searchindex-77679fc6.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-cbf67a2d.js"></script>
-        <link rel="stylesheet" href="../../css/book_canvas.css">
-</head>
+    </head>
     <body>
     <div id="mdbook-help-container">
         <div id="mdbook-help-popup">
@@ -103,11 +102,6 @@
         </script>
 
         <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
-            <div class="book-version-toggle">
-                <a href="wasm/index.html" class="version-link" title="Switch to interactive WASM version">
-                    ⚡ WASM version
-                </a>
-            </div>
             <!-- populated by js -->
             <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
             <noscript>
@@ -248,7 +242,6 @@
 </span>Shape::tapered_cylinder(top_radius, bottom_radius, height, detail)
 <span class="boring">}</span></code></pre>
 <p>A cone-frustum with flat top and bottom. When radii are equal, equivalent to a regular cylinder.</p>
-<p><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_shapes.png" alt="Shape showcase"><span class="img-wrapper"><img src="screenshots/screenshot_shapes.png" alt="Shape showcase"></span></label></p>
 <p><em>The 3D primitives, shaded with dual-directional gradients. Run <code>cargo run --example shapes</code> to reproduce it.</em></p>
 <h2 id="2d-primitives"><a class="header" href="#2d-primitives">2D Primitives</a></h2>
 <p>All 2D shapes are flat quads facing the camera (billboarded).</p>
@@ -290,7 +283,6 @@
 </span>Shape::wedge(radius, angle, detail)
 <span class="boring">}</span></code></pre>
 <p>Pie-slice shape. Angle is in radians (0 to 2π).</p>
-<p><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_arbitrary_shapes.png" alt="Arbitrary shapes"><span class="img-wrapper"><img src="screenshots/screenshot_arbitrary_shapes.png" alt="Arbitrary shapes"></span></label></p>
 <p><em>Custom polygons with per-vertex colours, stars, rings, wedges and a tapered cylinder. Run <code>cargo run --example arbitrary_shapes</code> to reproduce it.</em></p>
 <h3 id="arbitrary-polygon"><a class="header" href="#arbitrary-polygon">Arbitrary Polygon</a></h3>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]

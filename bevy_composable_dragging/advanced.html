@@ -35,12 +35,11 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-f6907466.js";
+            window.path_to_searchindex_js = "searchindex-5e46b0c3.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-d11337db.js"></script>
-        <link rel="stylesheet" href="../../css/book_canvas.css">
-</head>
+    </head>
     <body>
     <div id="mdbook-help-container">
         <div id="mdbook-help-popup">
@@ -103,11 +102,6 @@
         </script>
 
         <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
-            <div class="book-version-toggle">
-                <a href="wasm/index.html" class="version-link" title="Switch to interactive WASM version">
-                    ⚡ WASM version
-                </a>
-            </div>
             <!-- populated by js -->
             <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
             <noscript>
@@ -321,23 +315,28 @@ ViewNode::sdf("panel", SdfShape::rect(Vec2::new(200.0, 100.0)).with_corner_radiu
 <div class="table-wrapper">
 <table>
 <thead>
-<tr><th></th><th></th><th></th></tr>
+<tr><th>Example</th><th>Description</th></tr>
 </thead>
 <tbody>
-<tr><td><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_toggle.webp" alt="toggle"><span class="img-wrapper"><img src="screenshots/screenshot_toggle.webp" alt="toggle"></span></label></td><td><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_three_way.webp" alt="three_way"><span class="img-wrapper"><img src="screenshots/screenshot_three_way.webp" alt="three_way"></span></label></td><td><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_reorder_list.webp" alt="reorder_list"><span class="img-wrapper"><img src="screenshots/screenshot_reorder_list.webp" alt="reorder_list"></span></label></td></tr>
-<tr><td><code>toggle</code>: <code>between</code></td><td><code>three_way</code>: <code>between</code> over three states</td><td><code>reorder_list</code>: <code>closest</code> + floating</td></tr>
-<tr><td><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_ring_of_beads.webp" alt="ring_of_beads"><span class="img-wrapper"><img src="screenshots/screenshot_ring_of_beads.webp" alt="ring_of_beads"></span></label></td><td><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_slider.webp" alt="slider"><span class="img-wrapper"><img src="screenshots/screenshot_slider.webp" alt="slider"></span></label></td><td><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_clock.webp" alt="clock"><span class="img-wrapper"><img src="screenshots/screenshot_clock.webp" alt="clock"></span></label></td></tr>
-<tr><td><code>ring_of_beads</code>: <code>closest</code> on a ring</td><td><code>slider</code>: <code>vary</code> with a range constraint</td><td><code>clock</code>: <code>vary</code> one angle</td></tr>
-<tr><td><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_scheduler.webp" alt="scheduler"><span class="img-wrapper"><img src="screenshots/screenshot_scheduler.webp" alt="scheduler"></span></label></td><td><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_lists_in_lists.webp" alt="lists_in_lists"><span class="img-wrapper"><img src="screenshots/screenshot_lists_in_lists.webp" alt="lists_in_lists"></span></label></td><td><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_tessellations.webp" alt="tessellations"><span class="img-wrapper"><img src="screenshots/screenshot_tessellations.webp" alt="tessellations"></span></label></td></tr>
-<tr><td><code>scheduler</code>: <code>closest</code> + <code>vary</code></td><td><code>lists_in_lists</code>: rows nested to any depth, <code>when_far</code> snap-or-free, <code>with_overlay</code> insertion marker</td><td><code>tessellations</code>: toolbar and trash bin</td></tr>
-<tr><td><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_gradient_hanoi_3d.webp" alt="gradient_hanoi_3d"><span class="img-wrapper"><img src="screenshots/screenshot_gradient_hanoi_3d.webp" alt="gradient_hanoi_3d"></span></label></td><td><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_gradient_kanban_2d.webp" alt="gradient_kanban_2d"><span class="img-wrapper"><img src="screenshots/screenshot_gradient_kanban_2d.webp" alt="gradient_kanban_2d"></span></label></td><td><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_hello.webp" alt="hello"><span class="img-wrapper"><img src="screenshots/screenshot_hello.webp" alt="hello"></span></label></td></tr>
-<tr><td><code>gradient_hanoi_3d</code>: <code>shapes-3d</code></td><td><code>gradient_kanban_2d</code>: <code>shapes-2d</code></td><td><code>hello</code>: minimal <code>state</code> example</td></tr>
-<tr><td><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_chain_of_cells.webp" alt="chain_of_cells"><span class="img-wrapper"><img src="screenshots/screenshot_chain_of_cells.webp" alt="chain_of_cells"></span></label></td><td><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_blend_square.webp" alt="blend_square"><span class="img-wrapper"><img src="screenshots/screenshot_blend_square.webp" alt="blend_square"></span></label></td><td><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_tactile_tessellations.webp" alt="tactile_tessellations"><span class="img-wrapper"><img src="screenshots/screenshot_tactile_tessellations.webp" alt="tactile_tessellations"></span></label></td></tr>
-<tr><td><code>chain_of_cells</code>: <code>with_chaining</code>, overlay underline, drop transition</td><td><code>blend_square</code>: <code>between_with</code> natural neighbor and sharpness</td><td><code>tactile_tessellations</code>: edge-to-edge snaps with rotation</td></tr>
-<tr><td><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_gizmo_3d.webp" alt="gizmo_3d"><span class="img-wrapper"><img src="screenshots/screenshot_gizmo_3d.webp" alt="gizmo_3d"></span></label></td><td><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_physics_lab.webp" alt="physics_lab"><span class="img-wrapper"><img src="screenshots/screenshot_physics_lab.webp" alt="physics_lab"></span></label></td><td><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_cozy_castle.webp" alt="cozy_castle"><span class="img-wrapper"><img src="screenshots/screenshot_cozy_castle.webp" alt="cozy_castle"></span></label></td></tr>
-<tr><td><code>gizmo_3d</code>: translate, rotate and scale gizmos in 3D drag spaces</td><td><code>physics_lab</code>: 3D physics shapes dragged onto a grid, simulated with avian</td><td><code>cozy_castle</code>: radial menu, stacking rooms speculatively, an arch carved into a swept wall</td></tr>
-<tr><td><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_kart_racer_editor.webp" alt="kart_racer_editor"><span class="img-wrapper"><img src="screenshots/screenshot_kart_racer_editor.webp" alt="kart_racer_editor"></span></label></td><td></td><td></td></tr>
-<tr><td><code>kart_racer_editor</code>: a pulled curve, a scaled sweep road, hills and a radial menu</td><td></td><td></td></tr>
+<tr><td><code>toggle</code></td><td><code>between</code></td></tr>
+<tr><td><code>three_way</code></td><td><code>between</code> over three states</td></tr>
+<tr><td><code>reorder_list</code></td><td><code>closest</code> + floating</td></tr>
+<tr><td><code>ring_of_beads</code></td><td><code>closest</code> on a ring</td></tr>
+<tr><td><code>slider</code></td><td><code>vary</code> with a range constraint</td></tr>
+<tr><td><code>clock</code></td><td><code>vary</code> one angle</td></tr>
+<tr><td><code>scheduler</code></td><td><code>closest</code> + <code>vary</code></td></tr>
+<tr><td><code>lists_in_lists</code></td><td>rows nested to any depth, <code>when_far</code> snap-or-free, <code>with_overlay</code> insertion marker</td></tr>
+<tr><td><code>tessellations</code></td><td>toolbar and trash bin</td></tr>
+<tr><td><code>gradient_hanoi_3d</code></td><td><code>shapes-3d</code></td></tr>
+<tr><td><code>gradient_kanban_2d</code></td><td><code>shapes-2d</code></td></tr>
+<tr><td><code>hello</code></td><td>minimal <code>state</code> example</td></tr>
+<tr><td><code>chain_of_cells</code></td><td><code>with_chaining</code>, overlay underline, drop transition</td></tr>
+<tr><td><code>blend_square</code></td><td><code>between_with</code> natural neighbor and sharpness</td></tr>
+<tr><td><code>tactile_tessellations</code></td><td>edge-to-edge snaps with rotation</td></tr>
+<tr><td><code>gizmo_3d</code></td><td>translate, rotate and scale gizmos in 3D drag spaces</td></tr>
+<tr><td><code>physics_lab</code></td><td>3D physics shapes dragged onto a grid, simulated with avian</td></tr>
+<tr><td><code>cozy_castle</code></td><td>radial menu, stacking rooms speculatively, an arch carved into a swept wall</td></tr>
+<tr><td><code>kart_racer_editor</code></td><td>a pulled curve, a scaled sweep road, hills and a radial menu</td></tr>
 </tbody>
 </table>
 </div>

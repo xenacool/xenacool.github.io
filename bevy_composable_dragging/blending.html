@@ -35,12 +35,11 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-f6907466.js";
+            window.path_to_searchindex_js = "searchindex-5e46b0c3.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-d11337db.js"></script>
-        <link rel="stylesheet" href="../../css/book_canvas.css">
-</head>
+    </head>
     <body>
     <div id="mdbook-help-container">
         <div id="mdbook-help-popup">
@@ -103,11 +102,6 @@
         </script>
 
         <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
-            <div class="book-version-toggle">
-                <a href="wasm/index.html" class="version-link" title="Switch to interactive WASM version">
-                    ⚡ WASM version
-                </a>
-            </div>
             <!-- populated by js -->
             <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
             <noscript>
@@ -252,7 +246,6 @@ let t = lerp_transform(&amp;t1, &amp;t2, 0.5);
 <p>The HUD uses 12% overshoot for all its elements.</p>
 <h2 id="geometry-morphing"><a class="header" href="#geometry-morphing">Geometry Morphing</a></h2>
 <p>When two views use different geometries for the same node, the engine morphs between them. With <code>bevy_gradmesh</code>, shapes are quantized to 32 morph steps, bounding the number of distinct meshes.</p>
-<p><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_blend_square.webp" alt="Blend square"><span class="img-wrapper"><img src="screenshots/screenshot_blend_square.webp" alt="Blend square"></span></label></p>
 <p><em>Natural neighbor blending across four control points. Run <code>cargo run --example blend_square --features pbr</code>.</em></p>
 <h2 id="next-steps"><a class="header" href="#next-steps">Next Steps</a></h2>
 <ul>

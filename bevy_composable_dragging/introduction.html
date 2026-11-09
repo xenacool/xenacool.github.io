@@ -35,12 +35,11 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-f6907466.js";
+            window.path_to_searchindex_js = "searchindex-5e46b0c3.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-d11337db.js"></script>
-        <link rel="stylesheet" href="../../css/book_canvas.css">
-</head>
+    </head>
     <body>
     <div id="mdbook-help-container">
         <div id="mdbook-help-popup">
@@ -103,11 +102,6 @@
         </script>
 
         <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
-            <div class="book-version-toggle">
-                <a href="wasm/index.html" class="version-link" title="Switch to interactive WASM version">
-                    ⚡ WASM version
-                </a>
-            </div>
             <!-- populated by js -->
             <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
             <noscript>
@@ -190,7 +184,6 @@
 <p>Bevy Composable Dragging is a declarative dragging library for <a href="https://bevyengine.org/">Bevy</a> 0.20, ported from <a href="https://declarative-dragging.github.io">Dragology</a>.</p>
 <h2 id="what-it-solves"><a class="header" href="#what-it-solves">What It Solves</a></h2>
 <p>Instead of writing hand-crafted drop zones, hit tests, and drag state machines, you describe your interface as a pure function from state to a <a href="https://docs.rs/bevy_composable_dragging/latest/bevy_composable_dragging/struct.View.html"><code>View</code></a>, and attach a <em>drag spec</em> to every node that can be dragged. The engine renders the target states speculatively, finds the dragged node by id in each of them, and synthesizes the preview while dragging and the new state on release.</p>
-<p><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_hello.webp" alt="Hello world"><span class="img-wrapper"><img src="screenshots/screenshot_hello.webp" alt="Hello world"></span></label></p>
 <p><em>A single draggable circle toggling between two states. Run <code>cargo run --example hello --features pbr</code> to reproduce it.</em></p>
 <h2 id="key-concepts"><a class="header" href="#key-concepts">Key Concepts</a></h2>
 <ul>

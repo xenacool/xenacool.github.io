@@ -35,12 +35,11 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-70343dba.js";
+            window.path_to_searchindex_js = "searchindex-77679fc6.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-cbf67a2d.js"></script>
-        <link rel="stylesheet" href="../../css/book_canvas.css">
-</head>
+    </head>
     <body>
     <div id="mdbook-help-container">
         <div id="mdbook-help-popup">
@@ -103,11 +102,6 @@
         </script>
 
         <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
-            <div class="book-version-toggle">
-                <a href="wasm/index.html" class="version-link" title="Switch to interactive WASM version">
-                    ⚡ WASM version
-                </a>
-            </div>
             <!-- populated by js -->
             <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
             <noscript>
@@ -222,7 +216,6 @@ let mesh = Shape::bezier_curve(control_points, 0.1, 8, ShapeDetail::Medium).buil
     // Rebuild curve with new control points
 }
 <span class="boring">}</span></code></pre>
-<p><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_curves.png" alt="Curves"><span class="img-wrapper"><img src="screenshots/screenshot_curves.png" alt="Curves"></span></label></p>
 <p><em>Spline and parametric curves rendered as smooth tubes. Run <code>cargo run --example curves</code> to reproduce it.</em></p>
 <h2 id="3d-polylines"><a class="header" href="#3d-polylines">3D Polylines</a></h2>
 <p>Connect points with tube geometry:</p>
@@ -243,7 +236,6 @@ let mesh = Shape::polyline3d(points, 0.05, false, 8, ShapeDetail::Medium).build(
 </span><span class="boring">fn main() {
 </span>let mesh = Shape::polyline3d(points, 0.05, true, 8, ShapeDetail::Medium).build();
 <span class="boring">}</span></code></pre>
-<p><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_polyline.webp" alt="Polylines"><span class="img-wrapper"><img src="screenshots/screenshot_polyline.webp" alt="Polylines"></span></label></p>
 <p><em>Joint styles, width variation, gradient colours and an animated reveal. Run <code>cargo run --example polyline</code> to reproduce it.</em></p>
 <h2 id="use-cases"><a class="header" href="#use-cases">Use Cases</a></h2>
 <ul>

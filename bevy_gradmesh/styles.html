@@ -35,12 +35,11 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-70343dba.js";
+            window.path_to_searchindex_js = "searchindex-77679fc6.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-cbf67a2d.js"></script>
-        <link rel="stylesheet" href="../../css/book_canvas.css">
-</head>
+    </head>
     <body>
     <div id="mdbook-help-container">
         <div id="mdbook-help-popup">
@@ -103,11 +102,6 @@
         </script>
 
         <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
-            <div class="book-version-toggle">
-                <a href="wasm/index.html" class="version-link" title="Switch to interactive WASM version">
-                    ⚡ WASM version
-                </a>
-            </div>
             <!-- populated by js -->
             <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
             <noscript>
@@ -227,8 +221,6 @@ let mat = with_mix_space(
 <p><code>Style</code> takes the same setting (<code>Style::with_mix_space</code>), and
 <code>MixSpace::mix</code> / <code>Style::lerp</code> blend on the CPU in the same space, so an
 animated blend matches the shader gradient. See <code>examples/mix_spaces.rs</code>.</p>
-<p><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_mix_spaces.png" alt="The same gradient in four colour spaces"><span class="img-wrapper"><img src="screenshots/screenshot_mix_spaces.png" alt="The same gradient in four colour spaces"></span></label></p>
-<p><em>One gradient in each <code>MixSpace</code> for two colour pairs: sRGB goes grey in the middle, OKLAB keeps the lightness steady and OKLCH sweeps through the hues. <code>tests/mix_space_screenshot.rs</code> checks this picture against reference pixels and against the shader’s blend maths. Run <code>cargo run --example mix_spaces</code> to reproduce it.</em></p>
 <h2 id="blending-styles-and-shapes"><a class="header" href="#blending-styles-and-shapes">Blending Styles and Shapes</a></h2>
 <p><code>Style::lerp(&amp;other, t)</code> mixes colors in the style’s space, interpolates
 continuous values and snaps discrete ones (blend mode, dash count) to the
@@ -259,7 +251,6 @@ let mat = dual_radial(
 );
 <span class="boring">}</span></code></pre>
 <h2 id="blend-modes"><a class="header" href="#blend-modes">Blend Modes</a></h2>
-<p><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_styles.png" alt="Style variants"><span class="img-wrapper"><img src="screenshots/screenshot_styles.png" alt="Style variants"></span></label></p>
 <p><em>Opaque, transparent, additive, multiplicative, screen, dither and dashed styles. Run <code>cargo run --example styles</code> to reproduce it.</em></p>
 <h3 id="opaque"><a class="header" href="#opaque">Opaque</a></h3>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
@@ -325,7 +316,6 @@ mat.roughness = 0.1;    // Polished surface
 mat.metallic = 1.0;     // Metallic
 mat.emissive = Color::srgb(1.0, 0.0, 0.0).to_linear(); // Glow
 <span class="boring">}</span></code></pre>
-<p><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="screenshots/screenshot_pbr_effects.png" alt="PBR effects"><span class="img-wrapper"><img src="screenshots/screenshot_pbr_effects.png" alt="PBR effects"></span></label></p>
 <p><em>Transparency, emissive glow, metallic surfaces and combinations. Run <code>cargo run --example pbr_effects</code> to reproduce it.</em></p>
 
                     </main>
