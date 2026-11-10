@@ -22,7 +22,7 @@ SYNTH_RELEASE_DIR := $(SYNTH_SUBMODULE)/target/wasm32-unknown-unknown/release
 # Default port for local server
 PORT ?= 8000
 
-.PHONY: all build-dragging build-gradmesh build build-wasm build-wasm-dragging build-wasm-gradmesh build-examples build-examples-dragging build-examples-gradmesh build-wasm-runner build-gallery build-gallery-showcases build-gallery-synth serve clean clean-examples publish push-wasm-gh-pages check-links check-links-local check-versions check-main-pages test-js help
+.PHONY: all build-dragging build-gradmesh build build-wasm build-wasm-dragging build-wasm-gradmesh build-wasm-runner build-gallery build-gallery-showcases build-gallery-synth serve clean publish check-links check-links-local check-versions check-main-pages test-js help
 
 all: build
 
@@ -92,64 +92,6 @@ build-gallery-synth:
 		echo "Skipping composable_dragging_synth_demo: $(SYNTH_SUBMODULE) has no Cargo.toml yet"; \
 	fi
 
-## Build all examples to WASM (deprecated; use build-wasm-runner instead)
-build-examples: build-wasm-runner
-
-## Build bevy_composable_dragging examples to WASM
-build-examples-dragging:
-	@echo "Building bevy_composable_dragging examples to WASM..."
-	@mkdir -p demos/examples/bevy_composable_dragging
-	# Examples requiring pbr feature
-	@for example in hello toggle three_way reorder_list ring_of_beads slider clock scheduler lists_in_lists tessellations chain_of_cells blend_square; do \
-		echo "  Building $$example (pbr)..."; \
-		mkdir -p demos/examples/bevy_composable_dragging/$$example; \
-		cd $(DRAGGING_SUBMODULE) && \
-		cargo build --target wasm32-unknown-unknown --release --example $$example --features pbr 2>&1 && \
-		cd ../.. && \
-		wasm-bindgen $(DRAGGING_SUBMODULE)/target/wasm32-unknown-unknown/release/examples/$$example.wasm --out-dir demos/examples/bevy_composable_dragging/$$example --target web && \
-		wasm-opt -Oz --converge --enable-bulk-memory --enable-nontrapping-float-to-int -o demos/examples/bevy_composable_dragging/$$example/$${example}_bg.wasm demos/examples/bevy_composable_dragging/$$example/$${example}_bg.wasm && \
-		echo "  Done: $$example"; \
-	done
-	# Examples requiring shapes-2d feature
-	@for example in tactile_tessellations gradient_kanban_2d; do \
-		echo "  Building $$example (shapes-2d)..."; \
-		mkdir -p demos/examples/bevy_composable_dragging/$$example; \
-		cd $(DRAGGING_SUBMODULE) && \
-		cargo build --target wasm32-unknown-unknown --release --example $$example --features shapes-2d 2>&1 && \
-		cd ../.. && \
-		wasm-bindgen $(DRAGGING_SUBMODULE)/target/wasm32-unknown-unknown/release/examples/$$example.wasm --out-dir demos/examples/bevy_composable_dragging/$$example --target web && \
-		wasm-opt -Oz --converge --enable-bulk-memory --enable-nontrapping-float-to-int -o demos/examples/bevy_composable_dragging/$$example/$${example}_bg.wasm demos/examples/bevy_composable_dragging/$$example/$${example}_bg.wasm && \
-		echo "  Done: $$example"; \
-	done
-	# Examples requiring shapes-3d feature
-	@for example in gradient_hanoi_3d gizmo_3d cozy_castle_3d kart_racer_editor physics_lab; do \
-		echo "  Building $$example (shapes-3d)..."; \
-		mkdir -p demos/examples/bevy_composable_dragging/$$example; \
-		cd $(DRAGGING_SUBMODULE) && \
-		cargo build --target wasm32-unknown-unknown --release --example $$example --features shapes-3d 2>&1 && \
-		cd ../.. && \
-		wasm-bindgen $(DRAGGING_SUBMODULE)/target/wasm32-unknown-unknown/release/examples/$$example.wasm --out-dir demos/examples/bevy_composable_dragging/$$example --target web && \
-		wasm-opt -Oz --converge --enable-bulk-memory --enable-nontrapping-float-to-int -o demos/examples/bevy_composable_dragging/$$example/$${example}_bg.wasm demos/examples/bevy_composable_dragging/$$example/$${example}_bg.wasm && \
-		echo "  Done: $$example"; \
-	done
-	@echo "Done: demos/examples/bevy_composable_dragging/"
-
-## Build bevy_gradmesh examples to WASM
-build-examples-gradmesh:
-	@echo "Building bevy_gradmesh examples to WASM..."
-	@mkdir -p demos/examples/bevy_gradmesh
-	@for example in shapes styles mix_spaces pbr_effects gradient_2d sdf_2d sdf_dash_gallery immediate retained instanced standalone curves polyline sweep road composed_shapes terrain deformation appearance arbitrary_shapes; do \
-		echo "  Building $$example..."; \
-		mkdir -p demos/examples/bevy_gradmesh/$$example; \
-		cd $(GRADMESH_SUBMODULE) && \
-		cargo build --target wasm32-unknown-unknown --release --example $$example 2>&1 && \
-		cd ../.. && \
-		wasm-bindgen $(GRADMESH_SUBMODULE)/target/wasm32-unknown-unknown/release/examples/$$example.wasm --out-dir demos/examples/bevy_gradmesh/$$example --target web && \
-		wasm-opt -Oz --converge --enable-bulk-memory --enable-nontrapping-float-to-int -o demos/examples/bevy_gradmesh/$$example/$${example}_bg.wasm demos/examples/bevy_gradmesh/$$example/$${example}_bg.wasm && \
-		echo "  Done: $$example"; \
-	done
-	@echo "Done: demos/examples/bevy_gradmesh/"
-
 ## Serve the site locally using Python's http.server
 serve:
 	@echo "Starting local server on http://localhost:$(PORT)"
@@ -163,23 +105,6 @@ publish: check-versions build build-wasm build-gallery
 	git commit -m "Rebuild books: $(shell date +%Y-%m-%d)" || echo "No changes to commit"
 	git push origin gh-pages
 	@echo "Done."
-
-## DANGER: Push WASM examples to gh-pages only; NEVER run automatically
-## This target is intentionally excluded from all other targets.
-## Usage: make push-wasm-gh-pages (only after confirming you are on gh-pages branch)
-push-wasm-gh-pages:
-	@if git branch --show-current | grep -q '^gh-pages$$'; then \
-		echo "Pushing WASM files to gh-pages..."; \
-		git add demos/wasm/ demos/examples/ demos/gallery/; \
-		git commit -m "Update WASM runtime: $(shell date +%Y-%m-%d)" || echo "No WASM changes to commit"; \
-		git push origin gh-pages; \
-		echo "Done."; \
-	else \
-		echo "ERROR: You are on '$(shell git branch --show-current)' branch."; \
-		echo "WASM files must ONLY be committed to gh-pages branch."; \
-		echo "Switch with: git checkout gh-pages"; \
-		exit 1; \
-	fi
 
 ## Pull submodules and check all links against live GitHub Pages site
 check-links:
@@ -222,12 +147,6 @@ clean:
 	rm -rf demos/gallery/
 	@echo "Done."
 
-## Clean all WASM example output
-clean-examples:
-	@echo "Cleaning WASM example output..."
-	rm -rf demos/examples/
-	@echo "Done."
-
 ## Show help
 help:
 	@echo "xenacool.github.io Makefile"
@@ -244,11 +163,10 @@ help:
 	@echo "  test-js        Run the JavaScript unit tests"
 	@echo "  check-main-pages Check that main and index pages never mention WASM"
 	@echo "  serve          Start local HTTP server on port $(PORT)"
-	@echo "  publish        Build both versions, push to gh-pages"
+	@echo "  publish        Build everything and push to gh-pages"
 	@echo "  check-links    Pull submodules, build books, check all links"
 	@echo "  check-versions Check that book version references match Cargo.toml"
 	@echo "  clean          Remove all built book output"
-	@echo "  push-wasm-gh-pages  Push WASM to gh-pages (DANGER: gh-pages branch only)"
 	@echo "  help           Show this help message"
 	@echo ""
 	@echo "Book versions:"
@@ -262,7 +180,5 @@ help:
 	@echo "  make           Build both books (plain text)"
 	@echo "  make build-wasm  Build both + WASM runtime"
 	@echo "  make serve     Start local server"
-	@echo "  make publish   Build and push both versions"
+	@echo "  make publish   Build everything and push to gh-pages"
 	@echo "  make PORT=9000 serve  Start server on port 9000"
-	@echo ""
-	@echo "WARNING: push-wasm-gh-pages will FAIL on any branch other than gh-pages."
