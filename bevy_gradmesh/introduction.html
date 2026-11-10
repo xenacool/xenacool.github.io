@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-6557ef1d.js";
+            window.path_to_searchindex_js = "searchindex-36bca947.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-cbf67a2d.js"></script>
@@ -182,10 +182,10 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h1 id="introduction"><a class="header" href="#introduction">Introduction</a></h1>
-<p>BevyGradmesh is a procedural mesh generation library for <a href="https://bevyengine.org/">Bevy</a> that provides clean APIs for creating 3D primitives with gradient shading, inspired by Freya Holmer’s work.</p>
+<p>BevyGradmesh is a procedural mesh generation library for <a href="https://bevyengine.org/">Bevy</a> that provides clean APIs for creating 3D primitives with gradient shading, inspired by Freya Holmér’s work.</p>
 <h2 id="what-it-solves"><a class="header" href="#what-it-solves">What It Solves</a></h2>
 <p>Instead of manually creating mesh assets for every shape, BevyGradmesh generates watertight geometry at runtime with proper normals and UVs. Combined with dual-directional gradient materials, you get stylized 3D-looking characters and objects without any external assets.</p>
-<p><em>Every procedural primitive with dual-directional gradient shading. Run <code>cargo run --example shapes</code> to reproduce it.</em></p>
+<p><em>Every procedural primitive with dual-directional gradient shading, drawn without PBR. Run <code>cargo run --example shapes</code> to reproduce it.</em></p>
 <h2 id="key-concepts"><a class="header" href="#key-concepts">Key Concepts</a></h2>
 <ul>
 <li><strong>Shapes</strong>: Procedural primitives (spheres, cuboids, cylinders, etc.) generated at runtime</li>
@@ -197,7 +197,7 @@
 <p>BevyGradmesh follows these principles:</p>
 <ol>
 <li><strong>Zero external assets</strong>: Everything is generated procedurally</li>
-<li><strong>Bevy-native</strong>: Outputs standard <code>Mesh</code> and <code>StandardMaterial</code> types</li>
+<li><strong>Bevy-native</strong>: Outputs standard <code>Mesh</code> assets and Bevy materials (<code>GradMeshMaterial</code> extends <code>StandardMaterial</code>; the 2D, SDF and standalone backends need no PBR)</li>
 <li><strong>Performance-first</strong>: GPU instancing and dirty tracking minimize draw calls</li>
 <li><strong>Flexible</strong>: Multiple rendering modes for different patterns</li>
 </ol>

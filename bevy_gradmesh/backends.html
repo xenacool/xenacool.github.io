@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-6557ef1d.js";
+            window.path_to_searchindex_js = "searchindex-36bca947.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-cbf67a2d.js"></script>
@@ -194,8 +194,8 @@ first (mobile or desktop, 2D or 3D), then by the number of shapes.</p>
 <tr><td>Material (<code>GradMeshMaterial</code>)</td><td>3D</td><td>yes</td><td>full PBR</td><td>A few to a few hundred lit shapes, picking, shadows, height bands</td></tr>
 <tr><td>Instanced (<code>BatchRecorder</code>, <code>RetainedWorld</code>)</td><td>3D</td><td>yes</td><td>PBR</td><td>Thousands of similar shapes, animated appearance</td></tr>
 <tr><td>Standalone (<code>StandaloneRenderPlugin</code>)</td><td>3D</td><td>no</td><td>none</td><td>Mobile GPUs, flat-shaded crowds, anything that must avoid PBR</td></tr>
-<tr><td>Mesh2d gradient (<code>GradMeshMaterial2d</code>)</td><td>2D</td><td>no</td><td>none</td><td>Any 2D shape that comes from <code>Shape::build_2d</code> (stars, polygons, outlines)</td></tr>
-<tr><td>SDF 2D (<code>SdfMaterial2d</code>)</td><td>2D</td><td>no</td><td>none</td><td>Discs, ellipses and rounded rectangles with rims, arcs and dashes</td></tr>
+<tr><td>Mesh2d gradient (<code>GradMeshMaterial2d</code>)</td><td>2D</td><td>no</td><td>none</td><td>Any 2D shape that comes from <code>Shape::build_2d</code> (polygons with holes, per-vertex colours, outlines)</td></tr>
+<tr><td>SDF 2D (<code>SdfMaterial2d</code>)</td><td>2D</td><td>no</td><td>none</td><td>Discs, ellipses, rounded rectangles, polygons and stars with rims and arcs; dashes on rectangles and ellipses</td></tr>
 </tbody>
 </table>
 </div>
@@ -226,6 +226,15 @@ works, but each distinct parameter set is a distinct mesh.</p>
 (<code>unit_quad()</code>). Edges are anti-aliased from screen-space derivatives, so no MSAA
 is needed. Radius, rim width, arc, gradient and dash are material floats: changing
 them creates no mesh and no pipeline.</p>
+<p>The SDF backend draws rectangles, ellipses, regular polygons (<code>polygon</code>), stars (<code>star</code>) and
+polygons from up to 16 points (<code>polygon_from_points</code>). Rings and wedges are a disc with a rim or
+an arc. Polygons with holes, polylines, Bézier curves and 3D solids need a mesh backend.</p>
+<p><code>Shape::as_flat()</code> proves a shape is flat and returns a <code>FlatShape</code> (or <code>NotFlat</code> for a solid, tube or
+mesh). <code>FlatShape::sdf_2d()</code> then converts a rectangle, disc, ellipse, regular polygon and rim, star,
+ring, wedge, or a polygon of up to 16 vertices into the matching <code>SdfMaterial2d</code>, so the same shape can
+go to either 2D backend. It returns <code>Err(SdfConvertError)</code> saying why when the SDF backend cannot draw
+the shape (degenerate size, holes, per-vertex colours, too many vertices, a curve or compound);
+<code>FlatShape::build_2d()</code> draws all of those.</p>
 <pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
 </span><span class="boring">use bevy_gradmesh::{Dash2d, DashSnap, SdfMaterial2d, unit_quad};
 </span><span class="boring">fn main() {}
@@ -250,8 +259,9 @@ them creates no mesh and no pipeline.</p>
 <code>with_radial_gradient()</code> (fitted to the shape bounds), <code>with_angular_gradient(start)</code>
 (mirrored, no seam) and <code>with_angular_sweep(start)</code> (one turn, hard seam). All of
 them blend in the chosen <code>MixSpace</code>.</p>
-<p>Dashes (<code>Dash2d</code>) apply to rims. Give a length and a gap in world units, or a
-count and a gap ratio. The snap mode decides how the pattern fits the outline:</p>
+<p>Dashes (<code>Dash2d</code>) apply to rims of rectangles and ellipses; polygons and stars draw a solid rim.
+Give a length and a gap in world units, or a count and a gap ratio. The snap mode decides how
+the pattern fits the outline:</p>
 <ul>
 <li><code>Off</code> keeps the pattern as given and cuts it where the outline starts and ends.</li>
 <li><code>Tiling</code> rounds the number of periods to a whole number and rescales the period,
@@ -263,7 +273,7 @@ starts at the arc start and the last dash ends at the arc end.</li>
 rectangles and a partial arc. Two things to know: on an eccentric ellipse dashes
 are spaced by angle, not by arc length, and at a sharp rectangle corner the
 dashes meet in a mitre. <code>Transform</code> scale must be <code>SdfMaterial2d::quad_scale()</code>.</p>
-<p><em>Discs, ellipses, rounded rectangles, rims and animated arcs on one shared quad. Run <code>cargo run --example sdf_2d</code> to reproduce it.</em></p>
+<p><em>Discs, ellipses, rounded rectangles, rims, animated arcs, polygons and stars on one shared quad. Run <code>cargo run --example sdf_2d</code> to reproduce it.</em></p>
 <p><em>Dashed rims compared across <code>Off</code>, <code>Tiling</code>, <code>EndToEnd</code> and count-based snap modes. Run <code>cargo run --example sdf_dash_gallery</code> to reproduce it.</em></p>
 <h2 id="without-pbr-the-pbr-feature-and-for_mobile"><a class="header" href="#without-pbr-the-pbr-feature-and-for_mobile">Without PBR: the <code>pbr</code> feature and <code>for_mobile()</code></a></h2>
 <p>The crate has a <code>pbr</code> cargo feature that is on by default. It gates <code>material.rs</code>,
