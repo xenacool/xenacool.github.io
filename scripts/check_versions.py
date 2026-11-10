@@ -76,15 +76,15 @@ def main():
         all_errors.extend(check(name, path))
 
     if all_errors:
-        print("Version mismatch — the book examples won't install the latest release:")
+        print("Version mismatch: the book examples won't install the latest release:")
         print()
         for err in all_errors:
-            print(f"  ✗ {err}")
+            print(f"  x {err}")
         print()
         print("Fix the version in the book markdown, then rebuild.")
         sys.exit(1)
     else:
-        print("✓ All book versions match their Cargo.toml files.")
+        print("All book versions match their Cargo.toml files.")
         sys.exit(0)
 
 if __name__ == "__main__":

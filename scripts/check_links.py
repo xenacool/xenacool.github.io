@@ -204,10 +204,10 @@ def check_links_simple(links, images):
             req = urllib.request.Request(url, method='HEAD')
             req.add_header('User-Agent', 'Mozilla/5.0 (Link Checker)')
             response = urllib.request.urlopen(req, timeout=10, context=ssl_context)
-            print(f"  [{checked}/{total}] ✓ {url[:80]}")
+            print(f"  [{checked}/{total}] OK {url[:80]}")
         except Exception as e:
             broken_links.append((url, source, str(e)))
-            print(f"  [{checked}/{total}] ✗ {url[:80]} - {e}")
+            print(f"  [{checked}/{total}] FAIL {url[:80]} - {e}")
     
     # Check images
     for url, source in images:
@@ -216,10 +216,10 @@ def check_links_simple(links, images):
             req = urllib.request.Request(url, method='HEAD')
             req.add_header('User-Agent', 'Mozilla/5.0 (Link Checker)')
             response = urllib.request.urlopen(req, timeout=10, context=ssl_context)
-            print(f"  [{checked}/{total}] ✓ {url[:80]}")
+            print(f"  [{checked}/{total}] OK {url[:80]}")
         except Exception as e:
             broken_images.append((url, source, str(e)))
-            print(f"  [{checked}/{total}] ✗ {url[:80]} - {e}")
+            print(f"  [{checked}/{total}] FAIL {url[:80]} - {e}")
     
     return broken_links, broken_images
 
@@ -276,22 +276,22 @@ async def main():
     print("="*60)
     
     if broken_links:
-        print(f"\n❌ BROKEN LINKS ({len(broken_links)}):")
+        print(f"\nBROKEN LINKS ({len(broken_links)}):")
         for url, source, error in broken_links:
             print(f"  {url}")
             print(f"    Source: {source}")
             print(f"    Error: {error}")
     else:
-        print("\n✅ All links are working!")
+        print("\nAll links are working!")
     
     if broken_images:
-        print(f"\n❌ BROKEN IMAGES ({len(broken_images)}):")
+        print(f"\nBROKEN IMAGES ({len(broken_images)}):")
         for url, source, error in broken_images:
             print(f"  {url}")
             print(f"    Source: {source}")
             print(f"    Error: {error}")
     else:
-        print("✅ All images are loading!")
+        print("All images are loading!")
     
     total_broken = len(broken_links) + len(broken_images)
     print(f"\nTotal: {len(links) + len(images)} checked, {total_broken} broken")

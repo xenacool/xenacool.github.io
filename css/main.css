@@ -431,6 +431,13 @@ body {
   border-radius: var(--radius-full);
 }
 
+.card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-md);
+}
+
 .card__link {
   display: inline-flex;
   align-items: center;
@@ -440,7 +447,6 @@ body {
   font-weight: 600;
   color: var(--color-accent);
   text-decoration: none;
-  margin-top: var(--spacing-md);
   padding: var(--spacing-sm) var(--spacing-md);
   border-radius: var(--radius-md);
   background-color: var(--color-accent-light);
@@ -732,7 +738,7 @@ input:focus-visible {
   border-color: var(--color-accent);
 }
 
-/* Demo panels — show/hide based on tab selection */
+/* Demo panels: show/hide based on tab selection */
 .demo-panel {
   display: none;
   max-width: 900px;
@@ -832,7 +838,7 @@ input:focus-visible {
 }
 
 /* ============================================
-   Card badges — text-based, no images
+   Card badges: text-based, no images
    ============================================ */
 .card__badges {
   display: flex;
