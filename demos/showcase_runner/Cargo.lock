@@ -671,7 +671,7 @@ dependencies = [
 
 [[package]]
 name = "bevy_composable_dragging"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "bevy",
  "bevy_gradmesh",
@@ -809,7 +809,6 @@ dependencies = [
  "indexmap",
  "log",
  "nonmax",
- "rand",
  "serde",
  "slotmap",
  "smallvec",
@@ -983,7 +982,7 @@ dependencies = [
 
 [[package]]
 name = "bevy_gradmesh"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "bevy",
  "bevy_asset",
