@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-ad779c5b.js";
+            window.path_to_searchindex_js = "searchindex-5e46b0c3.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-d11337db.js"></script>
@@ -185,7 +185,8 @@
                         <h1 id="curve-handles"><a class="header" href="#curve-handles">Curve Handles</a></h1>
 <p>The <code>handles</code> module (behind the <code>gradmesh</code> feature) provides <code>CurveHandles</code> for editing 3D curves with draggable control points, width handles, and roll rings.</p>
 <h2 id="adding-curve-handles"><a class="header" href="#adding-curve-handles">Adding Curve Handles</a></h2>
-<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
 </span>use bevy_composable_dragging::handles::{CurveHandles, Lateral};
 use bevy_composable_dragging::ops::Snap;
 use bevy_composable_dragging::{View, ViewNode};
@@ -200,12 +201,12 @@ struct Road {
 fn view(road: &amp;Road) -&gt; View&lt;Road&gt; {
     let mut view = View::new();
     view.push(ViewNode::cuboid("road", Vec3::new(1.0, 0.1, 8.0), 0.0));
-
+    
     let lateral: Vec&lt;Lateral&gt; = road.half_widths.iter()
         .map(|hw| Lateral { right: Vec3::X, half_width: *hw })
         .collect();
-
-    CurveHandles::&lt;Road&gt;::new("road", Transform::IDENTITY, &amp;road.points)
+    
+    CurveHandles::new("road", Transform::IDENTITY, &amp;road.points)
         .selected(road.selected)
         .move_point(Snap::step(0.1), |road, index, offset| {
             let mut road = road.clone();
@@ -221,7 +222,7 @@ fn view(road: &amp;Road) -&gt; View&lt;Road&gt; {
         .add_to(&amp;mut view);
     view
 }
-<span class="boring">fn main() {}</span></code></pre>
+<span class="boring">}</span></code></pre>
 <h2 id="handle-types"><a class="header" href="#handle-types">Handle Types</a></h2>
 <div class="table-wrapper">
 <table>
@@ -238,54 +239,27 @@ fn view(road: &amp;Road) -&gt; View&lt;Road&gt; {
 </table>
 </div>
 <h2 id="configuration"><a class="header" href="#configuration">Configuration</a></h2>
-<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
-</span><span class="boring">use bevy_composable_dragging::View;
-</span><span class="boring">use bevy_composable_dragging::handles::{CurveHandles, Lateral, Twist};
-</span><span class="boring">use bevy_composable_dragging::ops::Snap;
-</span><span class="boring">#[derive(Clone)]
-</span><span class="boring">struct Road {
-</span><span class="boring">    points: Vec&lt;Vec3&gt;,
-</span><span class="boring">    half_widths: Vec&lt;f32&gt;,
-</span><span class="boring">    rolls: Vec&lt;f32&gt;,
-</span><span class="boring">}
-</span>fn add_handles(view: &amp;mut View&lt;Road&gt;, road: &amp;Road, lateral: &amp;[Lateral], twist: &amp;[Twist]) {
-    CurveHandles::&lt;Road&gt;::new("road", Transform::IDENTITY, &amp;road.points)
-        // Show selected point's extra handles
-        .selected(Some(0))
-        // Move points across the ground
-        .move_point(Snap::step(0.1), |road, index, offset| {
-            let mut road = road.clone();
-            road.points[index] += offset;
-            road
-        })
-        // Raise/lower points
-        .raise_point(Snap::step(0.1), |road, index, height| {
-            let mut road = road.clone();
-            road.points[index].y += height;
-            road
-        })
-        // Insert new points between existing ones
-        .insert_point(Snap::step(0.1), |road, segment, offset| {
-            let mut road = road.clone();
-            let middle = (road.points[segment] + road.points[segment + 1]) / 2.0;
-            road.points.insert(segment + 1, middle + offset);
-            road
-        })
-        // Adjust width at selected point
-        .width(lateral, Snap::step(0.1), |road, index, change| {
-            let mut road = road.clone();
-            road.half_widths[index] += change;
-            road
-        })
-        // Roll cross-section at selected point
-        .roll(twist, Snap::step(0.05), |road, index, change| {
-            let mut road = road.clone();
-            road.rolls[index] += change;
-            road
-        })
-        .add_to(view);
-}
-<span class="boring">fn main() {}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>CurveHandles::new("road", transform, &amp;points)
+    // Show selected point's extra handles
+    .selected(Some(0))
+    
+    // Move points across the ground
+    .move_point(Snap::step(0.1), move_fn)
+    
+    // Raise/lower points
+    .raise_point(Snap::step(0.1), raise_fn)
+    
+    // Insert new points between existing ones
+    .insert_point(insert_fn)
+    
+    // Adjust width at selected point
+    .width(&amp;lateral, Snap::step(0.1), width_fn)
+    
+    // Roll cross-section at selected point
+    .roll(Snap::step(0.05), roll_fn)
+<span class="boring">}</span></code></pre>
 <h2 id="closures"><a class="header" href="#closures">Closures</a></h2>
 <p>Each handle takes a closure that receives the original state, the point index, and the measured value, and returns the new state. Pressing a handle also selects its point, so the closure can use this for selection.</p>
 <h2 id="footprint"><a class="header" href="#footprint">Footprint</a></h2>

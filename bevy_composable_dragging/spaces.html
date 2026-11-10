@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-ad779c5b.js";
+            window.path_to_searchindex_js = "searchindex-5e46b0c3.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-d11337db.js"></script>
@@ -186,55 +186,47 @@
 <h2 id="types-of-drag-spaces"><a class="header" href="#types-of-drag-spaces">Types of Drag Spaces</a></h2>
 <h3 id="plane"><a class="header" href="#plane">Plane</a></h3>
 <p>The default space: a plane with any origin and normal.</p>
-<pre class="playground"><code class="language-rust">use bevy_composable_dragging::DragSpace;
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use bevy_composable_dragging::DragSpace;
 use bevy::math::{Dir3, Vec3};
 
-fn plane_spaces() -&gt; (DragSpace, DragSpace) {
-    // XY plane at z = 0 (default)
-    let xy_plane = DragSpace::world_plane(0.0);
-    // Ground plane at y = 0
-    let ground = DragSpace::plane(Vec3::ZERO, Dir3::Y);
-    (xy_plane, ground)
-}
-<span class="boring">fn main() {}</span></code></pre>
+// XY plane at z = 0 (default)
+DragSpace::world_plane(0.0)
+
+// Ground plane at y = 0
+DragSpace::plane(Vec3::ZERO, Dir3::Y)
+<span class="boring">}</span></code></pre>
 <h3 id="axis"><a class="header" href="#axis">Axis</a></h3>
 <p>Drag along a line. The pointer position is the nearest point on the line to the pointer ray.</p>
-<pre class="playground"><code class="language-rust"><span class="boring">use bevy::math::{Dir3, Vec3};
-</span><span class="boring">use bevy_composable_dragging::DragSpace;
-</span>fn y_axis_space() -&gt; DragSpace {
-    // Drag along the Y axis
-    DragSpace::axis(Vec3::ZERO, Dir3::Y)
-}
-<span class="boring">fn main() {}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>// Drag along the Y axis
+DragSpace::axis(Vec3::ZERO, Dir3::Y)
+<span class="boring">}</span></code></pre>
 <h3 id="screen"><a class="header" href="#screen">Screen</a></h3>
 <p>A plane through the dragged node that faces the camera, fixed when the drag starts.</p>
-<pre class="playground"><code class="language-rust"><span class="boring">use bevy_composable_dragging::DragSpace;
-</span>fn screen_space() -&gt; DragSpace {
-    DragSpace::screen()
-}
-<span class="boring">fn main() {}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>DragSpace::screen()
+<span class="boring">}</span></code></pre>
 <h2 id="setting-a-drag-space"><a class="header" href="#setting-a-drag-space">Setting a Drag Space</a></h2>
-<p>The sphere nodes below need the <code>gradmesh</code> feature.</p>
-<pre class="playground"><code class="language-rust">use bevy_composable_dragging::ops::between;
-use bevy_composable_dragging::{DragSpace, View, ViewNode};
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use bevy_composable_dragging::{DragSpace, ViewNode};
 use bevy::math::{Dir3, Vec3};
 
-fn view(on: &amp;bool) -&gt; View&lt;bool&gt; {
-    let x = if *on { 1.0 } else { -1.0 };
-    View::new()
-        // Default: drags in the XY plane
-        .with(ViewNode::sphere("default", 1.0)
-            .at(Vec3::new(x, 0.0, 0.0))
-            .draggable(|| between([false, true])))
-        // Custom: drag on the ground
-        .with(ViewNode::sphere("ground", 1.0)
-            .at(Vec3::new(x, 0.0, 3.0))
-            .draggable_in(
-                DragSpace::plane(Vec3::ZERO, Dir3::Y),
-                || between([false, true]),
-            ))
-}
-<span class="boring">fn main() {}</span></code></pre>
+// Default: drags in the XY plane
+ViewNode::sphere("default", 1.0)
+    .draggable(|| /* spec */)
+
+// Custom: drag on the ground
+ViewNode::sphere("ground", 1.0)
+    .draggable_in(
+        DragSpace::plane(Vec3::ZERO, Dir3::Y),
+        || /* spec */,
+    )
+<span class="boring">}</span></code></pre>
 <h2 id="how-spaces-work"><a class="header" href="#how-spaces-work">How Spaces Work</a></h2>
 <p>When you press a node, the engine resolves the pointer ray against the node’s drag space:</p>
 <ol>
@@ -244,7 +236,7 @@ fn view(on: &amp;bool) -&gt; View&lt;bool&gt; {
 </ol>
 <p>Operators like <code>closest</code>, <code>between</code>, and <code>with_floating</code> work unchanged in any space. Gaps are measured after projecting positions onto the space, and 2D weights use the local basis of the space.</p>
 <h2 id="picking"><a class="header" href="#picking">Picking</a></h2>
-<p>A press picks the node whose oriented bounds the pointer ray hits first (<code>View::hit_test</code>), then grabs its nearest draggable ancestor. Nodes on higher render layers are picked first, gizmo handles use layer 31 so they are always picked above scene geometry.</p>
+<p>A press picks the node whose oriented bounds the pointer ray hits first (<code>View::hit_test</code>), then grabs its nearest draggable ancestor. Nodes on higher render layers are picked first — gizmo handles use layer 31 so they are always picked above scene geometry.</p>
 <h2 id="next-steps"><a class="header" href="#next-steps">Next Steps</a></h2>
 <ul>
 <li>Smooth transitions with <a href="./blending.html">Blending</a></li>

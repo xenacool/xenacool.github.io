@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-ad779c5b.js";
+            window.path_to_searchindex_js = "searchindex-5e46b0c3.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-d11337db.js"></script>
@@ -182,104 +182,88 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h1 id="heightmaps"><a class="header" href="#heightmaps">Heightmaps</a></h1>
-<p>The <code>heightmap</code> module provides an editable terrain grid that a brush raises, lowers, and cuts holes in. It needs no rendering feature, the heightmap is plain data, and a renderer builds meshes from the chunks it marks as dirty.</p>
+<p>The <code>heightmap</code> module provides an editable terrain grid that a brush raises, lowers, and cuts holes in. It needs no rendering feature — the heightmap is plain data, and a renderer builds meshes from the chunks it marks as dirty.</p>
 <h2 id="creating-a-heightmap"><a class="header" href="#creating-a-heightmap">Creating a Heightmap</a></h2>
-<pre class="playground"><code class="language-rust">use bevy::math::{UVec2, Vec2};
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use bevy::math::{UVec2, Vec2};
 use bevy_composable_dragging::heightmap::{Brush, Grid, Heightmap};
 
-fn create_terrain() -&gt; Heightmap {
-    // 4x4 chunks, 16 vertices per side, 0.5 unit spacing
-    let grid = Grid::new(UVec2::new(4, 4), 16, Vec2::ZERO, 0.5);
+// 4x4 chunks, 16 vertices per side, 0.5 unit spacing
+let grid = Grid::new(UVec2::new(4, 4), 16, Vec2::ZERO, 0.5);
 
-    // Flat terrain at height 0, range -1 to 3
-    Heightmap::new(grid, 0.0, -1.0, 3.0)
-}
-<span class="boring">fn main() {}</span></code></pre>
+// Flat terrain at height 0, range -1 to 3
+let terrain = Heightmap::new(grid, 0.0, -1.0, 3.0);
+<span class="boring">}</span></code></pre>
 <h2 id="editing-with-a-brush"><a class="header" href="#editing-with-a-brush">Editing with a Brush</a></h2>
-<pre class="playground"><code class="language-rust"><span class="boring">use bevy::math::Vec2;
-</span><span class="boring">use bevy_composable_dragging::heightmap::{Brush, Heightmap};
-</span>fn raise_hill(terrain: &amp;Heightmap) -&gt; Heightmap {
-    terrain.raised(&amp;Brush {
-        center: Vec2::new(4.0, 4.0),  // brush position on the ground
-        radius: 2.0,                   // how far it reaches
-        amount: 1.0,                   // positive raises, negative lowers
-        falloff: 1.0,                  // 1.0 = smooth, 0.0 = hard edge
-    })
-}
-<span class="boring">fn main() {}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>let edited = terrain.raised(&amp;Brush {
+    center: Vec2::new(4.0, 4.0),  // brush position on the ground
+    radius: 2.0,                   // how far it reaches
+    amount: 1.0,                   // positive raises, negative lowers
+    falloff: 1.0,                  // 1.0 = smooth, 0.0 = hard edge
+});
+<span class="boring">}</span></code></pre>
 <h2 id="reading-the-terrain"><a class="header" href="#reading-the-terrain">Reading the Terrain</a></h2>
-<pre class="playground"><code class="language-rust"><span class="boring">use bevy::math::Vec2;
-</span><span class="boring">use bevy::prelude::Ray3d;
-</span><span class="boring">use bevy_composable_dragging::heightmap::Heightmap;
-</span>fn read_terrain(terrain: &amp;Heightmap, ray: Ray3d) {
-    // Height at a point (including over holes)
-    let height = terrain.surface(Vec2::new(4.0, 4.0));
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>// Height at a point (including over holes)
+let height = terrain.surface(Vec2::new(4.0, 4.0));
 
-    // Height only where the ground exists (None over holes)
-    let ground_height = terrain.height_at(Vec2::new(4.0, 4.0));
+// Height only where the ground exists (None over holes)
+let height = terrain.height_at(Vec2::new(4.0, 4.0));
 
-    // Surface normal for lighting or collision
-    let normal = terrain.normal_at(Vec2::new(4.0, 4.0));
+// Surface normal for lighting or collision
+let normal = terrain.normal_at(Vec2::new(4.0, 4.0));
 
-    // Ray intersection for picking
-    if let Some(hit) = terrain.hit(ray) {
-        println!("Hit at {}", hit);
-    }
+// Ray intersection for picking
+if let Some(hit) = terrain.hit(ray) {
+    println!("Hit at {}", hit);
 }
-<span class="boring">fn main() {}</span></code></pre>
+<span class="boring">}</span></code></pre>
 <h2 id="chunks-and-dirty-tracking"><a class="header" href="#chunks-and-dirty-tracking">Chunks and Dirty Tracking</a></h2>
-<p>The grid is divided into chunks. Copying a heightmap is cheap, only the edited chunks are copied. Each chunk has a key that changes when its heights or holes change:</p>
-<pre class="playground"><code class="language-rust"><span class="boring">use bevy_composable_dragging::heightmap::Heightmap;
-</span>fn changed_chunks(terrain: &amp;Heightmap, previous_keys: &amp;[u64]) {
-    // Check every chunk for changes
-    for chunk in 0..terrain.chunk_count() {
-        let key = terrain.chunk_key(chunk);
-        if key != previous_keys[chunk] {
-            // Rebuild the mesh for this chunk
-            let heights = terrain.chunk_heights(chunk);
-            let holes = terrain.chunk_holes(chunk);
-        }
+<p>The grid is divided into chunks. Copying a heightmap is cheap — only the edited chunks are copied. Each chunk has a key that changes when its heights or holes change:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>// Check every chunk for changes
+for chunk in 0..terrain.chunk_count() {
+    let key = terrain.chunk_key(chunk);
+    if key != previous_keys[chunk] {
+        // Rebuild the mesh for this chunk
+        let heights = terrain.chunk_heights(chunk);
+        let holes = terrain.chunk_holes(chunk);
     }
 }
-<span class="boring">fn main() {}</span></code></pre>
+<span class="boring">}</span></code></pre>
 <h2 id="holes"><a class="header" href="#holes">Holes</a></h2>
 <p>Cut holes in the terrain without losing the height data underneath. Holes are a mask over the cells, so filling a hole restores the original height:</p>
-<pre class="playground"><code class="language-rust"><span class="boring">use bevy::math::Vec2;
-</span><span class="boring">use bevy_composable_dragging::heightmap::Heightmap;
-</span>fn cut_and_fill(terrain: &amp;Heightmap) -&gt; Heightmap {
-    // Cut a hole
-    let with_hole = terrain.with_holes(Vec2::new(2.0, 2.0), 1.0, true);
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>// Cut a hole
+let with_hole = terrain.with_holes(Vec2::new(2.0, 2.0), 1.0, true);
 
-    // Fill it back, and the original height returns
-    with_hole.with_holes(Vec2::new(2.0, 2.0), 1.0, false)
-}
-<span class="boring">fn main() {}</span></code></pre>
+// Fill it back — the original height returns
+let filled = with_hole.with_holes(Vec2::new(2.0, 2.0), 1.0, false);
+<span class="boring">}</span></code></pre>
 <h2 id="integration-with-views"><a class="header" href="#integration-with-views">Integration with Views</a></h2>
 <p>Drag a brush across the terrain using <code>across_plane</code>:</p>
-<pre class="playground"><code class="language-rust"><span class="boring">use bevy::math::{Dir3, Vec3, Vec3Swizzles};
-</span><span class="boring">use bevy_composable_dragging::heightmap::{Brush, Heightmap};
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
 </span>use bevy_composable_dragging::ops::across_plane;
-use bevy_composable_dragging::{DragSpace, DragSpec, ViewNode};
+use bevy_composable_dragging::DragSpace;
 
-<span class="boring">#[derive(Clone)]
-</span><span class="boring">struct Editor {
-</span><span class="boring">    terrain: Heightmap,
-</span><span class="boring">    brush: Brush,
-</span><span class="boring">}
-</span>fn brush_node() -&gt; ViewNode&lt;Editor&gt; {
-    ViewNode::sphere("brush", 0.3).draggable_in(
+ViewNode::sphere("brush", 0.3)
+    .draggable_in(
         DragSpace::plane(Vec3::ZERO, Dir3::Y),
-        || {
-            DragSpec::from(across_plane(|state: &amp;Editor, delta| {
-                let mut s = state.clone();
-                s.brush.center += delta.xz();
-                s.terrain = s.terrain.raised(&amp;s.brush);
-                s
-            }))
-        },
+        || across_plane(brush_param, |state, delta| {
+            let mut s = state.clone();
+            s.brush.center += delta;
+            s.terrain = s.terrain.raised(&amp;s.brush);
+            s
+        }),
     )
-}
-<span class="boring">fn main() {}</span></code></pre>
+<span class="boring">}</span></code></pre>
 <p><em>Raising hills with a heightmap, picked from a radial menu. Run <code>cargo run --example kart_racer_editor --features shapes-3d</code>.</em></p>
 <h2 id="next-steps"><a class="header" href="#next-steps">Next Steps</a></h2>
 <ul>

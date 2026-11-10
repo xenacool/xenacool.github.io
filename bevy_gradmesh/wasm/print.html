@@ -38,7 +38,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-36bca947.js";
+            window.path_to_searchindex_js = "searchindex-ea5652b6.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-cbf67a2d.js"></script>
@@ -559,6 +559,68 @@ Use this form for outlines of more than 16 vertices, polygons with holes and per
     Shape::bezier_curve(control_points, thickness, segments, ShapeDetail::Medium)
 }</code></pre>
 <p>Supports linear (2 points), quadratic (3 points), and cubic (4+ points) Bézier curves rendered as tubes.</p>
+<h2 id="shape-morphing"><a class="header" href="#shape-morphing">Shape Morphing</a></h2>
+<p><code>Shape::lerp</code> blends two shapes by interpolating their parameters. When the shapes share the same
+kind, every continuous parameter (radius, height, size, roundness) is interpolated. Integer counts
+(sides, segments, points) and boolean flags (capped, closed) snap at <code>t = 0.5</code> — a prism cannot
+have 6.3 sides.</p>
+<h3 id="cross-kind-flat-shape-morphing"><a class="header" href="#cross-kind-flat-shape-morphing">Cross-kind flat shape morphing</a></h3>
+<p>Filled flat shapes of <strong>different kinds</strong> morph as outlines: a polygon can turn into a star, a
+disc rim can turn into a rectangle, and a ring can turn into a disc. The blend produces an
+arbitrary polygon. Supported kinds: rectangle, disc, ellipse, polygon, star, arbitrary polygon,
+rectangle rim, disc rim, ellipse rim, polygon rim, ring and wedge. For rims and rings only the
+outer edge participates; a ring’s inner hole is ignored.</p>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::{Shape, ShapeDetail};
+</span><span class="boring">fn main() {}
+</span>let a = Shape::disc(1.2, ShapeDetail::Medium);
+let b = Shape::star(5, 1.2, 0.5, ShapeDetail::Medium);
+let mid = a.lerp(&amp;b, 0.5); // an ArbitraryPolygon between disc and star</code></pre>
+<h3 id="ring-morph-example"><a class="header" href="#ring-morph-example">Ring morph example</a></h3>
+<p>A ring morphs into a disc by blending the ring’s outer edge with the disc’s outline:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::{Shape, ShapeDetail};
+</span><span class="boring">fn main() {}
+</span>let ring = Shape::ring(1.2, 0.5, ShapeDetail::Medium);
+let disc = Shape::disc(1.2, ShapeDetail::Medium);
+let mid = ring.lerp(&amp;disc, 0.5); // fills the hole gradually</code></pre>
+<p>A wedge morphs into a disc similarly:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::{Shape, ShapeDetail};
+</span><span class="boring">fn main() {}
+</span>let wedge = Shape::wedge(1.2, std::f32::consts::PI, ShapeDetail::Medium);
+let disc = Shape::disc(1.2, ShapeDetail::Medium);
+let mid = wedge.lerp(&amp;disc, 0.5);</code></pre>
+<h3 id="performance-pre-computing-keyframe-tables"><a class="header" href="#performance-pre-computing-keyframe-tables">Performance: pre-computing keyframe tables</a></h3>
+<p>Calling <code>lerp</code> with a different <code>t</code> each frame produces a new mesh each frame. At 60 Hz this is
+60 new meshes per second. To avoid this cost:</p>
+<ol>
+<li>
+<p><strong>Animate a continuous proxy</strong>: Keep a fixed mesh and animate its <code>Transform</code> (scale,
+position, rotation) instead of morphing the shape.</p>
+</li>
+<li>
+<p><strong>Pre-compute a keyframe table</strong>: Build intermediate shapes once at fixed <code>t</code> values and
+switch between them each frame:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span><span class="boring">use bevy_gradmesh::{Shape, ShapeDetail};
+</span><span class="boring">let a = Shape::disc(1.0, ShapeDetail::Medium);
+</span><span class="boring">let b = Shape::star(5, 1.0, 0.4, ShapeDetail::Medium);
+</span>// Build once (e.g. in Startup system)
+let keyframes: Vec&lt;Shape&gt; = (0..=10)
+    .map(|i| a.lerp(&amp;b, i as f32 / 10.0))
+    .collect();
+// Each frame, pick the nearest keyframe
+let idx = (t * 10.0).round() as usize;
+let shape = &amp;keyframes[idx.min(keyframes.len() - 1)];
+<span class="boring">}</span></code></pre>
+<p>This limits mesh generation to the number of keyframes (11 in the example) and makes each
+frame a cheap array lookup.</p>
+</li>
+<li>
+<p><strong>Quantise <code>t</code></strong>: Round <code>t</code> to a small set of steps before calling <code>lerp</code>, so repeated frames
+reuse the same <code>Shape</code> value.</p>
+</li>
+</ol>
+<p><em>Six morphing shapes: disc↔star, rect↔ring, polygon↔disc rim, ring↔disc, disc rim↔rect, wedge↔disc. Run <code>cargo run --example lerp</code> to reproduce it.</em></p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="styles--materials"><a class="header" href="#styles--materials">Styles &amp; Materials</a></h1>
 <h2 id="dual-directional-shading"><a class="header" href="#dual-directional-shading">Dual-Directional Shading</a></h2>

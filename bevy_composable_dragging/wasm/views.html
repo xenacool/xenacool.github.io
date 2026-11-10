@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-ad779c5b.js";
+            window.path_to_searchindex_js = "searchindex-5e46b0c3.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-d11337db.js"></script>
@@ -183,19 +183,18 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h1 id="views-and-nodes"><a class="header" href="#views-and-nodes">Views and Nodes</a></h1>
-<p>A <code>View&lt;S&gt;</code> is a flat list of <code>ViewNode</code>s, each identified by a <code>NodeId</code> (a string). Nothing in a view touches the ECS, it is plain data that the engine evaluates cheaply for many speculative states.</p>
+<p>A <code>View&lt;S&gt;</code> is a flat list of <code>ViewNode</code>s, each identified by a <code>NodeId</code> (a string). Nothing in a view touches the ECS — it is plain data that the engine evaluates cheaply for many speculative states.</p>
 <h2 id="building-a-view"><a class="header" href="#building-a-view">Building a View</a></h2>
-<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
 </span>use bevy_composable_dragging::{View, ViewNode};
 
-<span class="boring">#[derive(Clone)]
-</span><span class="boring">struct MyState;
-</span>fn view(state: &amp;MyState) -&gt; View&lt;MyState&gt; {
+fn view(state: &amp;MyState) -&gt; View&lt;MyState&gt; {
     View::new()
         .with(ViewNode::circle("a", 0.5).at_xy(Vec2::new(-1.0, 0.0)))
         .with(ViewNode::circle("b", 0.5).at_xy(Vec2::new(1.0, 0.0)))
 }
-<span class="boring">fn main() {}</span></code></pre>
+<span class="boring">}</span></code></pre>
 <h2 id="node-geometry"><a class="header" href="#node-geometry">Node Geometry</a></h2>
 <p>Nodes support several geometry types:</p>
 <div class="table-wrapper">
@@ -220,94 +219,71 @@
 </tbody>
 </table>
 </div>
-<p>The examples below build nodes with the <code>gradmesh</code> constructors, so run them with <code>--features gradmesh</code> (<code>shapes-3d</code> and <code>shapes-2d</code> include it).</p>
 <h2 id="transforms-and-hierarchy"><a class="header" href="#transforms-and-hierarchy">Transforms and Hierarchy</a></h2>
 <p>Nodes support full 3D transforms and parent-child hierarchy. A child node is positioned relative to its parent using <code>.with_parent()</code>:</p>
-<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
-</span><span class="boring">use bevy_composable_dragging::{View, ViewNode};
-</span><span class="boring">#[derive(Clone)]
-</span><span class="boring">struct MyState;
-</span>fn view(state: &amp;MyState) -&gt; View&lt;MyState&gt; {
-    View::new()
-        .with(ViewNode::sphere("parent", 1.0).at(Vec3::new(0.0, 2.0, 0.0)))
-        .with(ViewNode::sphere("child", 0.3)
-            .with_parent("parent")
-            .at(Vec3::new(1.5, 0.0, 0.0)))
-}
-<span class="boring">fn main() {}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>View::new()
+    .with(ViewNode::sphere("parent", 1.0).at(Vec3::new(0.0, 2.0, 0.0)))
+    .with(ViewNode::sphere("child", 0.3)
+        .with_parent("parent")
+        .at(Vec3::new(1.5, 0.0, 0.0)))
+<span class="boring">}</span></code></pre>
 <p>Transform methods:</p>
 <ul>
-<li><code>at(Vec3)</code>, full 3D position</li>
-<li><code>at_xy(Vec2)</code>, 2D shorthand</li>
-<li><code>with_rotation(Quat)</code>, full rotation</li>
-<li><code>with_rotation_xy(f32)</code>, Z-axis rotation in radians</li>
-<li><code>scaled(Vec3)</code>, full scale</li>
-<li><code>scaled_xy(Vec2)</code>, uniform 2D scale</li>
+<li><code>at(Vec3)</code> — full 3D position</li>
+<li><code>at_xy(Vec2)</code> — 2D shorthand</li>
+<li><code>with_rotation(Quat)</code> — full rotation</li>
+<li><code>with_rotation_xy(f32)</code> — Z-axis rotation in radians</li>
+<li><code>scaled(Vec3)</code> — full scale</li>
+<li><code>scaled_xy(Vec2)</code> — uniform 2D scale</li>
 </ul>
 <h2 id="colors-and-styles"><a class="header" href="#colors-and-styles">Colors and Styles</a></h2>
-<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
-</span><span class="boring">use bevy_composable_dragging::ViewNode;
-</span><span class="boring">#[derive(Clone)]
-</span><span class="boring">struct MyState;
-</span>fn colored_node() -&gt; ViewNode&lt;MyState&gt; {
-    ViewNode::sphere("colored", 1.0).with_color(Color::srgb(0.9, 0.3, 0.2))
-}
-<span class="boring">fn main() {}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>ViewNode::sphere("colored", 1.0)
+    .with_color(Color::srgb(0.9, 0.3, 0.2))
+<span class="boring">}</span></code></pre>
 <p>With the <code>gradmesh</code> feature, nodes can carry a <code>Style</code> for gradient shading:</p>
-<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
-</span><span class="boring">use bevy_composable_dragging::ViewNode;
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
 </span>use bevy_gradmesh::Style;
 
-<span class="boring">#[derive(Clone)]
-</span><span class="boring">struct MyState;
-</span>fn gradient_node() -&gt; ViewNode&lt;MyState&gt; {
-    let dark = Color::srgb(0.3, 0.2, 0.1);
-    let light = Color::srgb(0.9, 0.7, 0.5);
-    ViewNode::sphere("gradient", 1.0)
-        .with_style(Style::dual_directional(dark, light, Vec3::Y))
-}
-<span class="boring">fn main() {}</span></code></pre>
+ViewNode::sphere("gradient", 1.0)
+    .with_style(Style::dual_directional([0.3, 0.2, 0.1], [0.9, 0.7, 0.5], [0.0, 1.0, 0.0]))
+<span class="boring">}</span></code></pre>
 <h2 id="presence-and-opacity"><a class="header" href="#presence-and-opacity">Presence and Opacity</a></h2>
 <p>Control how nodes appear and disappear during blends:</p>
-<pre class="playground"><code class="language-rust">use bevy_composable_dragging::{Presence, ViewNode};
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use bevy_composable_dragging::Presence;
 
-<span class="boring">#[derive(Clone)]
-</span><span class="boring">struct MyState;
-</span>fn fading_node() -&gt; ViewNode&lt;MyState&gt; {
-    ViewNode::sphere("fade", 1.0)
-        .presence(Presence::Fade)            // fades in/out during blends
-        .with_opacity(0.8)                   // semi-transparent
-}
-<span class="boring">fn main() {}</span></code></pre>
+ViewNode::sphere("fade", 1.0)
+    .presence(Presence::Fade)            // fades in/out during blends
+    .with_opacity(0.8)                   // semi-transparent
+<span class="boring">}</span></code></pre>
 <p>Presence options:</p>
 <ul>
-<li><code>Presence::Fade</code>: node fades in and out</li>
-<li><code>Presence::Emerge { from }</code>: node emerges from the node with id <code>from</code>. Set it with <code>.emerge_from("id")</code></li>
-<li><code>Presence::Pop</code>: node switches at the midpoint of the blend</li>
+<li><code>Presence::Fade</code> — node fades in and out</li>
+<li><code>Presence::Emerge</code> — node emerges from the dragged node</li>
+<li><code>Presence::Pop</code> — node appears instantly</li>
 </ul>
 <h2 id="rendering-modes"><a class="header" href="#rendering-modes">Rendering Modes</a></h2>
-<pre class="playground"><code class="language-rust">use bevy_composable_dragging::{View, ViewNode};
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>// 3D spatial rendering (default)
+ViewNode::sphere("spatial", 1.0).spatial()
 
-<span class="boring">#[derive(Clone)]
-</span><span class="boring">struct MyState;
-</span>fn view(state: &amp;MyState) -&gt; View&lt;MyState&gt; {
-    View::new()
-        // 3D spatial rendering (default)
-        .with(ViewNode::sphere("spatial", 1.0).spatial())
-        // 2D flat rendering (requires gradmesh)
-        .with(ViewNode::sphere("flat", 1.0).flat())
-}
-<span class="boring">fn main() {}</span></code></pre>
+// 2D flat rendering (requires gradmesh)
+ViewNode::sphere("flat", 1.0).flat()
+<span class="boring">}</span></code></pre>
 <p><code>ViewNode::spatial()</code> draws a node as a <code>Mesh3d</code> for a <code>Camera3d</code>, and <code>ViewNode::flat()</code> draws it as a <code>Mesh2d</code> for a <code>Camera2d</code>, overriding the plugin default. Together with <code>.on_layer()</code>, they build a HUD from ordinary nodes over a 3D scene: give the HUD nodes <code>.flat().on_layer(HUD)</code> and add a <code>Camera2d</code> with that layer and a higher <code>order</code> next to the scene camera. Each camera only draws the nodes on its own layers, and a press from it only picks those nodes, so the HUD and the scene never take presses from each other.</p>
 <h2 id="layers"><a class="header" href="#layers">Layers</a></h2>
 <p>Nodes live on render layers for picking and rendering isolation:</p>
-<pre class="playground"><code class="language-rust"><span class="boring">use bevy_composable_dragging::ViewNode;
-</span><span class="boring">#[derive(Clone)]
-</span><span class="boring">struct MyState;
-</span>fn hud_node() -&gt; ViewNode&lt;MyState&gt; {
-    ViewNode::sphere("hud", 1.0).on_layer(2)
-}
-<span class="boring">fn main() {}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>ViewNode::sphere("hud", 1.0).on_layer(2)
+<span class="boring">}</span></code></pre>
 <p>Gizmo handles use layer 31 (<code>GIZMO_LAYER</code>) so they are always picked first.</p>
 <h2 id="next-steps"><a class="header" href="#next-steps">Next Steps</a></h2>
 <ul>

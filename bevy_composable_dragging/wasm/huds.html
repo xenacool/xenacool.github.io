@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-ad779c5b.js";
+            window.path_to_searchindex_js = "searchindex-5e46b0c3.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-d11337db.js"></script>
@@ -183,10 +183,12 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h1 id="huds"><a class="header" href="#huds">HUDs</a></h1>
-<p>The <code>hud</code> module (behind the <code>gradmesh</code> feature) provides a heads-up display built from ordinary nodes. Elements are rounded signed distance fields, fills and borders drawn per pixel so edges stay crisp at any size.</p>
+<p>The <code>hud</code> module (behind the <code>gradmesh</code> feature) provides a heads-up display built from ordinary nodes. Elements are rounded signed distance fields — fills and borders drawn per pixel so edges stay crisp at any size.</p>
 <h2 id="screen-and-layout"><a class="header" href="#screen-and-layout">Screen and Layout</a></h2>
 <p>The <code>Screen</code> holds the HUD size and the projection of the scene camera. The <code>Layout</code> computes where corner anchors and radial menu petals go from the screen size.</p>
-<pre class="playground"><code class="language-rust">use bevy_composable_dragging::hud::{HudHost, HudPlugin, HudProjectionCamera, Screen};
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use bevy_composable_dragging::hud::{HudHost, HudPlugin, HudProjectionCamera, Screen};
 
 #[derive(Clone)]
 struct Editor {
@@ -202,69 +204,34 @@ impl HudHost for Editor {
         Self { screen }
     }
 }
-<span class="boring">fn main() {}</span></code></pre>
+<span class="boring">}</span></code></pre>
 <p>Register <code>HudPlugin</code> to keep the screen in sync with the window:</p>
-<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
-</span><span class="boring">use bevy_composable_dragging::hud::{HudHost, HudPlugin, HudProjectionCamera, Screen};
-</span><span class="boring">use bevy_composable_dragging::{DraggablePlugin, View};
-</span><span class="boring">#[derive(Clone)]
-</span><span class="boring">struct Editor {
-</span><span class="boring">    screen: Screen,
-</span><span class="boring">}
-</span><span class="boring">impl HudHost for Editor {
-</span><span class="boring">    fn screen(&amp;self) -&gt; &amp;Screen {
-</span><span class="boring">        &amp;self.screen
-</span><span class="boring">    }
-</span><span class="boring">    fn with_screen(&amp;self, screen: Screen) -&gt; Self {
-</span><span class="boring">        Self { screen }
-</span><span class="boring">    }
-</span><span class="boring">}
-</span><span class="boring">fn view(_state: &amp;Editor) -&gt; View&lt;Editor&gt; {
-</span><span class="boring">    View::new()
-</span><span class="boring">}
-</span>fn main() {
-    App::new()
-        .add_plugins(DefaultPlugins)
-        .add_plugins(DraggablePlugin::new(Editor { screen: Screen::default() }, view))
-        .add_plugins(HudPlugin::&lt;Editor&gt;::new(720.0))
-        .add_systems(Startup, |mut commands: Commands| {
-            commands.spawn((Camera3d::default(), HudProjectionCamera));
-        })
-        .run();
-}</code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>App::new()
+    .add_plugins(DefaultPlugins)
+    .add_plugins(DraggablePlugin::new(Editor { screen: Screen::default() }, view))
+    .add_plugins(HudPlugin::&lt;Editor&gt;::new(720.0))
+    .add_systems(Startup, |mut commands: Commands| {
+        commands.spawn((Camera3d::default(), HudProjectionCamera));
+    })
+    .run();
+<span class="boring">}</span></code></pre>
 <h2 id="theme"><a class="header" href="#theme">Theme</a></h2>
 <p>A <code>Theme</code> holds colors, border width, tween settings, and the render layer. The HUD builders are methods of the theme:</p>
-<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
-</span><span class="boring">use bevy_composable_dragging::View;
-</span>use bevy_composable_dragging::hud::{HudHost, Layout, Screen, Theme};
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use bevy_composable_dragging::hud::{Layout, Theme};
 
-<span class="boring">#[derive(Clone)]
-</span><span class="boring">struct Editor {
-</span><span class="boring">    screen: Screen,
-</span><span class="boring">}
-</span><span class="boring">impl HudHost for Editor {
-</span><span class="boring">    fn screen(&amp;self) -&gt; &amp;Screen {
-</span><span class="boring">        &amp;self.screen
-</span><span class="boring">    }
-</span><span class="boring">    fn with_screen(&amp;self, screen: Screen) -&gt; Self {
-</span><span class="boring">        Self { screen }
-</span><span class="boring">    }
-</span><span class="boring">}
-</span>fn view(state: &amp;Editor) -&gt; View&lt;Editor&gt; {
-    let theme = Theme::default();
-    let layout = Layout::new(state.screen());
-    let mut view = View::new();
+let theme = Theme::default();
+let layout = Layout::new(state.screen());
 
-    // Build a bordered panel (returns 2 nodes: plate + border)
-    let [plate, border] = theme.panel("panel", Vec2::new(200.0, 100.0), Vec2::ZERO, &amp;layout);
-    view.push(plate);
-    view.push(border);
+// Build a bordered panel (returns 2 nodes: plate + border)
+let panel = theme.panel("panel", Vec2::new(200.0, 100.0), Vec2::ZERO, &amp;layout);
 
-    // Build a filled disc
-    view.push(theme.disc("action", 20.0, theme.fill, Vec3::ZERO));
-    view
-}
-<span class="boring">fn main() {}</span></code></pre>
+// Build a filled disc
+let disc = theme.disc("action", 20.0, theme.fill, Vec3::ZERO);
+<span class="boring">}</span></code></pre>
 <h2 id="depth-layers"><a class="header" href="#depth-layers">Depth Layers</a></h2>
 <p>HUD elements are layered by depth constants:</p>
 <div class="table-wrapper">
@@ -284,19 +251,16 @@ impl HudHost for Editor {
 </div>
 <h2 id="sdf-shapes"><a class="header" href="#sdf-shapes">SDF Shapes</a></h2>
 <p>HUD elements use <code>SdfShape</code> for crisp edges:</p>
-<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
-</span>use bevy_composable_dragging::{SdfShape, ViewNode};
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use bevy_composable_dragging::SdfShape;
 
-<span class="boring">#[derive(Clone)]
-</span><span class="boring">struct Editor;
-</span>fn panel_node() -&gt; ViewNode&lt;Editor&gt; {
-    ViewNode::sdf("panel", SdfShape::rect(Vec2::new(200.0, 100.0)).with_corner_radius(8.0))
-}
-<span class="boring">fn main() {}</span></code></pre>
+ViewNode::sdf("panel", SdfShape::rect(Vec2::new(200.0, 100.0)).with_corner_radius(8.0))
+<span class="boring">}</span></code></pre>
 <p>Available SDF shapes:</p>
 <ul>
-<li><code>rect(size).with_corner_radius(r)</code>, rounded rectangle</li>
-<li><code>ellipse(size)</code>, ellipse</li>
+<li><code>rect(size).with_corner_radius(r)</code> — rounded rectangle</li>
+<li><code>ellipse(size)</code> — ellipse</li>
 </ul>
 <h2 id="overshoot"><a class="header" href="#overshoot">Overshoot</a></h2>
 <p>All HUD elements use 12% overshoot for spring-like animations when the view changes.</p>

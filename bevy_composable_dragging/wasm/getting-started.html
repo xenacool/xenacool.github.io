@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-ad779c5b.js";
+            window.path_to_searchindex_js = "searchindex-5e46b0c3.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-d11337db.js"></script>
@@ -216,14 +216,14 @@ fn main() {
 <h2 id="understanding-the-api"><a class="header" href="#understanding-the-api">Understanding the API</a></h2>
 <p>The core API has three main types:</p>
 <ol>
-<li><strong><code>View&lt;S&gt;</code></strong>: A flat list of <code>ViewNode</code>s describing your scene. Build it as a pure function of your state type <code>S</code>.</li>
-<li><strong><code>ViewNode&lt;S&gt;</code></strong>: A single element with an id, geometry, transform, color, and optional drag spec.</li>
-<li><strong><code>DragSpec&lt;S&gt;</code></strong>: A declarative description of how a node can be dragged, built with operators from the <code>ops</code> module.</li>
+<li><strong><code>View&lt;S&gt;</code></strong> — A flat list of <code>ViewNode</code>s describing your scene. Build it as a pure function of your state type <code>S</code>.</li>
+<li><strong><code>ViewNode&lt;S&gt;</code></strong> — A single element with an id, geometry, transform, color, and optional drag spec.</li>
+<li><strong><code>DragSpec&lt;S&gt;</code></strong> — A declarative description of how a node can be dragged, built with operators from the <code>ops</code> module.</li>
 </ol>
 <h2 id="state-and-view-functions"><a class="header" href="#state-and-view-functions">State and View Functions</a></h2>
-<p>Your state type <code>S</code> holds everything your interface needs. The view function <code>fn(&amp;S) -&gt; View&lt;S&gt;</code> must be pure, no side effects, no external state. The engine calls it many times per frame with speculative states to compute drag previews.</p>
-<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
-</span><span class="boring">use bevy_composable_dragging::{View, ViewNode};
+<p>Your state type <code>S</code> holds everything your interface needs. The view function <code>fn(&amp;S) -&gt; View&lt;S&gt;</code> must be pure — no side effects, no external state. The engine calls it many times per frame with speculative states to compute drag previews.</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
 </span>#[derive(Clone)]
 struct Slider {
     value: f32,
@@ -233,7 +233,7 @@ fn view(state: &amp;Slider) -&gt; View&lt;Slider&gt; {
     View::new()
         .with(ViewNode::circle("handle", 0.3).at_xy(Vec2::new(state.value, 0.0)))
 }
-<span class="boring">fn main() {}</span></code></pre>
+<span class="boring">}</span></code></pre>
 <h2 id="features"><a class="header" href="#features">Features</a></h2>
 <div class="table-wrapper">
 <table>
@@ -250,9 +250,9 @@ fn view(state: &amp;Slider) -&gt; View&lt;Slider&gt; {
 </div>
 <h2 id="next-steps"><a class="header" href="#next-steps">Next Steps</a></h2>
 <ul>
-<li>Learn about <a href="./views.html">Views and Nodes</a>, building scenes with geometry, transforms, and hierarchy</li>
-<li>Explore <a href="./operators.html">Operators</a>, the declarative drag behaviors</li>
-<li>Try <a href="./spaces.html">Drag Spaces</a>, planes, axes, and screen-facing dragging</li>
+<li>Learn about <a href="./views.html">Views and Nodes</a> — building scenes with geometry, transforms, and hierarchy</li>
+<li>Explore <a href="./operators.html">Operators</a> — the declarative drag behaviors</li>
+<li>Try <a href="./spaces.html">Drag Spaces</a> — planes, axes, and screen-facing dragging</li>
 </ul>
 
                     </main>

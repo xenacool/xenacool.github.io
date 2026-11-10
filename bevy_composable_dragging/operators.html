@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-ad779c5b.js";
+            window.path_to_searchindex_js = "searchindex-5e46b0c3.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-d11337db.js"></script>
@@ -182,248 +182,136 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h1 id="operators"><a class="header" href="#operators">Operators</a></h1>
-<p>Operators build <code>DragSpec</code>s declaratively. They follow Figure 4 of the Dragology paper and compose freely: specs are plain data that compile into per-frame behavior.</p>
-<p>Every snippet in this chapter is a complete function that compiles against the crate. Lines that only set up the example, such as <code>fn main</code> and the state types, are hidden. Use the eye button of a snippet to show them.</p>
-<h2 id="state-switch-to-a-fixed-state"><a class="header" href="#state-switch-to-a-fixed-state"><code>state</code>: Switch to a Fixed State</a></h2>
+<p>Operators build <code>DragSpec</code>s declaratively. They follow Figure 4 of the Dragology paper and compose freely — specs are plain data that compile into per-frame behavior.</p>
+<h2 id="state--switch-to-a-fixed-state"><a class="header" href="#state--switch-to-a-fixed-state"><code>state</code> — Switch to a Fixed State</a></h2>
 <p>The simplest operator: dragging switches to the given state.</p>
-<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
 </span>use bevy_composable_dragging::ops::state;
-use bevy_composable_dragging::{View, ViewNode};
 
-fn view(_pressed: &amp;bool) -&gt; View&lt;bool&gt; {
-    View::new().with(ViewNode::circle("button", 0.3).draggable(|| state(true)))
-}
-<span class="boring">fn main() {}</span></code></pre>
-<h2 id="between-toggle-between-states"><a class="header" href="#between-toggle-between-states"><code>between</code>: Toggle Between States</a></h2>
+ViewNode::circle("button", 0.3)
+    .draggable(|| state(true))
+<span class="boring">}</span></code></pre>
+<h2 id="between--toggle-between-states"><a class="header" href="#between--toggle-between-states"><code>between</code> — Toggle Between States</a></h2>
 <p>Drag between a list of discrete states. The preview interpolates between them, and the nearest state wins on release.</p>
-<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
 </span>use bevy_composable_dragging::ops::between;
-use bevy_composable_dragging::{View, ViewNode};
 
-fn view(on: &amp;bool) -&gt; View&lt;bool&gt; {
-    let x = if *on { 1.0 } else { -1.0 };
-    View::new().with(
-        ViewNode::circle("knob", 0.5)
-            .at_xy(Vec2::new(x, 0.0))
-            .draggable(|| between([false, true])),
-    )
-}
-<span class="boring">fn main() {}</span></code></pre>
-<p>With custom interpolation and drop rules, use <code>between_with</code>. The state here is the index of a corner:</p>
-<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
-</span>use bevy_composable_dragging::ops::{between_with, BetweenOptions, DropRule, Interpolation};
-use bevy_composable_dragging::{View, ViewNode};
+ViewNode::circle("knob", 0.5)
+    .draggable(|| between([false, true]))
+<span class="boring">}</span></code></pre>
+<p>With custom interpolation and drop rules:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use bevy_composable_dragging::ops::{between_with, BetweenOptions, Interpolation};
 
-const CORNERS: [Vec2; 4] = [
-    Vec2::new(-1.0, -1.0),
-    Vec2::new(1.0, -1.0),
-    Vec2::new(1.0, 1.0),
-    Vec2::new(-1.0, 1.0),
-];
+between_with([a, b, c, d], BetweenOptions::new()
+    .with_interpolation(Interpolation::NaturalNeighbor)
+)
 
-fn view(corner: &amp;usize) -&gt; View&lt;usize&gt; {
-    let options = BetweenOptions::new()
-        .with_interpolation(Interpolation::NaturalNeighbor)
-        .with_drop_rule(DropRule::NearestTarget);
-    View::new().with(
-        ViewNode::circle("knob", 0.5)
-            .at_xy(CORNERS[*corner])
-            .draggable(move || between_with([0, 1, 2, 3], options)),
-    )
-}
-<span class="boring">fn main() {}</span></code></pre>
-<p><em>Three states arranged in a triangle. Run <code>cargo run --example three_way --features pbr</code>.</em></p>
-<h2 id="closest-pick-the-nearest-state"><a class="header" href="#closest-pick-the-nearest-state"><code>closest</code>: Pick the Nearest State</a></h2>
-<p><code>closest_states</code> picks the state whose view puts the dragged node nearest to the pointer. Here the state is the slot that the item sits in:</p>
-<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
-</span>use bevy_composable_dragging::ops::closest_states;
-use bevy_composable_dragging::{View, ViewNode};
+*Three states arranged in a triangle. Run `cargo run --example three_way --features pbr`.*
 
-const SLOT_COUNT: usize = 5;
+# `closest` — Pick the Nearest State
 
-fn view(slot: &amp;usize) -&gt; View&lt;usize&gt; {
-    View::new().with(
-        ViewNode::circle("item", 0.3)
-            .at_xy(Vec2::new(*slot as f32, 0.0))
-            .draggable(|| closest_states(0..SLOT_COUNT)),
-    )
-}
-<span class="boring">fn main() {}</span></code></pre>
-<p><code>closest</code> takes full specs instead of plain states, so discrete and continuous choices combine:</p>
-<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
-</span>use bevy_composable_dragging::ops::{between, closest, state};
-use bevy_composable_dragging::{View, ViewNode};
+Evaluate many drag specs and pick the one whose dragged node is closest to the pointer.
 
-fn view(slot: &amp;usize) -&gt; View&lt;usize&gt; {
-    View::new().with(
-        ViewNode::circle("item", 0.3)
-            .at_xy(Vec2::new(*slot as f32, 0.0))
-            .draggable(|| closest([between([0, 1]), state(2)])),
-    )
-}
-<span class="boring">fn main() {}</span></code></pre>
+```rust
+use bevy_composable_dragging::ops::closest_states;
+
+ViewNode::circle("item", 0.3)
+    .draggable(|| closest_states((0..10).map(|i| {
+        let mut s = state.clone();
+        s.positions[i] = i as f32;
+        s
+    })))
+<span class="boring">}</span></code></pre>
 <p><em>Drag items to reorder a list. Run <code>cargo run --example reorder_list --features pbr</code>.</em></p>
-<h2 id="vary-continuously-change-a-value"><a class="header" href="#vary-continuously-change-a-value"><code>vary</code>: Continuously Change a Value</a></h2>
+<h2 id="vary--continuously-change-a-value"><a class="header" href="#vary--continuously-change-a-value"><code>vary</code> — Continuously Change a Value</a></h2>
 <p>Continuously change a numeric parameter of your state as you drag.</p>
-<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
 </span>use bevy_composable_dragging::ops::vary;
-use bevy_composable_dragging::{param, View, ViewNode};
+use bevy_composable_dragging::param;
 
-#[derive(Clone)]
-struct Slider {
-    value: f32,
-}
-
-fn view(slider: &amp;Slider) -&gt; View&lt;Slider&gt; {
-    let start = slider.clone();
-    View::new().with(
-        ViewNode::circle("handle", 0.3)
-            .at_xy(Vec2::new(slider.value, 0.0))
-            .draggable(move || vary(start.clone(), [param!(Slider, value)])),
-    )
-}
-<span class="boring">fn main() {}</span></code></pre>
+ViewNode::circle("handle", 0.3)
+    .draggable(|| vary(state.clone(), [param!(Slider, value)]))
+<span class="boring">}</span></code></pre>
 <p>With range constraints, use <code>vary_constrained</code>:</p>
-<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
-</span>use bevy_composable_dragging::constraint::in_range;
-use bevy_composable_dragging::ops::vary_constrained;
-use bevy_composable_dragging::{param, View, ViewNode};
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use bevy_composable_dragging::ops::vary_constrained;
+use bevy_composable_dragging::{param, constraint};
 
-#[derive(Clone)]
-struct Slider {
-    value: f32,
-}
-
-fn view(slider: &amp;Slider) -&gt; View&lt;Slider&gt; {
-    let start = slider.clone();
-    View::new().with(
-        ViewNode::circle("handle", 0.3)
-            .at_xy(Vec2::new(slider.value, 0.0))
-            .draggable(move || {
-                let value = param!(Slider, value);
-                vary_constrained(start.clone(), [value.clone()], in_range(value, 0.0, 10.0))
-            }),
-    )
-}
-<span class="boring">fn main() {}</span></code></pre>
+vary_constrained(
+    state.clone(),
+    [param!(Slider, value)],
+    constraint::in_range(param!(Slider, value), 0.0, 10.0),
+)
+<span class="boring">}</span></code></pre>
 <p><em>A continuous slider. Run <code>cargo run --example slider --features pbr</code>.</em></p>
-<h2 id="substate-delegate-to-a-nested-state"><a class="header" href="#substate-delegate-to-a-nested-state"><code>substate</code>: Delegate to a Nested State</a></h2>
-<p>Apply an operator to a field of your state, using a <code>Lens</code>. The operator sees and changes only the field:</p>
-<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
-</span>use bevy_composable_dragging::ops::{between, substate, Lens};
-use bevy_composable_dragging::{View, ViewNode};
+<h2 id="substate--delegate-to-a-nested-state"><a class="header" href="#substate--delegate-to-a-nested-state"><code>substate</code> — Delegate to a Nested State</a></h2>
+<p>Apply an operator to a field of your state, using a <code>Lens</code>:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use bevy_composable_dragging::ops::{substate, between, Lens};
 
-#[derive(Clone)]
-struct MyState {
-    inner: usize,
-    label: usize,
-}
+let lens = Lens::new(
+    |s: &amp;MyState| s.inner.clone(),
+    |s: &amp;MyState, inner| MyState { inner, ..s.clone() },
+);
 
-fn view(state: &amp;MyState) -&gt; View&lt;MyState&gt; {
-    let inner = Lens::new(
-        |s: &amp;MyState| s.inner,
-        |s: &amp;MyState, inner| MyState { inner, ..s.clone() },
-    );
-    View::new().with(
-        ViewNode::circle("nested", 0.3)
-            .at_xy(Vec2::new(state.inner as f32, state.label as f32))
-            .draggable(move || substate(inner.clone(), between([0, 1, 2]))),
-    )
-}
-<span class="boring">fn main() {}</span></code></pre>
-<h2 id="drop_target-define-a-drop-zone"><a class="header" href="#drop_target-define-a-drop-zone"><code>drop_target</code>: Define a Drop Zone</a></h2>
-<p><code>drop_target</code> names a node, and the drag drops into the given state while the pointer is over that node. Combine it with <code>closest</code> so the drag falls back to another branch elsewhere:</p>
-<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
-</span>use bevy_composable_dragging::ops::{closest, drop_target, state};
-use bevy_composable_dragging::{View, ViewNode};
+ViewNode::circle("nested", 0.3)
+    .draggable(|| substate(lens.clone(), between([0, 1, 2])))
+<span class="boring">}</span></code></pre>
+<h2 id="drop_target--define-a-drop-zone"><a class="header" href="#drop_target--define-a-drop-zone"><code>drop_target</code> — Define a Drop Zone</a></h2>
+<p>Mark a node as a drop target that accepts drops from other nodes.</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use bevy_composable_dragging::ops::drop_target;
 
-const BIN_POSITION: Vec2 = Vec2::new(3.0, 0.0);
+ViewNode::rectangle("zone", Vec2::splat(2.0))
+    .draggable(|| drop_target("dropper", dropped_state))
+<span class="boring">}</span></code></pre>
+<h2 id="react_to--react-to-external-values"><a class="header" href="#react_to--react-to-external-values"><code>react_to</code> — React to External Values</a></h2>
+<p>Rebuild the drag spec when an external value changes, such as a modifier key:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use bevy_composable_dragging::ops::react_to;
 
-fn view(binned: &amp;bool) -&gt; View&lt;bool&gt; {
-    let item_position = if *binned { BIN_POSITION } else { Vec2::ZERO };
-    View::new()
-        .with(ViewNode::rectangle("bin", Vec2::splat(2.0)).at_xy(BIN_POSITION))
-        .with(
-            ViewNode::circle("item", 0.3)
-                .at_xy(item_position)
-                .with_z(0.1)
-                .draggable(|| closest([state(false), drop_target("bin", true)])),
-        )
-}
-<span class="boring">fn main() {}</span></code></pre>
-<h2 id="react_to-react-to-external-values"><a class="header" href="#react_to-react-to-external-values"><code>react_to</code>: React to External Values</a></h2>
-<p>Rebuild the drag spec when an external value changes, such as a modifier key. The getter reads the value, and the builder makes a spec from it:</p>
-<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
-</span>use std::sync::atomic::{AtomicBool, Ordering};
-
-use bevy_composable_dragging::ops::{between, react_to, state};
-use bevy_composable_dragging::{View, ViewNode};
-
-static SHIFT_HELD: AtomicBool = AtomicBool::new(false);
-
-fn view(x: &amp;usize) -&gt; View&lt;usize&gt; {
-    View::new().with(
-        ViewNode::circle("reactor", 0.3)
-            .at_xy(Vec2::new(*x as f32, 0.0))
-            .draggable(|| {
-                react_to(
-                    || SHIFT_HELD.load(Ordering::Relaxed),
-                    |shift| {
-                        if *shift {
-                            between([0, 1, 2, 3])
-                        } else {
-                            state(0)
-                        }
-                    },
-                )
-            }),
-    )
-}
-<span class="boring">fn main() {}</span></code></pre>
-<h2 id="button-click-without-dragging"><a class="header" href="#button-click-without-dragging"><code>button</code>: Click Without Dragging</a></h2>
-<p>A node that activates on press-and-release without moving. The second argument is the radius within which the pointer counts as not having moved:</p>
-<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
+ViewNode::circle("reactor", 0.3)
+    .draggable(|| react_to(
+        || shift_held.load(std::sync::atomic::Ordering::Relaxed),
+        |shift| if *shift { /* spec with shift */ } else { /* normal spec */ },
+    ))
+<span class="boring">}</span></code></pre>
+<h2 id="button--click-without-dragging"><a class="header" href="#button--click-without-dragging"><code>button</code> — Click Without Dragging</a></h2>
+<p>A node that activates on press-and-release without moving:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
 </span>use bevy_composable_dragging::ops::button;
-use bevy_composable_dragging::{View, ViewNode};
 
-fn view(clicked: &amp;bool) -&gt; View&lt;bool&gt; {
-    let color = if *clicked { Color::srgb(0.3, 0.7, 0.4) } else { Color::WHITE };
-    let after_click = !*clicked;
-    View::new().with(
-        ViewNode::circle("btn", 0.3)
-            .with_color(color)
-            .draggable(move || button(after_click, 0.1)),
-    )
-}
-<span class="boring">fn main() {}</span></code></pre>
-<h2 id="custom-full-control"><a class="header" href="#custom-full-control"><code>custom</code>: Full Control</a></h2>
-<p>Provide a compile function for complete control over drag behavior. It receives the <code>DragContext</code> when a drag starts and returns a behavior that turns each pointer position into a <code>Frame</code>: the view to show, the state to drop into, and the gap between the pointer and the dragged node. This one keeps the starting state, which is what <code>state(start)</code> does:</p>
-<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
+ViewNode::circle("btn", 0.3)
+    .draggable(|| button(clicked_state, 0.1))
+<span class="boring">}</span></code></pre>
+<h2 id="custom--full-control"><a class="header" href="#custom--full-control"><code>custom</code> — Full Control</a></h2>
+<p>Provide a custom compile function for complete control over drag behavior.</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
 </span>use bevy_composable_dragging::ops::custom;
-use bevy_composable_dragging::{DragContext, DragSpec, Frame, View, ViewNode};
 
-fn stay_put() -&gt; DragSpec&lt;usize&gt; {
-    custom(|context: &amp;DragContext&lt;usize&gt;| {
-        let start = context.start_state().clone();
-        let view = context.render(&amp;start);
-        Box::new(move |_pointer| Frame::new(view.clone(), start.clone(), 0.0))
-    })
-}
-
-fn view(slot: &amp;usize) -&gt; View&lt;usize&gt; {
-    View::new().with(
-        ViewNode::circle("custom", 0.3)
-            .at_xy(Vec2::new(*slot as f32, 0.0))
-            .draggable(stay_put),
-    )
-}
-<span class="boring">fn main() {}</span></code></pre>
+ViewNode::circle("custom", 0.3)
+    .draggable(|| custom(|context| {
+        // Build a DragBehavior from scratch
+        // ...
+    }))
+<span class="boring">}</span></code></pre>
 <h2 id="value-operators"><a class="header" href="#value-operators">Value Operators</a></h2>
 <p>Three operators for direct value editing along axes and planes:</p>
 <ul>
-<li><strong><code>along_axis</code></strong>: Change a value by dragging along a line</li>
-<li><strong><code>around_axis</code></strong>: Change a value by dragging around a ring (rotation)</li>
-<li><strong><code>across_plane</code></strong>: Change a value by dragging across a plane</li>
+<li><strong><code>along_axis</code></strong> — Change a value by dragging along a line</li>
+<li><strong><code>around_axis</code></strong> — Change a value by dragging around a ring (rotation)</li>
+<li><strong><code>across_plane</code></strong> — Change a value by dragging across a plane</li>
 </ul>
 <p>These are used by gizmos and curve handles for precise editing with snapping.</p>
 <h2 id="spec-modifiers"><a class="header" href="#spec-modifiers">Spec Modifiers</a></h2>
@@ -447,18 +335,13 @@ fn view(slot: &amp;usize) -&gt; View&lt;usize&gt; {
 </div>
 <h2 id="chaining"><a class="header" href="#chaining">Chaining</a></h2>
 <p><code>.with_chaining()</code> lets a drag continue seamlessly after switching states:</p>
-<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
 </span>use bevy_composable_dragging::ops::closest_states;
-use bevy_composable_dragging::{View, ViewNode};
 
-fn view(slot: &amp;usize) -&gt; View&lt;usize&gt; {
-    View::new().with(
-        ViewNode::circle("item", 0.3)
-            .at_xy(Vec2::new(*slot as f32, 0.0))
-            .draggable(|| closest_states(0..5).with_chaining()),
-    )
-}
-<span class="boring">fn main() {}</span></code></pre>
+ViewNode::circle("item", 0.3)
+    .draggable(|| closest_states(states).with_chaining())
+<span class="boring">}</span></code></pre>
 <h2 id="next-steps"><a class="header" href="#next-steps">Next Steps</a></h2>
 <ul>
 <li>Control where drags happen with <a href="./spaces.html">Drag Spaces</a></li>

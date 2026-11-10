@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-ad779c5b.js";
+            window.path_to_searchindex_js = "searchindex-5e46b0c3.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-d11337db.js"></script>
@@ -185,12 +185,12 @@
 <p>The engine blends views to produce smooth animations. Every animatable property of a <code>ViewNode</code> implements the <code>Blend</code> trait, and <code>lerp_views</code> interpolates between two views by node id.</p>
 <h2 id="how-blending-works"><a class="header" href="#how-blending-works">How Blending Works</a></h2>
 <p>When a drag starts, the engine evaluates the view function for the current state and each target state. As the pointer moves, it blends between the start view and the target view, producing a smooth preview. On release, the state switches and the view animates to the new target.</p>
-<pre class="playground"><code class="language-rust">use bevy_composable_dragging::{View, lerp_views};
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use bevy_composable_dragging::lerp_views;
 
-fn preview&lt;S&gt;(start_view: &amp;View&lt;S&gt;, target_view: &amp;View&lt;S&gt;, t: f32) -&gt; View&lt;S&gt; {
-    lerp_views(start_view, target_view, t)
-}
-<span class="boring">fn main() {}</span></code></pre>
+let preview = lerp_views(&amp;start_view, &amp;target_view, t);
+<span class="boring">}</span></code></pre>
 <h2 id="blended-properties"><a class="header" href="#blended-properties">Blended Properties</a></h2>
 <div class="table-wrapper">
 <table>
@@ -210,45 +210,40 @@ fn preview&lt;S&gt;(start_view: &amp;View&lt;S&gt;, target_view: &amp;View&lt;S&
 </div>
 <h2 id="presence"><a class="header" href="#presence">Presence</a></h2>
 <p>When a node exists in one view but not the other, its <code>Presence</code> determines how it appears or disappears:</p>
-<pre class="playground"><code class="language-rust">use bevy_composable_dragging::{NodeId, Presence};
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use bevy_composable_dragging::Presence;
 
-fn presence_options() -&gt; [Presence; 3] {
-    [
-        // Fade in/out with opacity
-        Presence::Fade,
-        // Emerge from the position of the node with id "knob"
-        Presence::Emerge { from: NodeId::from("knob") },
-        // Appear instantly
-        Presence::Pop,
-    ]
-}
-<span class="boring">fn main() {}</span></code></pre>
+// Fade in/out with opacity
+Presence::Fade
+
+// Emerge from the dragged node's position
+Presence::Emerge
+
+// Appear instantly
+Presence::Pop
+<span class="boring">}</span></code></pre>
 <h2 id="view-blending-functions"><a class="header" href="#view-blending-functions">View Blending Functions</a></h2>
-<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::Transform;
-</span>use bevy_composable_dragging::{View, blend_views, lerp_transform, lerp_views};
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use bevy_composable_dragging::{lerp_views, blend_views, lerp_transform};
 
-fn blend_examples&lt;S: Clone&gt;(a: &amp;View&lt;S&gt;, b: &amp;View&lt;S&gt;, c: &amp;View&lt;S&gt;, t1: &amp;Transform, t2: &amp;Transform) {
-    // Linear interpolation between two views
-    let blended = lerp_views(a, b, 0.5);
+// Linear interpolation between two views
+let blended = lerp_views(&amp;a, &amp;b, 0.5);
 
-    // Natural neighbor blending (for multiple views)
-    let blended_many = blend_views(&amp;[a, b, c], &amp;[0.5, 0.3, 0.2]);
+// Natural neighbor blending (for multiple views)
+let blended = blend_views(&amp;[&amp;a, &amp;b, &amp;c], &amp;[0.5, 0.3, 0.2]);
 
-    // Interpolate a single transform
-    let halfway = lerp_transform(t1, t2, 0.5);
-}
-<span class="boring">fn main() {}</span></code></pre>
+// Interpolate a single transform
+let t = lerp_transform(&amp;t1, &amp;t2, 0.5);
+<span class="boring">}</span></code></pre>
 <h2 id="overshoot"><a class="header" href="#overshoot">Overshoot</a></h2>
-<p><code>ViewNode::with_overshoot</code> makes a node’s transform run past its target by a fraction of the distance and settle back, creating a spring-like animation. The sphere in this example needs the <code>gradmesh</code> feature:</p>
-<pre class="playground"><code class="language-rust">use bevy_composable_dragging::ViewNode;
-
-<span class="boring">#[derive(Clone)]
-</span><span class="boring">struct MyState;
-</span>fn bouncy_node() -&gt; ViewNode&lt;MyState&gt; {
-    ViewNode::sphere("bouncy", 1.0)
-        .with_overshoot(0.12)  // 12% overshoot
-}
-<span class="boring">fn main() {}</span></code></pre>
+<p><code>ViewNode::with_overshoot</code> makes a node’s transform run past its target by a fraction of the distance and settle back, creating a spring-like animation:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>ViewNode::sphere("bouncy", 1.0)
+    .with_overshoot(0.12)  // 12% overshoot
+<span class="boring">}</span></code></pre>
 <p>The HUD uses 12% overshoot for all its elements.</p>
 <h2 id="geometry-morphing"><a class="header" href="#geometry-morphing">Geometry Morphing</a></h2>
 <p>When two views use different geometries for the same node, the engine morphs between them. With <code>bevy_gradmesh</code>, shapes are quantized to 32 morph steps, bounding the number of distinct meshes.</p>
