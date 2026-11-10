@@ -28,6 +28,7 @@
         <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
 
         <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="variant_switch-2015b158.css">
 
 
         <!-- Provide site root and default themes to javascript -->
@@ -35,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-5e46b0c3.js";
+            window.path_to_searchindex_js = "searchindex-ad779c5b.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-d11337db.js"></script>
@@ -186,13 +187,22 @@
 <p>Three traits connect your types to the menu:</p>
 <h3 id="petal"><a class="header" href="#petal"><code>Petal</code></a></h3>
 <p>Defines what a menu item looks like and does:</p>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>use bevy_composable_dragging::radial::Petal;
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
+</span><span class="boring">use bevy_composable_dragging::hud::Screen;
+</span>use bevy_composable_dragging::radial::{glyph, Petal};
 use bevy_gradmesh::Shape;
 
 #[derive(Clone, Copy, PartialEq, Debug)]
 enum Tool { Pen, Eraser }
+
+<span class="boring">#[derive(Clone, Copy, PartialEq, Debug)]
+</span><span class="boring">enum Page { Tools }
+</span>#[derive(Clone)]
+struct MyState {
+    screen: Screen,
+    tool: Tool,
+    menu: Option&lt;Page&gt;,
+}
 
 impl Petal&lt;MyState&gt; for Tool {
     fn name(&amp;self) -&gt; String {
@@ -209,7 +219,7 @@ impl Petal&lt;MyState&gt; for Tool {
 
     fn glyph(&amp;self) -&gt; Shape {
         // Return a small shape for the petal icon
-        Shape::circle(0.5)
+        glyph::dots(5.0, &amp;[(0.0, 0.0)])
     }
 
     fn is_active(&amp;self, state: &amp;MyState) -&gt; bool {
@@ -223,14 +233,31 @@ impl Petal&lt;MyState&gt; for Tool {
         s
     }
 }
-<span class="boring">}</span></code></pre>
+<span class="boring">fn main() {}</span></code></pre>
 <h3 id="ring"><a class="header" href="#ring"><code>Ring</code></a></h3>
 <p>Defines a ring of items:</p>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
+</span><span class="boring">use bevy_composable_dragging::hud::Screen;
+</span><span class="boring">use bevy_composable_dragging::radial::{glyph, Petal};
+</span><span class="boring">use bevy_gradmesh::Shape;
 </span>use bevy_composable_dragging::radial::Ring;
 
-#[derive(Clone, Copy, PartialEq, Debug)]
+<span class="boring">#[derive(Clone, Copy, PartialEq, Debug)]
+</span><span class="boring">enum Tool { Pen, Eraser }
+</span><span class="boring">#[derive(Clone)]
+</span><span class="boring">struct MyState {
+</span><span class="boring">    screen: Screen,
+</span><span class="boring">    tool: Tool,
+</span><span class="boring">    menu: Option&lt;Page&gt;,
+</span><span class="boring">}
+</span><span class="boring">impl Petal&lt;MyState&gt; for Tool {
+</span><span class="boring">    fn name(&amp;self) -&gt; String { format!("{self:?}") }
+</span><span class="boring">    fn label(&amp;self, _state: &amp;MyState) -&gt; String { self.name() }
+</span><span class="boring">    fn accent(&amp;self) -&gt; Color { Color::srgb(0.24, 0.42, 0.8) }
+</span><span class="boring">    fn glyph(&amp;self) -&gt; Shape { glyph::dots(5.0, &amp;[(0.0, 0.0)]) }
+</span><span class="boring">    fn press(&amp;self, state: &amp;MyState) -&gt; MyState { state.clone() }
+</span><span class="boring">}
+</span>#[derive(Clone, Copy, PartialEq, Debug)]
 enum Page { Tools }
 
 impl Ring&lt;MyState&gt; for Page {
@@ -248,15 +275,44 @@ impl Ring&lt;MyState&gt; for Page {
         vec![Page::Tools]
     }
 }
-<span class="boring">}</span></code></pre>
+<span class="boring">fn main() {}</span></code></pre>
 <h3 id="radialhost"><a class="header" href="#radialhost"><code>RadialHost</code></a></h3>
 <p>Connects the state to the menu. It extends <code>HudHost</code>:</p>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
+</span><span class="boring">use bevy_composable_dragging::hud::{HudHost, Screen};
+</span><span class="boring">use bevy_composable_dragging::radial::{glyph, Petal, Ring};
+</span><span class="boring">use bevy_gradmesh::Shape;
 </span>use bevy_composable_dragging::radial::RadialHost;
 use bevy_composable_dragging::hud::Layout;
 
-impl RadialHost for MyState {
+<span class="boring">#[derive(Clone, Copy, PartialEq, Debug)]
+</span><span class="boring">enum Tool { Pen, Eraser }
+</span><span class="boring">#[derive(Clone, Copy, PartialEq, Debug)]
+</span><span class="boring">enum Page { Tools }
+</span><span class="boring">#[derive(Clone)]
+</span><span class="boring">struct MyState {
+</span><span class="boring">    screen: Screen,
+</span><span class="boring">    tool: Tool,
+</span><span class="boring">    menu: Option&lt;Page&gt;,
+</span><span class="boring">}
+</span><span class="boring">impl HudHost for MyState {
+</span><span class="boring">    fn screen(&amp;self) -&gt; &amp;Screen { &amp;self.screen }
+</span><span class="boring">    fn with_screen(&amp;self, screen: Screen) -&gt; Self { Self { screen, ..self.clone() } }
+</span><span class="boring">}
+</span><span class="boring">impl Petal&lt;MyState&gt; for Tool {
+</span><span class="boring">    fn name(&amp;self) -&gt; String { format!("{self:?}") }
+</span><span class="boring">    fn label(&amp;self, _state: &amp;MyState) -&gt; String { self.name() }
+</span><span class="boring">    fn accent(&amp;self) -&gt; Color { Color::srgb(0.24, 0.42, 0.8) }
+</span><span class="boring">    fn glyph(&amp;self) -&gt; Shape { glyph::dots(5.0, &amp;[(0.0, 0.0)]) }
+</span><span class="boring">    fn press(&amp;self, state: &amp;MyState) -&gt; MyState { state.clone() }
+</span><span class="boring">}
+</span><span class="boring">impl Ring&lt;MyState&gt; for Page {
+</span><span class="boring">    type Item = Tool;
+</span><span class="boring">    fn name(&amp;self) -&gt; String { "tools".into() }
+</span><span class="boring">    fn items(&amp;self, _state: &amp;MyState) -&gt; Vec&lt;Tool&gt; { vec![Tool::Pen, Tool::Eraser] }
+</span><span class="boring">    fn all(_state: &amp;MyState) -&gt; Vec&lt;Self&gt; { vec![Page::Tools] }
+</span><span class="boring">}
+</span>impl RadialHost for MyState {
     type Ring = Page;
 
     fn root(&amp;self) -&gt; Page {
@@ -279,38 +335,80 @@ impl RadialHost for MyState {
         format!("Tool: {:?}", self.tool)
     }
 }
-<span class="boring">}</span></code></pre>
+<span class="boring">fn main() {}</span></code></pre>
 <h2 id="adding-the-menu"><a class="header" href="#adding-the-menu">Adding the Menu</a></h2>
 <p><code>push_menu</code> builds the menu nodes; call it from your view function with the layout and theme:</p>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>use bevy_composable_dragging::hud::Layout;
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
+</span><span class="boring">use bevy_composable_dragging::hud::Screen;
+</span><span class="boring">use bevy_composable_dragging::radial::{glyph, Petal, RadialHost, Ring};
+</span><span class="boring">use bevy_composable_dragging::View;
+</span><span class="boring">use bevy_gradmesh::Shape;
+</span>use bevy_composable_dragging::hud::{HudHost, Layout, Theme};
 use bevy_composable_dragging::radial::{push_menu, RadialMenuPlugin};
 
-fn view(state: &amp;MyState) -&gt; View&lt;MyState&gt; {
+<span class="boring">#[derive(Clone, Copy, PartialEq, Debug)]
+</span><span class="boring">enum Tool { Pen, Eraser }
+</span><span class="boring">#[derive(Clone, Copy, PartialEq, Debug)]
+</span><span class="boring">enum Page { Tools }
+</span><span class="boring">#[derive(Clone)]
+</span><span class="boring">struct MyState {
+</span><span class="boring">    screen: Screen,
+</span><span class="boring">    tool: Tool,
+</span><span class="boring">    menu: Option&lt;Page&gt;,
+</span><span class="boring">}
+</span><span class="boring">impl HudHost for MyState {
+</span><span class="boring">    fn screen(&amp;self) -&gt; &amp;Screen { &amp;self.screen }
+</span><span class="boring">    fn with_screen(&amp;self, screen: Screen) -&gt; Self { Self { screen, ..self.clone() } }
+</span><span class="boring">}
+</span><span class="boring">impl Petal&lt;MyState&gt; for Tool {
+</span><span class="boring">    fn name(&amp;self) -&gt; String { format!("{self:?}") }
+</span><span class="boring">    fn label(&amp;self, _state: &amp;MyState) -&gt; String { self.name() }
+</span><span class="boring">    fn accent(&amp;self) -&gt; Color { Color::srgb(0.24, 0.42, 0.8) }
+</span><span class="boring">    fn glyph(&amp;self) -&gt; Shape { glyph::dots(5.0, &amp;[(0.0, 0.0)]) }
+</span><span class="boring">    fn press(&amp;self, state: &amp;MyState) -&gt; MyState { state.clone() }
+</span><span class="boring">}
+</span><span class="boring">impl Ring&lt;MyState&gt; for Page {
+</span><span class="boring">    type Item = Tool;
+</span><span class="boring">    fn name(&amp;self) -&gt; String { "tools".into() }
+</span><span class="boring">    fn items(&amp;self, _state: &amp;MyState) -&gt; Vec&lt;Tool&gt; { vec![Tool::Pen, Tool::Eraser] }
+</span><span class="boring">    fn all(_state: &amp;MyState) -&gt; Vec&lt;Self&gt; { vec![Page::Tools] }
+</span><span class="boring">}
+</span><span class="boring">impl RadialHost for MyState {
+</span><span class="boring">    type Ring = Page;
+</span><span class="boring">    fn root(&amp;self) -&gt; Page { Page::Tools }
+</span><span class="boring">    fn menu(&amp;self) -&gt; Option&lt;Page&gt; { self.menu }
+</span><span class="boring">    fn with_menu(&amp;self, menu: Option&lt;Page&gt;) -&gt; Self { Self { menu, ..self.clone() } }
+</span><span class="boring">    fn pop_center(&amp;self, layout: &amp;Layout) -&gt; Vec2 { layout.home() }
+</span><span class="boring">    fn status(&amp;self) -&gt; String { format!("Tool: {:?}", self.tool) }
+</span><span class="boring">}
+</span>fn view(state: &amp;MyState) -&gt; View&lt;MyState&gt; {
     let mut view = View::new();
     // ... scene nodes ...
     let layout = Layout::new(state.screen());
-    let theme = /* your theme */;
-    push_menu(&amp;mut view, &amp;state_arc, &amp;layout, &amp;theme);
+    let theme = Theme::default();
+    push_menu(&amp;mut view, state, &amp;layout, &amp;theme);
     view
 }
 
 // Register the plugin for text labels
-App::add_plugins(RadialMenuPlugin::&lt;MyState&gt;::new(theme));
-<span class="boring">}</span></code></pre>
+fn add_menu_plugin(app: &amp;mut App) {
+    app.add_plugins(RadialMenuPlugin::&lt;MyState&gt;::new(Theme::default()));
+}
+<span class="boring">fn main() {}</span></code></pre>
 <h2 id="glyphs"><a class="header" href="#glyphs">Glyphs</a></h2>
 <p>The <code>glyph</code> submodule provides common icon shapes:</p>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>use bevy_composable_dragging::radial::glyph;
+<pre class="playground"><code class="language-rust">use bevy_composable_dragging::radial::glyph;
+use bevy_gradmesh::Shape;
 
-// Dots pattern
-glyph::dots(5.0, &amp;[(0.0, 0.0)])
-
-// Arrow
-glyph::arrow(5.0, Dir2::ZERO)
-<span class="boring">}</span></code></pre>
+fn glyphs() -&gt; [Shape; 2] {
+    [
+        // Dots pattern
+        glyph::dots(5.0, &amp;[(0.0, 0.0)]),
+        // Polygon from points: a triangle pointing right
+        glyph::outline(&amp;[(-6.0, -6.0), (6.0, 0.0), (-6.0, 6.0)]),
+    ]
+}
+<span class="boring">fn main() {}</span></code></pre>
 <h2 id="hub-behavior"><a class="header" href="#hub-behavior">Hub Behavior</a></h2>
 <p>The hub rests as a small button in a corner, or pops up over the element the menu edits. When a tool edits an element in place, the hub shrinks to a chip above it.</p>
 <p><em>A radial menu choosing the piece to place. Run <code>cargo run --example cozy_castle_3d --features shapes-3d</code>.</em></p>
@@ -370,6 +468,7 @@ glyph::arrow(5.0, Dir2::ZERO)
         <script src="book-609e4cb8.js"></script>
 
         <!-- Custom JS scripts -->
+        <script src="variant_switch-903d09f9.js"></script>
 
 
 

@@ -30,6 +30,7 @@ fn main() {
                     title: format!("Bevy Demo: {}", example_name),
                     resolution: (1280, 720).into(),
                     canvas: Some("#bevy-canvas".into()),
+                    fit_canvas_to_parent: true,
                     ..default()
                 }),
                 ..default()
@@ -39,7 +40,6 @@ fn main() {
                 ..default()
             }),
     );
-    app.add_plugins(bevy_gradmesh::GradMeshPlugin);
     examples::dispatch(&example_name, &mut app);
     app.run();
 }

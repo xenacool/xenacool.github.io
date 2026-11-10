@@ -29,6 +29,7 @@
         <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
 
         <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="variant_switch-2015b158.css">
 
 
         <!-- Provide site root and default themes to javascript -->
@@ -36,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-77679fc6.js";
+            window.path_to_searchindex_js = "searchindex-6557ef1d.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-cbf67a2d.js"></script>
@@ -179,7 +180,7 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h1 id="introduction"><a class="header" href="#introduction">Introduction</a></h1>
-<p>BevyGradmesh is a procedural mesh generation library for <a href="https://bevyengine.org/">Bevy</a> that provides clean APIs for creating 3D primitives with gradient shading, inspired by Freya Holmér’s work.</p>
+<p>BevyGradmesh is a procedural mesh generation library for <a href="https://bevyengine.org/">Bevy</a> that provides clean APIs for creating 3D primitives with gradient shading, inspired by Freya Holmer’s work.</p>
 <h2 id="what-it-solves"><a class="header" href="#what-it-solves">What It Solves</a></h2>
 <p>Instead of manually creating mesh assets for every shape, BevyGradmesh generates watertight geometry at runtime with proper normals and UVs. Combined with dual-directional gradient materials, you get stylized 3D-looking characters and objects without any external assets.</p>
 <p><em>Every procedural primitive with dual-directional gradient shading. Run <code>cargo run --example shapes</code> to reproduce it.</em></p>
@@ -243,12 +244,13 @@ fn setup(
     mut materials: ResMut&lt;Assets&lt;GradMeshMaterial&gt;&gt;,
 ) {
     // Camera
-    commands.spawn(Camera3d::from_transform(
-        Transform::from_xyz(0.0, 5.0, 10.0).looking_at(Vec3::ZERO, Vec3::Y)
+    commands.spawn((
+        Camera3d::default(),
+        Transform::from_xyz(0.0, 5.0, 10.0).looking_at(Vec3::ZERO, Vec3::Y),
     ));
 
     // Light
-    commands.spawn(DirectionalLight::new_white());
+    commands.spawn(DirectionalLight::default());
 
     // Generate a sphere mesh
     let mesh = meshes.add(Shape::sphere(1.0, ShapeDetail::Medium).build());
@@ -273,14 +275,15 @@ fn setup(
 </ol>
 <h2 id="detail-levels"><a class="header" href="#detail-levels">Detail Levels</a></h2>
 <p>Control mesh resolution with <code>ShapeDetail</code>:</p>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>Shape::sphere(1.0, ShapeDetail::Minimal)  // 8 segments
-Shape::sphere(1.0, ShapeDetail::Low)      // 12 segments
-Shape::sphere(1.0, ShapeDetail::Medium)   // 16 segments (default)
-Shape::sphere(1.0, ShapeDetail::High)     // 24 segments
-Shape::sphere(1.0, ShapeDetail::Extreme)  // 32 segments
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::{Shape, ShapeDetail};
+</span><span class="boring">fn main() {}
+</span>fn detail_levels() {
+    Shape::sphere(1.0, ShapeDetail::Minimal); // 8 segments
+    Shape::sphere(1.0, ShapeDetail::Low); // 12 segments
+    Shape::sphere(1.0, ShapeDetail::Medium); // 16 segments (default)
+    Shape::sphere(1.0, ShapeDetail::High); // 24 segments
+    Shape::sphere(1.0, ShapeDetail::Extreme); // 32 segments
+}</code></pre>
 <h2 id="next-steps"><a class="header" href="#next-steps">Next Steps</a></h2>
 <ul>
 <li>Learn about all available <a href="#shapes">Shapes</a></li>
@@ -292,152 +295,228 @@ Shape::sphere(1.0, ShapeDetail::Extreme)  // 32 segments
 <p>BevyGradmesh provides a wide variety of procedural primitives, all generated at runtime with proper normals and UVs.</p>
 <h2 id="3d-primitives"><a class="header" href="#3d-primitives">3D Primitives</a></h2>
 <h3 id="sphere"><a class="header" href="#sphere">Sphere</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>Shape::sphere(radius, detail)
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::{Shape, ShapeDetail};
+</span><span class="boring">fn main() {}
+</span>fn sphere() -&gt; Shape {
+    Shape::sphere(1.0, ShapeDetail::Medium)
+}</code></pre>
 <h3 id="ellipsoid"><a class="header" href="#ellipsoid">Ellipsoid</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>Shape::ellipsoid(size, detail)
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
+</span><span class="boring">use bevy_gradmesh::{Shape, ShapeDetail};
+</span><span class="boring">fn main() {}
+</span>fn ellipsoid() -&gt; Shape {
+    Shape::ellipsoid(Vec3::new(2.0, 1.0, 1.5), ShapeDetail::Medium)
+}</code></pre>
 <h3 id="cuboid"><a class="header" href="#cuboid">Cuboid</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>Shape::cuboid(size, roundness, detail)
-<span class="boring">}</span></code></pre>
-<p>The <code>roundness</code> parameter (0.0–1.0) creates rounded edges. At 0.0, produces a sharp box.</p>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
+</span><span class="boring">use bevy_gradmesh::{Shape, ShapeDetail};
+</span><span class="boring">fn main() {}
+</span>fn cuboid() -&gt; Shape {
+    let roundness = 0.2;
+    Shape::cuboid(Vec3::new(1.0, 2.0, 1.0), roundness, ShapeDetail::Medium)
+}</code></pre>
+<p>The <code>roundness</code> parameter (0.0 to 1.0) creates rounded edges. At 0.0, produces a sharp box.</p>
 <h3 id="cylinder"><a class="header" href="#cylinder">Cylinder</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>Shape::cylinder(radius, height, detail)
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::{Shape, ShapeDetail};
+</span><span class="boring">fn main() {}
+</span>fn cylinder() -&gt; Shape {
+    Shape::cylinder(0.5, 2.0, ShapeDetail::Medium)
+}</code></pre>
 <h3 id="cone"><a class="header" href="#cone">Cone</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>Shape::cone(radius, height, detail)
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::{Shape, ShapeDetail};
+</span><span class="boring">fn main() {}
+</span>fn cone() -&gt; Shape {
+    Shape::cone(0.5, 2.0, ShapeDetail::Medium)
+}</code></pre>
 <h3 id="capsule"><a class="header" href="#capsule">Capsule</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>Shape::capsule(radius, height, detail)
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::{Shape, ShapeDetail};
+</span><span class="boring">fn main() {}
+</span>fn capsule() -&gt; Shape {
+    Shape::capsule(0.5, 2.0, ShapeDetail::Medium)
+}</code></pre>
 <h3 id="hemisphere"><a class="header" href="#hemisphere">Hemisphere</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>Shape::hemisphere(radius, capped, detail)
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::{Shape, ShapeDetail};
+</span><span class="boring">fn main() {}
+</span>fn hemisphere() -&gt; Shape {
+    let capped = true;
+    Shape::hemisphere(1.0, capped, ShapeDetail::Medium)
+}</code></pre>
 <p>When <code>capped</code> is true, the flat face is filled with geometry.</p>
 <h3 id="torus"><a class="header" href="#torus">Torus</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>Shape::torus(radius, thickness, start_angle, span)
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::Shape;
+</span><span class="boring">fn main() {}
+</span>fn torus() -&gt; Shape {
+    let start_angle = 0.0;
+    let span = std::f32::consts::TAU;
+    Shape::torus(1.0, 0.25, start_angle, span)
+}</code></pre>
 <p>Supports partial torus arcs. Use <code>start_angle = 0.0</code> and <code>span = TAU</code> for a full torus.</p>
 <h3 id="regular-prism"><a class="header" href="#regular-prism">Regular Prism</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>Shape::regular_prism(sides, radius, height, roundness, detail)
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::{Shape, ShapeDetail};
+</span><span class="boring">fn main() {}
+</span>fn regular_prism() -&gt; Shape {
+    let sides = 6;
+    let roundness = 0.1;
+    Shape::regular_prism(sides, 1.0, 2.0, roundness, ShapeDetail::Medium)
+}</code></pre>
 <h3 id="pyramid"><a class="header" href="#pyramid">Pyramid</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>Shape::pyramid(sides, radius, height, detail)
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::{Shape, ShapeDetail};
+</span><span class="boring">fn main() {}
+</span>fn pyramid() -&gt; Shape {
+    let sides = 4;
+    Shape::pyramid(sides, 1.0, 1.5, ShapeDetail::Medium)
+}</code></pre>
 <h3 id="tapered-cylinder"><a class="header" href="#tapered-cylinder">Tapered Cylinder</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>Shape::tapered_cylinder(top_radius, bottom_radius, height, detail)
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::{Shape, ShapeDetail};
+</span><span class="boring">fn main() {}
+</span>fn tapered_cylinder() -&gt; Shape {
+    let top_radius = 0.3;
+    let bottom_radius = 0.6;
+    Shape::tapered_cylinder(top_radius, bottom_radius, 2.0, ShapeDetail::Medium)
+}</code></pre>
 <p>A cone-frustum with flat top and bottom. When radii are equal, equivalent to a regular cylinder.</p>
 <p><em>The 3D primitives, shaded with dual-directional gradients. Run <code>cargo run --example shapes</code> to reproduce it.</em></p>
 <h2 id="2d-primitives"><a class="header" href="#2d-primitives">2D Primitives</a></h2>
 <p>All 2D shapes are flat quads facing the camera (billboarded).</p>
 <h3 id="rectangle"><a class="header" href="#rectangle">Rectangle</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>Shape::rectangle(size, detail)
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
+</span><span class="boring">use bevy_gradmesh::{Shape, ShapeDetail};
+</span><span class="boring">fn main() {}
+</span>fn rectangle() -&gt; Shape {
+    Shape::rectangle(Vec2::new(2.0, 1.0), ShapeDetail::Medium)
+}</code></pre>
 <h3 id="disc"><a class="header" href="#disc">Disc</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>Shape::disc(radius, detail)
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::{Shape, ShapeDetail};
+</span><span class="boring">fn main() {}
+</span>fn disc() -&gt; Shape {
+    Shape::disc(1.0, ShapeDetail::Medium)
+}</code></pre>
 <h3 id="polygon"><a class="header" href="#polygon">Polygon</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>Shape::polygon(sides, radius, detail)
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::{Shape, ShapeDetail};
+</span><span class="boring">fn main() {}
+</span>fn polygon() -&gt; Shape {
+    let sides = 5;
+    Shape::polygon(sides, 1.0, ShapeDetail::Medium)
+}</code></pre>
 <h3 id="ellipse"><a class="header" href="#ellipse">Ellipse</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>Shape::ellipse(radius, detail)
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
+</span><span class="boring">use bevy_gradmesh::{Shape, ShapeDetail};
+</span><span class="boring">fn main() {}
+</span>fn ellipse() -&gt; Shape {
+    Shape::ellipse(Vec2::new(1.5, 0.75), ShapeDetail::Medium)
+}</code></pre>
 <h3 id="star"><a class="header" href="#star">Star</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>Shape::star(points, outer_radius, inner_radius, detail)
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::{Shape, ShapeDetail};
+</span><span class="boring">fn main() {}
+</span>fn star() -&gt; Shape {
+    let points = 5;
+    let outer_radius = 1.0;
+    let inner_radius = 0.4;
+    Shape::star(points, outer_radius, inner_radius, ShapeDetail::Medium)
+}</code></pre>
 <p>N-pointed star. The <code>inner_radius</code> controls how deep the indentations are.</p>
 <h3 id="ring"><a class="header" href="#ring">Ring</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>Shape::ring(outer_radius, inner_radius, detail)
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::{Shape, ShapeDetail};
+</span><span class="boring">fn main() {}
+</span>fn ring() -&gt; Shape {
+    let outer_radius = 1.0;
+    let inner_radius = 0.6;
+    Shape::ring(outer_radius, inner_radius, ShapeDetail::Medium)
+}</code></pre>
 <p>Annulus (2D donut with a hole).</p>
 <h3 id="wedge"><a class="header" href="#wedge">Wedge</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>Shape::wedge(radius, angle, detail)
-<span class="boring">}</span></code></pre>
-<p>Pie-slice shape. Angle is in radians (0 to 2π).</p>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::{Shape, ShapeDetail};
+</span><span class="boring">fn main() {}
+</span>fn wedge() -&gt; Shape {
+    let angle = std::f32::consts::FRAC_PI_2;
+    Shape::wedge(1.0, angle, ShapeDetail::Medium)
+}</code></pre>
+<p>Pie-slice shape. Angle is in radians (0 to 2 pi).</p>
 <p><em>Custom polygons with per-vertex colours, stars, rings, wedges and a tapered cylinder. Run <code>cargo run --example arbitrary_shapes</code> to reproduce it.</em></p>
 <h3 id="arbitrary-polygon"><a class="header" href="#arbitrary-polygon">Arbitrary Polygon</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>Shape::arbitrary_polygon(vertices, detail)
-Shape::arbitrary_polygon_colored(vertices, colors, detail)
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
+</span><span class="boring">use bevy_gradmesh::{Shape, ShapeDetail};
+</span><span class="boring">fn main() {}
+</span>fn arbitrary_polygon() -&gt; Shape {
+    let vertices = vec![
+        Vec2::new(-1.0, -1.0),
+        Vec2::new(1.0, -1.0),
+        Vec2::new(0.0, 1.0),
+    ];
+    Shape::arbitrary_polygon(vertices, ShapeDetail::Medium)
+}
+
+fn arbitrary_polygon_colored() -&gt; Shape {
+    let vertices = vec![
+        Vec2::new(-1.0, -1.0),
+        Vec2::new(1.0, -1.0),
+        Vec2::new(0.0, 1.0),
+    ];
+    let colors = vec![
+        [1.0, 0.0, 0.0, 1.0],
+        [0.0, 1.0, 0.0, 1.0],
+        [0.0, 0.0, 1.0, 1.0],
+    ];
+    Shape::arbitrary_polygon_colored(vertices, colors, ShapeDetail::Medium)
+}</code></pre>
 <p>Accepts any set of 2D vertices. Triangulated using ear-clipping algorithm. Supports optional per-vertex RGBA colors.</p>
 <h2 id="advanced-geometry"><a class="header" href="#advanced-geometry">Advanced Geometry</a></h2>
 <h3 id="3d-polyline"><a class="header" href="#3d-polyline">3D Polyline</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>Shape::polyline3d(points, thickness, closed, segments, detail)
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
+</span><span class="boring">use bevy_gradmesh::{Shape, ShapeDetail};
+</span><span class="boring">fn main() {}
+</span>fn polyline3d() -&gt; Shape {
+    let points = vec![
+        Vec3::new(0.0, 0.0, 0.0),
+        Vec3::new(1.0, 1.0, 0.0),
+        Vec3::new(2.0, 0.0, 1.0),
+    ];
+    let thickness = 0.1;
+    let closed = false;
+    let segments = 8;
+    Shape::polyline3d(points, thickness, closed, segments, ShapeDetail::Medium)
+}</code></pre>
 <p>Renders as tube geometry along the point path.</p>
-<h3 id="bézier-curve"><a class="header" href="#bézier-curve">Bézier Curve</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>Shape::bezier_curve(control_points, thickness, segments, detail)
-<span class="boring">}</span></code></pre>
-<p>Supports linear (2 points), quadratic (3 points), and cubic (4+ points) Bézier curves rendered as tubes.</p>
+<h3 id="bezier-curve"><a class="header" href="#bezier-curve">Bezier Curve</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
+</span><span class="boring">use bevy_gradmesh::{Shape, ShapeDetail};
+</span><span class="boring">fn main() {}
+</span>fn bezier_curve() -&gt; Shape {
+    let control_points = vec![
+        Vec3::new(0.0, 0.0, 0.0),
+        Vec3::new(1.0, 2.0, 0.0),
+        Vec3::new(2.0, 2.0, 0.0),
+        Vec3::new(3.0, 0.0, 0.0),
+    ];
+    let thickness = 0.1;
+    let segments = 32;
+    Shape::bezier_curve(control_points, thickness, segments, ShapeDetail::Medium)
+}</code></pre>
+<p>Supports linear (2 points), quadratic (3 points), and cubic (4+ points) Bezier curves rendered as tubes.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="styles--materials"><a class="header" href="#styles--materials">Styles &amp; Materials</a></h1>
 <h2 id="dual-directional-shading"><a class="header" href="#dual-directional-shading">Dual-Directional Shading</a></h2>
 <p>The signature feature of BevyGradmesh. Colors a surface with a smooth gradient between two colors along a given direction.</p>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>use bevy_gradmesh::dual_directional;
-
-let mat = dual_directional(
-    [0.6, 0.4, 0.3],  // dark color (RGB)
-    [0.96, 0.8, 0.69], // light color (RGB)
-    [0.0, 1.0, 0.0],   // gradient direction
-);
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::{GradMeshMaterial, dual_directional};
+</span><span class="boring">fn main() {}
+</span>fn directional_material() -&gt; GradMeshMaterial {
+    dual_directional(
+        [0.6, 0.4, 0.3],   // dark color (RGB)
+        [0.96, 0.8, 0.69], // light color (RGB)
+        [0.0, 1.0, 0.0],   // gradient direction
+    )
+}</code></pre>
 <h2 id="color-spaces"><a class="header" href="#color-spaces">Color Spaces</a></h2>
 <p>Gradients blend in OKLAB by default, which avoids the muddy midpoints that
 RGB interpolation produces. Pick another space with <code>with_mix_space</code>:</p>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>use bevy_gradmesh::{MixSpace, dual_directional, with_mix_space};
-
-let mat = with_mix_space(
-    dual_directional([0.6, 0.4, 0.3], [0.96, 0.8, 0.69], [0.0, 1.0, 0.0]),
-    MixSpace::Oklch,
-);
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::{GradMeshMaterial, MixSpace, dual_directional, with_mix_space};
+</span><span class="boring">fn main() {}
+</span>fn oklch_material() -&gt; GradMeshMaterial {
+    with_mix_space(
+        dual_directional([0.6, 0.4, 0.3], [0.96, 0.8, 0.69], [0.0, 1.0, 0.0]),
+        MixSpace::Oklch,
+    )
+}</code></pre>
 <div class="table-wrapper">
 <table>
 <thead>
@@ -474,97 +553,102 @@ exact for every shape kind. <code>Shape::bounds_2d()</code> does the same for
 read it every frame.</p>
 <h2 id="dual-radial-shading"><a class="header" href="#dual-radial-shading">Dual-Radial Shading</a></h2>
 <p>Gradient radiates from the center outward:</p>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>use bevy_gradmesh::dual_radial;
-
-let mat = dual_radial(
-    [0.6, 0.4, 0.3],
-    [0.96, 0.8, 0.69],
-);
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::{GradMeshMaterial, dual_radial};
+</span><span class="boring">fn main() {}
+</span>fn radial_material() -&gt; GradMeshMaterial {
+    dual_radial(
+        [0.6, 0.4, 0.3],   // inner color
+        [0.96, 0.8, 0.69], // outer color
+    )
+}</code></pre>
 <h2 id="blend-modes"><a class="header" href="#blend-modes">Blend Modes</a></h2>
 <p><em>Opaque, transparent, additive, multiplicative, screen, dither and dashed styles. Run <code>cargo run --example styles</code> to reproduce it.</em></p>
 <h3 id="opaque"><a class="header" href="#opaque">Opaque</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>use bevy_gradmesh::opaque;
-let mat = opaque(1.0, 0.0, 0.0);
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::{GradMeshMaterial, opaque};
+</span><span class="boring">fn main() {}
+</span>fn opaque_material() -&gt; GradMeshMaterial {
+    opaque(1.0, 0.0, 0.0)
+}</code></pre>
 <h3 id="transparent"><a class="header" href="#transparent">Transparent</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>use bevy_gradmesh::transparent;
-let mat = transparent(1.0, 0.0, 0.0, 0.5);
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::{GradMeshMaterial, transparent};
+</span><span class="boring">fn main() {}
+</span>fn transparent_material() -&gt; GradMeshMaterial {
+    transparent(1.0, 0.0, 0.0, 0.5)
+}</code></pre>
 <h3 id="additive-glow-effect"><a class="header" href="#additive-glow-effect">Additive (Glow Effect)</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>use bevy_gradmesh::additive;
-let mat = additive(1.0, 0.5, 0.0);
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::{GradMeshMaterial, additive};
+</span><span class="boring">fn main() {}
+</span>fn additive_material() -&gt; GradMeshMaterial {
+    additive(1.0, 0.5, 0.0)
+}</code></pre>
 <h3 id="multiplicative"><a class="header" href="#multiplicative">Multiplicative</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>use bevy_gradmesh::multiplicative;
-let mat = multiplicative(0.5, 0.5, 0.5);
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::{GradMeshMaterial, multiplicative};
+</span><span class="boring">fn main() {}
+</span>fn multiplicative_material() -&gt; GradMeshMaterial {
+    multiplicative(0.5, 0.5, 0.5)
+}</code></pre>
 <h3 id="screen"><a class="header" href="#screen">Screen</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>use bevy_gradmesh::screen;
-let mat = screen(1.0, 1.0, 0.0);
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::{GradMeshMaterial, screen};
+</span><span class="boring">fn main() {}
+</span>fn screen_material() -&gt; GradMeshMaterial {
+    screen(1.0, 1.0, 0.0)
+}</code></pre>
 <h3 id="dither"><a class="header" href="#dither">Dither</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>use bevy_gradmesh::dither;
-let mat = dither(1.0, 0.0, 0.0, 0.5);
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::{GradMeshMaterial, dither};
+</span><span class="boring">fn main() {}
+</span>fn dither_material() -&gt; GradMeshMaterial {
+    dither(1.0, 0.0, 0.0, 0.5)
+}</code></pre>
 <h3 id="dashed-outlines"><a class="header" href="#dashed-outlines">Dashed Outlines</a></h3>
 <p>Use <code>Style::with_dash</code> to add a dash pattern to any style:</p>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>use bevy_gradmesh::{Style, Dash};
-
-let style = Style::opaque(Color::WHITE).with_dash(
-    Dash::fixed(4, 0.2),
-);
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
+</span><span class="boring">use bevy_gradmesh::{Dash, Style};
+</span><span class="boring">fn main() {}
+</span>fn dashed_style() -&gt; Style {
+    Style::opaque(Color::WHITE).with_dash(Dash::fixed(4, 0.2))
+}</code></pre>
 <h2 id="custom-shaders"><a class="header" href="#custom-shaders">Custom Shaders</a></h2>
 <p>Attach any Bevy shader:</p>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>use bevy_gradmesh::BlendMode;
-use bevy::asset::Handle;
-
-let style = Style::custom(my_shader_handle, [1.0, 0.0, 0.0, 1.0]);
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
+</span><span class="boring">use bevy_gradmesh::Style;
+</span><span class="boring">fn main() {}
+</span>fn custom_style(my_shader_handle: Handle&lt;Shader&gt;) -&gt; Style {
+    Style::custom(my_shader_handle, Color::srgb(1.0, 0.0, 0.0))
+}</code></pre>
 <h2 id="pbr-properties"><a class="header" href="#pbr-properties">PBR Properties</a></h2>
 <p>All materials support Bevy’s PBR properties:</p>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>let mut mat = dual_directional([...], [...], [...]);
-mat.roughness = 0.1;    // Polished surface
-mat.metallic = 1.0;     // Metallic
-mat.emissive = Color::srgb(1.0, 0.0, 0.0).to_linear(); // Glow
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
+</span><span class="boring">use bevy_gradmesh::{GradMeshMaterial, dual_directional};
+</span><span class="boring">fn main() {}
+</span>fn pbr_material() -&gt; GradMeshMaterial {
+    let mut mat = dual_directional([0.2, 0.2, 0.8], [0.8, 0.2, 0.2], [0.0, 1.0, 0.0]);
+    mat.base.perceptual_roughness = 0.1; // Polished surface
+    mat.base.metallic = 1.0; // Metallic
+    mat.base.emissive = Color::srgb(1.0, 0.0, 0.0).to_linear(); // Glow
+    mat
+}</code></pre>
 <p><em>Transparency, emissive glow, metallic surfaces and combinations. Run <code>cargo run --example pbr_effects</code> to reproduce it.</em></p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="composing-shapes-2d-and-ghost-previews"><a class="header" href="#composing-shapes-2d-and-ghost-previews">Composing Shapes, 2D and Ghost Previews</a></h1>
 <h2 id="flat-shapes-with-mesh2d"><a class="header" href="#flat-shapes-with-mesh2d">Flat shapes with <code>Mesh2d</code></a></h2>
 <p><code>Shape::build_2d()</code> returns geometry in the XY plane facing +Z with gradient UVs. Pair it with
 <code>GradMeshMaterial2d</code> (built from a <code>Style</code>) and a <code>Camera2d</code>:</p>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>use bevy::prelude::*;
-use bevy_gradmesh::{Shape, ShapeDetail, Style};
-
-let mesh = Shape::disc(0.5, ShapeDetail::High).build_2d();
-let material = Style::dual_radial(Color::WHITE, Color::srgb(0.9, 0.4, 0.5)).build_2d();
-// commands.spawn((Mesh2d(meshes.add(mesh)), MeshMaterial2d(materials.add(material)),
-//     Transform::from_xyz(0.0, 0.0, 5.0).with_scale(Vec3::splat(120.0))));
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
+</span><span class="boring">use bevy_gradmesh::{GradMeshMaterial2d, Shape, ShapeDetail, Style};
+</span><span class="boring">fn main() {}
+</span>fn spawn_disc(
+    mut commands: Commands,
+    mut meshes: ResMut&lt;Assets&lt;Mesh&gt;&gt;,
+    mut materials: ResMut&lt;Assets&lt;GradMeshMaterial2d&gt;&gt;,
+) {
+    let mesh = Shape::disc(0.5, ShapeDetail::High).build_2d();
+    let material = Style::dual_radial(Color::WHITE, Color::srgb(0.9, 0.4, 0.5)).build_2d();
+    commands.spawn((
+        Mesh2d(meshes.add(mesh)),
+        MeshMaterial2d(materials.add(material)),
+        Transform::from_xyz(0.0, 0.0, 5.0).with_scale(Vec3::splat(120.0)),
+    ));
+}</code></pre>
 <ul>
 <li><code>Transform</code> scale resizes the shape on the XY plane; gradients and dashes follow because they are
 computed from the mesh UVs.</li>
@@ -580,19 +664,18 @@ curve, <code>v</code> across it).</li>
 <p><em>Gradient cards, a translucent dragged card layered by z, a radial disc, a pulsing star, a dashed ring and a polygon with a hole. Run <code>cargo run --example gradient_2d</code> to reproduce it.</em></p>
 <h2 id="outlines-extrusion-holes"><a class="header" href="#outlines-extrusion-holes">Outlines, extrusion, holes</a></h2>
 <p><code>arch</code>, <code>rounded_rectangle</code> and <code>blob</code> return counter-clockwise outlines centred on the origin.</p>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>use bevy::prelude::*;
-use bevy_gradmesh::{Shape, ShapeDetail, arch, rounded_rectangle};
-
-let wall = Shape::extruded_polygon_with_holes(
-    rounded_rectangle(Vec2::new(4.0, 3.4), 0.15, 3),
-    vec![arch(1.2, 2.0, 10)],
-    0.5,  // depth
-    0.35, // roundness of the rim
-    ShapeDetail::High,
-);
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
+</span><span class="boring">use bevy_gradmesh::{Shape, ShapeDetail, arch, rounded_rectangle};
+</span><span class="boring">fn main() {}
+</span>fn wall() -&gt; Shape {
+    Shape::extruded_polygon_with_holes(
+        rounded_rectangle(Vec2::new(4.0, 3.4), 0.15, 3),
+        vec![arch(1.2, 2.0, 10)],
+        0.5,  // depth
+        0.35, // roundness of the rim
+        ShapeDetail::High,
+    )
+}</code></pre>
 <p><code>Shape::extruded_polygon</code> and <code>extruded_polygon_colored</code> handle single outlines (the colours are
 per vertex and multiply the gradient), <code>arbitrary_polygon_with_holes</code> builds the flat version. Either
 winding is accepted; extrusion is centred on <code>z = 0</code>.</p>
@@ -604,11 +687,21 @@ Compounds are <code>Hash + Eq</code> and work with <code>MeshCache</code>.</p>
 crisp, gentle ones are smoothed, and open ends away from the axis get caps.</p>
 <p><em>A compound tower, a wall with an arched opening, extruded cobbles, an emissive torch, a metallic gem and a ghost piece that casts no shadow. Run <code>cargo run --example composed_shapes</code> to reproduce it.</em></p>
 <h2 id="sharing-meshes-and-materials"><a class="header" href="#sharing-meshes-and-materials">Sharing meshes and materials</a></h2>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>// let mesh_handle = cache.get_or_build_handle(&amp;shape, &amp;mut meshes);
-// let material_handle = pool.get_or_add(&amp;style, &amp;mut materials);
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
+</span><span class="boring">use bevy_gradmesh::{GradMeshMaterial, GradMeshMaterialPool, MeshCache, Shape, Style};
+</span><span class="boring">fn main() {}
+</span>fn share_assets(
+    shape: &amp;Shape,
+    style: &amp;Style,
+    cache: &amp;mut MeshCache,
+    pool: &amp;mut GradMeshMaterialPool,
+    meshes: &amp;mut Assets&lt;Mesh&gt;,
+    materials: &amp;mut Assets&lt;GradMeshMaterial&gt;,
+) -&gt; (Handle&lt;Mesh&gt;, Handle&lt;GradMeshMaterial&gt;) {
+    let mesh_handle = cache.get_or_build_handle(shape, meshes);
+    let material_handle = pool.get_or_add(style, materials);
+    (mesh_handle, material_handle)
+}</code></pre>
 <p>Equal shapes return the same <code>Handle&lt;Mesh&gt;</code>, equal styles (<code>Style: PartialEq</code>) the same material, so a
 per-frame sync of an unchanged node allocates nothing.</p>
 <h2 id="style-additions"><a class="header" href="#style-additions">Style additions</a></h2>
@@ -654,97 +747,124 @@ path.</p>
 <p>BevyGradmesh provides four rendering modes for different use cases.</p>
 <h2 id="direct-mode"><a class="header" href="#direct-mode">Direct Mode</a></h2>
 <p>The simplest approach: build a mesh and spawn it as a Bevy entity.</p>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>let mesh = meshes.add(Shape::sphere(1.0, ShapeDetail::Medium).build());
-let mat = materials.add(dual_directional(
-    [0.6, 0.4, 0.3], [0.96, 0.8, 0.69], [0.0, 1.0, 0.0]
-));
-commands.spawn((Mesh3d(mesh), MeshMaterial3d(mat)));
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
+</span><span class="boring">use bevy_gradmesh::{GradMeshMaterial, Shape, ShapeDetail, dual_directional};
+</span><span class="boring">fn main() {}
+</span>fn spawn_sphere(
+    mut commands: Commands,
+    mut meshes: ResMut&lt;Assets&lt;Mesh&gt;&gt;,
+    mut materials: ResMut&lt;Assets&lt;GradMeshMaterial&gt;&gt;,
+) {
+    let mesh = meshes.add(Shape::sphere(1.0, ShapeDetail::Medium).build());
+    let mat = materials.add(dual_directional(
+        [0.6, 0.4, 0.3], [0.96, 0.8, 0.69], [0.0, 1.0, 0.0]
+    ));
+    commands.spawn((Mesh3d(mesh), MeshMaterial3d(mat)));
+}</code></pre>
 <p><strong>Best for</strong>: Static scenes with a few shapes.</p>
 <h2 id="immediate-mode"><a class="header" href="#immediate-mode">Immediate Mode</a></h2>
 <p>Per-frame draw/dispose pattern using <code>ImmediateRecorder</code>. Supports push/pop state stacking and billboarding.</p>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>use bevy_gradmesh::{ImmediateRecorder, imm_opaque};
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
+</span><span class="boring">use bevy_gradmesh::{GradMeshMaterial, ImmediateRecorder, ShapeDetail, imm_opaque};
+</span><span class="boring">fn main() {}
+</span>#[derive(Resource)]
+struct Recorder(ImmediateRecorder);
 
-fn draw_frame(mut commands: Commands, mut meshes: ResMut&lt;Assets&lt;Mesh&gt;&gt;,
-              mut recorder: ResMut&lt;ImmediateRecorder&gt;) {
-    recorder.begin();
-    
+fn draw_frame(
+    mut commands: Commands,
+    mut meshes: ResMut&lt;Assets&lt;Mesh&gt;&gt;,
+    mut materials: ResMut&lt;Assets&lt;GradMeshMaterial&gt;&gt;,
+    mut recorder: ResMut&lt;Recorder&gt;,
+) {
+    let recorder = &amp;mut recorder.0;
+    recorder.begin(&amp;mut commands);
+
     recorder.push_state();
     recorder.set_position(Vec3::new(1.0, 0.0, 0.0));
-    recorder.sphere(0.5, ShapeDetail::Medium, imm_opaque(1.0, 0.0, 0.0));
+    recorder.sphere(
+        &amp;mut commands,
+        &amp;mut meshes,
+        &amp;mut materials,
+        0.5,
+        ShapeDetail::Medium,
+        imm_opaque(1.0, 0.0, 0.0),
+    );
     recorder.pop_state();
-    
-    recorder.render(&amp;mut commands, &amp;mut meshes);
-}
-<span class="boring">}</span></code></pre>
+}</code></pre>
 <p><strong>Best for</strong>: Particle systems, animated effects, debug visualization.</p>
 <p><em>Per-frame particles, push/pop state, billboarding and line drawing. Run <code>cargo run --example immediate</code> to reproduce it.</em></p>
 <h2 id="retained-mode"><a class="header" href="#retained-mode">Retained Mode</a></h2>
 <p>Persistent shapes managed by handle. Create once, update per-frame.</p>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>use bevy_gradmesh::{RetainedWorld, GradMeshHandle};
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
+</span><span class="boring">use bevy_gradmesh::{GradMeshHandle, RetainedWorld, ShapeDetail};
+</span><span class="boring">fn main() {}
+</span>#[derive(Resource)]
+struct Scene {
+    world: RetainedWorld,
+    ball: GradMeshHandle,
+}
 
-fn setup(mut commands: Commands, mut meshes: ResMut&lt;Assets&lt;Mesh&gt;&gt;,
-         mut retained: ResMut&lt;RetainedWorld&gt;,
-         mut handles: ResMut&lt;Assets&lt;GradMeshHandle&gt;&gt;) {
-    let handle = retained.sphere(
-        &amp;mut commands, &amp;mut meshes, 1.0, ShapeDetail::Medium,
+fn setup(mut commands: Commands, mut meshes: ResMut&lt;Assets&lt;Mesh&gt;&gt;) {
+    let mut world = RetainedWorld::new();
+    let ball = world.sphere(
+        &amp;mut commands, &amp;mut meshes, Vec3::ZERO, 1.0, ShapeDetail::Medium,
         [1.0, 0.0, 0.0, 1.0],
     );
-    let handle_res = handles.add(handle);
+    commands.insert_resource(Scene { world, ball });
 }
 
-fn update(mut retained: ResMut&lt;RetainedWorld&gt;, time: Res&lt;Time&gt;,
-          handle: Res&lt;GradMeshHandle&gt;) {
-    retained.set_position(*handle, Vec3::new(0.0, time.elapsed_secs().sin(), 0.0));
-}
-<span class="boring">}</span></code></pre>
+fn update(mut scene: ResMut&lt;Scene&gt;, time: Res&lt;Time&gt;) {
+    let ball = scene.ball;
+    scene.world.set_position(ball, Vec3::new(0.0, time.elapsed_secs().sin(), 0.0));
+}</code></pre>
 <p><strong>Best for</strong>: Scenes with persistent shapes that change position or properties each frame.</p>
 <p><em>Persistent shapes updated each frame through handles. Run <code>cargo run --example retained</code> to reproduce it.</em></p>
 <h2 id="batched-mode"><a class="header" href="#batched-mode">Batched Mode</a></h2>
 <p>Groups instances into batches for GPU instancing - thousands of shapes in far fewer draw calls.</p>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>use bevy_gradmesh::{BatchRecorder, AppearanceSnapshot};
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
+</span><span class="boring">use bevy_gradmesh::{AppearanceSnapshot, BatchRecorder, ShapeDetail};
+</span><span class="boring">fn main() {}
+</span>#[derive(Resource)]
+struct Recorder(BatchRecorder);
 
-fn draw_frame(mut recorder: ResMut&lt;BatchRecorder&gt;) {
+fn draw_frame(
+    mut commands: Commands,
+    meshes: ResMut&lt;Assets&lt;Mesh&gt;&gt;,
+    mut recorder: ResMut&lt;Recorder&gt;,
+) {
+    let recorder = &amp;mut recorder.0;
     recorder.begin();
-    
+
     for i in 0..100 {
         recorder.set_position(Vec3::new(
             (i % 10) as f32,
             0.0,
             (i / 10) as f32,
         ));
-        
+
         // Optional: add color animation
         recorder.set_appearance(
             AppearanceSnapshot::color_pulse(1.0, i as f32 / 100.0)
         );
-        
+
         recorder.sphere(0.3, ShapeDetail::Medium, [1.0, 0.0, 0.0, 1.0]);
     }
-    
-    recorder.render_batches(&amp;mut commands, &amp;mut meshes, None);
-}
-<span class="boring">}</span></code></pre>
+
+    recorder.end();
+    recorder.render_batches(&amp;mut commands, meshes, None);
+}</code></pre>
 <p><strong>Best for</strong>: Large numbers of similar shapes (terrain, crowds, particles).</p>
 <p><em>500 spheres drawn in one GPU batch with <code>BatchRecorder</code>. Run <code>cargo run --example instanced</code> to reproduce it.</em></p>
 <h3 id="dirty-tracking"><a class="header" href="#dirty-tracking">Dirty Tracking</a></h3>
 <p>Batched mode tracks which batches changed each frame, uploading only dirty data:</p>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>// Check statistics
-let stats = stats.read();
-info!("Batches: {}, Dirty: {}, Instances: {}",
-    stats.batch_count, stats.dirty_batch_count, stats.total_instances
-);
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
+</span><span class="boring">use bevy_gradmesh::InstancedStats;
+</span><span class="boring">fn main() {}
+</span>fn check_statistics(stats: Res&lt;InstancedStats&gt;) {
+    info!("Batches: {}, Dirty: {}, Instances: {}",
+        stats.batch_count, stats.dirty_batch_count, stats.total_instances
+    );
+}</code></pre>
 <h3 id="choosing-a-mode"><a class="header" href="#choosing-a-mode">Choosing a Mode</a></h3>
 <div class="table-wrapper">
 <table>
@@ -805,20 +925,26 @@ works, but each distinct parameter set is a distinct mesh.</p>
 (<code>unit_quad()</code>). Edges are anti-aliased from screen-space derivatives, so no MSAA
 is needed. Radius, rim width, arc, gradient and dash are material floats: changing
 them creates no mesh and no pipeline.</p>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>let quad = meshes.add(unit_quad());
-let material = SdfMaterial2d::disc(80.0)
-    .with_rim(10.0)
-    .with_arc(0.0, std::f32::consts::PI * 1.5)
-    .with_dash(Dash2d::by_length(14.0, 8.0).with_snap(DashSnap::EndToEnd))
-    .with_colors(Color::srgb(1.0, 0.35, 0.25), Color::srgb(1.0, 0.9, 0.35));
-commands.spawn((
-    Mesh2d(quad.clone()),
-    Transform::from_scale(material.quad_scale()),
-    MeshMaterial2d(materials.add(material)),
-));
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
+</span><span class="boring">use bevy_gradmesh::{Dash2d, DashSnap, SdfMaterial2d, unit_quad};
+</span><span class="boring">fn main() {}
+</span>fn spawn_disc(
+    mut commands: Commands,
+    mut meshes: ResMut&lt;Assets&lt;Mesh&gt;&gt;,
+    mut materials: ResMut&lt;Assets&lt;SdfMaterial2d&gt;&gt;,
+) {
+    let quad = meshes.add(unit_quad());
+    let material = SdfMaterial2d::disc(80.0)
+        .with_rim(10.0)
+        .with_arc(0.0, std::f32::consts::PI * 1.5)
+        .with_dash(Dash2d::by_length(14.0, 8.0).with_snap(DashSnap::EndToEnd))
+        .with_colors(Color::srgb(1.0, 0.35, 0.25), Color::srgb(1.0, 0.9, 0.35));
+    commands.spawn((
+        Mesh2d(quad.clone()),
+        Transform::from_scale(material.quad_scale()),
+        MeshMaterial2d(materials.add(material)),
+    ));
+}</code></pre>
 <p>Gradients: <code>with_colors</code> (linear, along <code>with_gradient_direction</code>),
 <code>with_radial_gradient()</code> (fitted to the shape bounds), <code>with_angular_gradient(start)</code>
 (mirrored, no seam) and <code>with_angular_sweep(start)</code> (one turn, hard seam). All of
@@ -844,10 +970,12 @@ dashes meet in a mitre. <code>Transform</code> scale must be <code>SdfMaterial2d
 For a PBR-free app, switch default features off and add the mobile plugin:</p>
 <pre><code class="language-toml">bevy_gradmesh = { version = "0.3", default-features = false }
 </code></pre>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>app.add_plugins(GradMeshPlugin::for_mobile());
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
+</span><span class="boring">use bevy_gradmesh::GradMeshPlugin;
+</span><span class="boring">fn main() {}
+</span>fn add_mobile_plugin(app: &amp;mut App) {
+    app.add_plugins(GradMeshPlugin::for_mobile());
+}</code></pre>
 <p><code>for_mobile()</code> registers the standalone pipeline, the Mesh2d gradient material and
 <code>SdfMaterial2d</code>. Without <code>pbr</code> the Material and Instanced backends and
 <code>RetainedWorld::flush</code> are not available. Check that none of your other
@@ -858,10 +986,13 @@ dependencies enables <code>bevy_pbr</code> again (<code>cargo tree -e features -
 <code>Clone + Debug + Eq + Hash</code>, work with <code>MeshCache</code>, and can be a part of
 <code>Shape::compound</code>.</p>
 <h2 id="shapefrom_mesh"><a class="header" href="#shapefrom_mesh"><code>Shape::from_mesh</code></a></h2>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>let shape = Shape::from_mesh(Arc::new(my_mesh), 42);
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use std::sync::Arc;
+</span><span class="boring">use bevy_gradmesh::{Shape, ShapeDetail};
+</span><span class="boring">fn main() {}
+</span>fn mesh_shape() -&gt; Shape {
+    let my_mesh = Shape::sphere(1.0, ShapeDetail::Low).build();
+    Shape::from_mesh(Arc::new(my_mesh), 42)
+}</code></pre>
 <p>Wraps a mesh you generated yourself. The shape is <code>Eq</code> and <code>Hash</code> by <code>key</code>
 only; the mesh is never compared. <strong>You own key uniqueness</strong>: two different
 meshes with the same key share one cache entry. Bounds and <code>is_round()</code> are
@@ -869,14 +1000,17 @@ measured from the positions once, in the constructor, so <code>bounds()</code> d
 build anything. <code>build()</code> and <code>build_2d()</code> return a copy of the mesh, and
 <code>Shape::lerp</code> takes the nearer shape.</p>
 <h2 id="shapeheightfield"><a class="header" href="#shapeheightfield"><code>Shape::heightfield</code></a></h2>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>let chunk = Shape::heightfield(
-    heights.into(),          // Arc&lt;[f32]&gt;, heights[x + y * size.x]
-    UVec2::new(17, 17),      // samples
-    Vec2::splat(16.0),       // world extent
-);
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
+</span><span class="boring">use bevy_gradmesh::Shape;
+</span><span class="boring">fn main() {}
+</span>fn terrain_chunk() -&gt; Shape {
+    let heights = vec![0.0_f32; 17 * 17];
+    Shape::heightfield(
+        heights.into(),          // Arc&lt;[f32]&gt;, heights[x + y * size.x]
+        UVec2::new(17, 17),      // samples
+        Vec2::splat(16.0),       // world extent
+    )
+}</code></pre>
 <p>A terrain chunk centred on the origin in XZ, with smooth normals from central
 differences and UVs from 0 to 1. Skirts hang below the edges (a tenth of the
 larger extent) to hide cracks between neighbouring chunks of different detail;
@@ -884,22 +1018,30 @@ the depth is not an option, because a chunk without skirts shows cracks.
 Equality and hashing cover <code>size</code>, <code>extent</code>, the heights and the holes and
 border below, all by value, so there is no key to keep in step: changing a height
 gives a different shape and a stale mesh is never shared. The heights are hashed
-once, when the shape is built (about 4 µs for 65 × 65 samples), so keep the
+once, when the shape is built (about 4 microseconds for 65 by 65 samples), so keep the
 <code>Shape</code> and reuse it rather than rebuilding it every frame. A size below 2 in
 either axis, or a wrong <code>heights</code> length, gives an empty mesh and a warning.</p>
 <p><code>Shape::bounds()</code> includes the skirts, as it measures the mesh;
 <code>Shape::surface_bounds()</code> is the land alone. Neither builds anything.</p>
 <h3 id="holes-and-seamless-chunk-edges"><a class="header" href="#holes-and-seamless-chunk-edges">Holes and seamless chunk edges</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>let chunk = Shape::heightfield_with_options(
-    heights.into(), size, extent,
-    HeightfieldOptions::default()
-        .with_holes(holes)          // Vec&lt;bool&gt;, (size.x - 1) * (size.y - 1) cells
-        .with_hole_edge(HoleEdge::Smooth)
-        .with_border(HeightfieldBorder::new(west, east, north, south)),
-);
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
+</span><span class="boring">use bevy_gradmesh::{HeightfieldBorder, HeightfieldOptions, HoleEdge, Shape};
+</span><span class="boring">fn main() {}
+</span>fn chunk_with_hole() -&gt; Shape {
+    let size = UVec2::new(17, 17);
+    let extent = Vec2::splat(16.0);
+    let heights = vec![0.0_f32; 17 * 17];
+    let holes = vec![false; 16 * 16];
+    let (west, east) = (vec![0.0; 17], vec![0.0; 17]);
+    let (north, south) = (vec![0.0; 17], vec![0.0; 17]);
+    Shape::heightfield_with_options(
+        heights.into(), size, extent,
+        HeightfieldOptions::default()
+            .with_holes(holes)          // Vec&lt;bool&gt;, (size.x - 1) * (size.y - 1) cells
+            .with_hole_edge(HoleEdge::Smooth)
+            .with_border(HeightfieldBorder::new(west, east, north, south)),
+    )
+}</code></pre>
 <p>A hole cell has no triangles and no skirt below it (a skirt hides seams between
 chunks, and a hole is meant to be see-through); vertices that only holes touch
 are left out of the mesh and the bounds. The border is the ring of neighbour
@@ -936,14 +1078,28 @@ three ways; the labels are the triangle counts of the built meshes, which the
 example asserts grow with the smoothness.</p>
 <p><em>Four chunks meeting at a peak with shared edge normals, and the same round hole cut three ways with <code>HoleEdge::Cells</code>, <code>Rounded</code> and <code>Smooth</code>; each label shows its triangle count. Run <code>cargo run --example terrain</code> to reproduce it.</em></p>
 <h2 id="shapesweep"><a class="header" href="#shapesweep"><code>Shape::sweep</code></a></h2>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>let wall = Shape::sweep(
-    profile,                      // Vec&lt;Vec2&gt;: x across the path, y up
-    path,                         // Vec&lt;Vec3&gt;: a polyline or baked spline positions
-    SweepOptions::default().with_closed(true),
-);
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
+</span><span class="boring">use bevy_gradmesh::{Shape, SweepOptions};
+</span><span class="boring">fn main() {}
+</span>fn wall() -&gt; Shape {
+    let profile = vec![
+        Vec2::new(-0.2, 0.0),
+        Vec2::new(0.2, 0.0),
+        Vec2::new(0.2, 2.0),
+        Vec2::new(-0.2, 2.0),
+    ];
+    let path = vec![
+        Vec3::new(-4.0, 0.0, -4.0),
+        Vec3::new(4.0, 0.0, -4.0),
+        Vec3::new(4.0, 0.0, 4.0),
+        Vec3::new(-4.0, 0.0, 4.0),
+    ];
+    Shape::sweep(
+        profile,                      // Vec&lt;Vec2&gt;: x across the path, y up
+        path,                         // Vec&lt;Vec3&gt;: a polyline or baked spline positions
+        SweepOptions::default().with_closed(true),
+    )
+}</code></pre>
 <p>Sweeps a closed profile along a path as one mesh: walls, roads, rails and pipes.
 Frames follow the path by parallel transport from <code>SweepOptions::up</code>, joints are
 mitred (the sides keep a constant width; the mitre is clamped at four times the
@@ -968,11 +1124,12 @@ the difference spread evenly along the loop.</li>
 <p>A <code>Shape</code> has to be <code>Clone + Eq + Hash</code>, which a boxed closure cannot be. So
 <code>scale_along</code> is <code>Option&lt;Vec&lt;(f32, Vec2)&gt;&gt;</code>: <code>(ratio along the path, scale)</code>
 pairs with linear steps in between. To start from a function, bake it:</p>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>let options = SweepOptions::default()
-    .scale_with(8, |t| Vec2::splat(1.0 - 0.55 * t));
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
+</span><span class="boring">use bevy_gradmesh::SweepOptions;
+</span><span class="boring">fn main() {}
+</span>fn tapering_options() -&gt; SweepOptions {
+    SweepOptions::default().scale_with(8, |t| Vec2::splat(1.0 - 0.55 * t))
+}</code></pre>
 <p><code>tint_by_length</code> is a list of <code>(ratio, Color)</code> pairs and multiplies the style’s
 colour through vertex colours.</p>
 <h3 id="roll-and-banked-roads"><a class="header" href="#roll-and-banked-roads">Roll and banked roads</a></h3>
@@ -982,29 +1139,47 @@ colour through vertex colours.</p>
 parallel-transported frame, and adds to <code>twist</code>.</p>
 <p>To give the frames yourself, for example from a baked spline with its own
 banking, use <code>Shape::sweep_frames</code>:</p>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>let road = Shape::sweep_frames(
-    profile,
-    &amp;baked.sweep_frames(Some(0), Some(1)),   // width channel 0, roll channel 1
-    SweepOptions::default(),
-);
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
+</span><span class="boring">use bevy_gradmesh::{CatmullRomSpline, Shape, SplineError, SweepOptions};
+</span><span class="boring">fn main() {}
+</span>fn road() -&gt; Result&lt;Shape, SplineError&gt; {
+    let profile = vec![
+        Vec2::new(-1.0, 0.0),
+        Vec2::new(1.0, 0.0),
+        Vec2::new(1.0, 0.1),
+        Vec2::new(-1.0, 0.1),
+    ];
+    let points = vec![
+        Vec3::new(0.0, 0.0, 0.0),
+        Vec3::new(5.0, 0.0, 2.0),
+        Vec3::new(10.0, 0.0, 0.0),
+    ];
+    let baked = CatmullRomSpline::open(points)?
+        .with_channel(&amp;[1.0, 1.5, 1.0])   // channel 0: width
+        .with_channel(&amp;[0.0, 0.3, 0.0])   // channel 1: roll
+        .bake(0.25);
+    Ok(Shape::sweep_frames(
+        profile,
+        &amp;baked.sweep_frames(Some(0), Some(1)),   // width channel 0, roll channel 1
+        SweepOptions::default(),
+    ))
+}</code></pre>
 <p>Each <code>SweepFrame</code> has a <code>position</code>, <code>right</code>, <code>up</code> and <code>scale</code>. The sweep keeps them
 as given (no parallel transport) and blends them where it needs extra rings.
-<code>right × up</code> should point along the path; a left-handed frame keeps its <code>up</code> and
+The cross product of <code>right</code> and <code>up</code> should point along the path; a left-handed frame keeps its <code>up</code> and
 gets its <code>right</code> flipped, so the surface never turns inside out. A closed sweep
 joins the last frame to the first without correcting the frames at the seam.</p>
 <p><em>A wall along a baked spline loop with an arched gate, a kerbed road and a tapering pipe on a helix. Run <code>cargo run --example sweep</code> to reproduce it.</em></p>
 <p><em>An open spline with width and roll channels baked into <code>Shape::sweep_frames</code>, and a ribbon turning with <code>SweepOptions::roll_with</code>. Run <code>cargo run --example road</code> to reproduce it.</em></p>
 <h3 id="openings"><a class="header" href="#openings">Openings</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>let options = SweepOptions::default().with_openings(vec![
-    SweepOpening::arch(0.30..0.38, 0.0, 1.2, 1.9, 12),  // a gate
-    SweepOpening::rect(0.60..0.64, 0.9, 1.4),            // a window
-]);
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::{SweepOpening, SweepOptions};
+</span><span class="boring">fn main() {}
+</span>fn wall_options() -&gt; SweepOptions {
+    SweepOptions::default().with_openings(vec![
+        SweepOpening::arch(0.30..0.38, 0.0, 1.2, 1.9, 12),  // a gate
+        SweepOpening::rect(0.60..0.64, 0.9, 1.4),            // a window
+    ])
+}</code></pre>
 <p>An opening is a real hole through the wall, with sill, lintel and jamb faces on
 the inside. Its <code>outline</code> is in <strong>wall-face coordinates</strong>, not in the profile
 plane: <code>x</code> runs <code>0..1</code> over the opening’s <code>t</code> range (a ratio of the path length)
@@ -1043,14 +1218,16 @@ keeps at least half the length of the control polygon.
 <code>Err(Relaxed { best, radius })</code> when no curve that keeps enough length is gentle
 enough, so you can reject the design.</p>
 <h2 id="height-bands"><a class="header" href="#height-bands">Height bands</a></h2>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>let terrain = Style::shaded(Color::WHITE, 0.5).with_height_bands(&amp;[
-    (0.0, Color::srgb(0.35, 0.6, 0.3)),   // grass
-    (1.2, Color::srgb(0.5, 0.48, 0.45)),  // rock
-    (2.4, Color::srgb(0.95, 0.95, 1.0)),  // snow
-]);
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
+</span><span class="boring">use bevy_gradmesh::Style;
+</span><span class="boring">fn main() {}
+</span>fn terrain_style() -&gt; Style {
+    Style::shaded(Color::WHITE, 0.5).with_height_bands(&amp;[
+        (0.0, Color::srgb(0.35, 0.6, 0.3)),   // grass
+        (1.2, Color::srgb(0.5, 0.48, 0.45)),  // rock
+        (2.4, Color::srgb(0.95, 0.95, 1.0)),  // snow
+    ])
+}</code></pre>
 <p><code>GradMeshMaterial</code> colours each fragment by its world height: a band’s colour
 holds from its height up to the next band, with a hard step and no blending. At
 most four bands fit (given more, the four lowest are kept and a warning is
@@ -1060,14 +1237,19 @@ re-baking vertex colours. They work on the material path only, not on the
 instanced, standalone or Mesh2d paths.</p>
 <p>To state the heights as fractions of a shape’s own height, so that re-scaling the
 land keeps the look, use <code>with_height_bands_on</code>:</p>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>let terrain = Style::shaded(Color::WHITE, 0.5).with_height_bands_on(
-    &amp;[(0.0, grass), (0.55, rock), (0.9, snow)],   // 0 = lowest land, 1 = highest
-    &amp;chunk,
-    &amp;transform,                                   // the placement the chunk is shown with
-);
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
+</span><span class="boring">use bevy_gradmesh::{Shape, Style};
+</span><span class="boring">fn main() {}
+</span>fn relative_terrain_style(chunk: &amp;Shape, transform: &amp;Transform) -&gt; Style {
+    let grass = Color::srgb(0.35, 0.6, 0.3);
+    let rock = Color::srgb(0.5, 0.48, 0.45);
+    let snow = Color::srgb(0.95, 0.95, 1.0);
+    Style::shaded(Color::WHITE, 0.5).with_height_bands_on(
+        &amp;[(0.0, grass), (0.55, rock), (0.9, snow)],   // 0 = lowest land, 1 = highest
+        chunk,
+        transform,                                    // the placement the chunk is shown with
+    )
+}</code></pre>
 <p>The fractions are resolved on the spot against <code>Shape::surface_bounds()</code> (the
 land, without skirts) and the transform into ordinary world heights, so an
 unresolved band can never reach the shader. Build the style again when the
@@ -1088,20 +1270,20 @@ counts only those. Hold the handle for as long as the material is shown.
 <p>See <code>examples/sweep.rs</code> and <code>examples/composed_shapes.rs</code>.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="curves--polylines"><a class="header" href="#curves--polylines">Curves &amp; Polylines</a></h1>
-<h2 id="bézier-curves"><a class="header" href="#bézier-curves">Bézier Curves</a></h2>
+<h2 id="bezier-curves"><a class="header" href="#bezier-curves">Bezier Curves</a></h2>
 <p>Render smooth curves as tube geometry:</p>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>use bevy_gradmesh::Shape;
-
-let control_points = vec![
-    Vec3::new(0.0, 0.0, 0.0),
-    Vec3::new(1.0, 2.0, 0.0),
-    Vec3::new(2.0, -2.0, 0.0),
-    Vec3::new(3.0, 0.0, 0.0),
-];
-let mesh = Shape::bezier_curve(control_points, 0.1, 8, ShapeDetail::Medium).build();
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
+</span><span class="boring">use bevy_gradmesh::{Shape, ShapeDetail};
+</span><span class="boring">fn main() {}
+</span>fn curve_mesh() -&gt; Mesh {
+    let control_points = vec![
+        Vec3::new(0.0, 0.0, 0.0),
+        Vec3::new(1.0, 2.0, 0.0),
+        Vec3::new(2.0, -2.0, 0.0),
+        Vec3::new(3.0, 0.0, 0.0),
+    ];
+    Shape::bezier_curve(control_points, 0.1, 8, ShapeDetail::Medium).build()
+}</code></pre>
 <h3 id="curve-types"><a class="header" href="#curve-types">Curve Types</a></h3>
 <ul>
 <li><strong>Linear</strong> (2 control points): Straight line tube</li>
@@ -1110,9 +1292,17 @@ let mesh = Shape::bezier_curve(control_points, 0.1, 8, ShapeDetail::Medium).buil
 </ul>
 <h3 id="animated-curves"><a class="header" href="#animated-curves">Animated Curves</a></h3>
 <p>Update control points each frame for animated paths:</p>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>fn animate_curve(mut time: Res&lt;Time&gt;) {
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
+</span><span class="boring">use bevy_gradmesh::{Shape, ShapeDetail};
+</span><span class="boring">fn main() {}
+</span>#[derive(Resource)]
+struct CurveMesh(Handle&lt;Mesh&gt;);
+
+fn animate_curve(
+    time: Res&lt;Time&gt;,
+    curve: Res&lt;CurveMesh&gt;,
+    mut meshes: ResMut&lt;Assets&lt;Mesh&gt;&gt;,
+) {
     let t = time.elapsed_secs();
     let points = vec![
         Vec3::new(0.0, 0.0, 0.0),
@@ -1121,32 +1311,43 @@ let mesh = Shape::bezier_curve(control_points, 0.1, 8, ShapeDetail::Medium).buil
         Vec3::new(3.0, 0.0, 0.0),
     ];
     // Rebuild curve with new control points
-}
-<span class="boring">}</span></code></pre>
+    let rebuilt = Shape::bezier_curve(points, 0.1, 8, ShapeDetail::Medium).build();
+    if let Some(mut mesh) = meshes.get_mut(&amp;curve.0) {
+        *mesh = rebuilt;
+    }
+}</code></pre>
 <p><em>Spline and parametric curves rendered as smooth tubes. Run <code>cargo run --example curves</code> to reproduce it.</em></p>
 <h2 id="3d-polylines"><a class="header" href="#3d-polylines">3D Polylines</a></h2>
 <p>Connect points with tube geometry:</p>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>use bevy_gradmesh::Shape;
-
-let points = vec![
-    Vec3::new(0.0, 0.0, 0.0),
-    Vec3::new(1.0, 1.0, 0.0),
-    Vec3::new(2.0, 0.0, 0.0),
-    Vec3::new(3.0, 1.0, 0.0),
-];
-let mesh = Shape::polyline3d(points, 0.05, false, 8, ShapeDetail::Medium).build();
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
+</span><span class="boring">use bevy_gradmesh::{Shape, ShapeDetail};
+</span><span class="boring">fn main() {}
+</span>fn polyline_mesh() -&gt; Mesh {
+    let points = vec![
+        Vec3::new(0.0, 0.0, 0.0),
+        Vec3::new(1.0, 1.0, 0.0),
+        Vec3::new(2.0, 0.0, 0.0),
+        Vec3::new(3.0, 1.0, 0.0),
+    ];
+    Shape::polyline3d(points, 0.05, false, 8, ShapeDetail::Medium).build()
+}</code></pre>
 <h3 id="closed-polylines"><a class="header" href="#closed-polylines">Closed Polylines</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>let mesh = Shape::polyline3d(points, 0.05, true, 8, ShapeDetail::Medium).build();
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
+</span><span class="boring">use bevy_gradmesh::{Shape, ShapeDetail};
+</span><span class="boring">fn main() {}
+</span>fn closed_polyline_mesh() -&gt; Mesh {
+    let points = vec![
+        Vec3::new(0.0, 0.0, 0.0),
+        Vec3::new(1.0, 1.0, 0.0),
+        Vec3::new(2.0, 0.0, 0.0),
+        Vec3::new(3.0, 1.0, 0.0),
+    ];
+    Shape::polyline3d(points, 0.05, true, 8, ShapeDetail::Medium).build()
+}</code></pre>
 <p><em>Joint styles, width variation, gradient colours and an animated reveal. Run <code>cargo run --example polyline</code> to reproduce it.</em></p>
 <h2 id="use-cases"><a class="header" href="#use-cases">Use Cases</a></h2>
 <ul>
-<li><strong>Track paths</strong>: Define racing tracks with Bézier curves</li>
+<li><strong>Track paths</strong>: Define racing tracks with Bezier curves</li>
 <li><strong>Cables and wires</strong>: Connect objects with polylines</li>
 <li><strong>Animated trails</strong>: Update control points each frame</li>
 <li><strong>Data visualization</strong>: Plot 3D data as connected tubes</li>
@@ -1157,54 +1358,62 @@ let mesh = Shape::polyline3d(points, 0.05, false, 8, ShapeDetail::Medium).build(
 <h2 id="deformation-types"><a class="header" href="#deformation-types">Deformation Types</a></h2>
 <h3 id="wobble"><a class="header" href="#wobble">Wobble</a></h3>
 <p>Sinusoidal displacement along the vertex normal:</p>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>use bevy_gradmesh::DeformationParams;
-
-let deform = DeformationParams::wobble(
-    0.2,  // amplitude
-    2.0,  // frequency (cycles per second)
-    0.0,  // phase offset
-);
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::DeformationParams;
+</span><span class="boring">fn main() {}
+</span>fn wobble() -&gt; DeformationParams {
+    DeformationParams::wobble(
+        0.2,  // amplitude
+        2.0,  // frequency (cycles per second)
+        0.0,  // phase offset
+    )
+}</code></pre>
 <h3 id="pulse"><a class="header" href="#pulse">Pulse</a></h3>
 <p>Uniform scale oscillation (breathing effect):</p>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>let deform = DeformationParams::pulse(
-    0.1,  // ±10% scale oscillation
-    1.0,  // 1 cycle per second
-    0.0,  // phase
-);
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::DeformationParams;
+</span><span class="boring">fn main() {}
+</span>fn pulse() -&gt; DeformationParams {
+    DeformationParams::pulse(
+        0.1,  // 10% scale oscillation in each direction
+        1.0,  // 1 cycle per second
+        0.0,  // phase
+    )
+}</code></pre>
 <h3 id="morph"><a class="header" href="#morph">Morph</a></h3>
 <p>Displacement toward/away from center:</p>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>let deform = DeformationParams::morph(
-    0.3,  // displacement magnitude
-    1.5,  // frequency
-    0.5,  // phase
-);
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::DeformationParams;
+</span><span class="boring">fn main() {}
+</span>fn morph() -&gt; DeformationParams {
+    DeformationParams::morph(
+        0.3,  // displacement magnitude
+        1.5,  // frequency
+        0.5,  // phase
+    )
+}</code></pre>
 <p><em>Wobble, pulse and morph compared against static originals. Run <code>cargo run --example deformation</code> to reproduce it.</em></p>
 <h2 id="using-with-batchrecorder"><a class="header" href="#using-with-batchrecorder">Using with BatchRecorder</a></h2>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>use bevy_gradmesh::{BatchRecorder, DeformationParams};
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
+</span><span class="boring">use bevy_gradmesh::{BatchRecorder, DeformationParams, ShapeDetail};
+</span><span class="boring">fn main() {}
+</span>#[derive(Resource)]
+struct Recorder(BatchRecorder);
 
-fn draw(mut recorder: ResMut&lt;BatchRecorder&gt;) {
+fn draw(
+    mut commands: Commands,
+    meshes: ResMut&lt;Assets&lt;Mesh&gt;&gt;,
+    mut recorder: ResMut&lt;Recorder&gt;,
+) {
+    let recorder = &amp;mut recorder.0;
     recorder.begin();
-    
+
     recorder.set_deformation(
         DeformationParams::wobble(0.15, 3.0, 0.0)
     );
     recorder.set_position(Vec3::ZERO);
     recorder.sphere(0.5, ShapeDetail::Medium, [1.0, 0.0, 0.0, 1.0]);
-    
-    recorder.render_batches(&amp;mut commands, &amp;mut meshes, None);
-}
-<span class="boring">}</span></code></pre>
+
+    recorder.end();
+    recorder.render_batches(&amp;mut commands, meshes, None);
+}</code></pre>
 <h2 id="how-it-works"><a class="header" href="#how-it-works">How It Works</a></h2>
 <ol>
 <li>Each instance carries a <code>DeformationParams</code> vec4 in its GPU buffer</li>
@@ -1220,65 +1429,74 @@ fn draw(mut recorder: ResMut&lt;BatchRecorder&gt;) {
 <h2 id="animation-types"><a class="header" href="#animation-types">Animation Types</a></h2>
 <h3 id="color-pulse"><a class="header" href="#color-pulse">Color Pulse</a></h3>
 <p>Blend between primary and secondary color over time:</p>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>use bevy_gradmesh::AppearanceSnapshot;
-
-let appearance = AppearanceSnapshot::color_pulse(
-    1.0,  // 1 cycle per second
-    0.0,  // phase offset (0.0–1.0)
-);
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::AppearanceSnapshot;
+</span><span class="boring">fn main() {}
+</span>fn pulse() -&gt; AppearanceSnapshot {
+    AppearanceSnapshot::color_pulse(
+        1.0,  // 1 cycle per second
+        0.0,  // phase offset (0.0 to 1.0)
+    )
+}</code></pre>
 <h3 id="color-cycle"><a class="header" href="#color-cycle">Color Cycle</a></h3>
 <p>Shift through color hues continuously:</p>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>let appearance = AppearanceSnapshot::color_cycle(
-    0.5,  // 0.5 cycles per second
-    0.25, // starting hue offset
-);
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::AppearanceSnapshot;
+</span><span class="boring">fn main() {}
+</span>fn cycle() -&gt; AppearanceSnapshot {
+    AppearanceSnapshot::color_cycle(
+        0.5,  // 0.5 cycles per second
+        0.25, // starting hue offset
+    )
+}</code></pre>
 <h3 id="gradient-shift"><a class="header" href="#gradient-shift">Gradient Shift</a></h3>
 <p>Shift the gradient direction over time:</p>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>let appearance = AppearanceSnapshot::gradient_shift(
-    0.3,  // rotation speed
-    0.0,  // starting angle
-);
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::AppearanceSnapshot;
+</span><span class="boring">fn main() {}
+</span>fn shift() -&gt; AppearanceSnapshot {
+    AppearanceSnapshot::gradient_shift(
+        0.3,  // rotation speed
+        0.0,  // starting angle
+    )
+}</code></pre>
 <h3 id="static-no-animation"><a class="header" href="#static-no-animation">Static (No Animation)</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>let appearance = AppearanceSnapshot::static_appearance();
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::AppearanceSnapshot;
+</span><span class="boring">fn main() {}
+</span>fn still() -&gt; AppearanceSnapshot {
+    AppearanceSnapshot::static_appearance()
+}</code></pre>
 <p><em>Static, colour pulse, colour cycle and gradient shift rows; the phase is staggered over the instances, and the shader animates what the CPU uploaded once. Run <code>cargo run --example appearance</code> to reproduce it.</em></p>
 <h2 id="using-with-batchrecorder-1"><a class="header" href="#using-with-batchrecorder-1">Using with BatchRecorder</a></h2>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>use bevy_gradmesh::{BatchRecorder, AppearanceSnapshot};
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
+</span><span class="boring">use bevy_gradmesh::{AppearanceSnapshot, BatchRecorder, ShapeDetail};
+</span><span class="boring">fn main() {}
+</span>#[derive(Resource)]
+struct Recorder(BatchRecorder);
 
-fn draw(mut recorder: ResMut&lt;BatchRecorder&gt;) {
+fn draw(
+    mut commands: Commands,
+    meshes: ResMut&lt;Assets&lt;Mesh&gt;&gt;,
+    mut recorder: ResMut&lt;Recorder&gt;,
+) {
+    let recorder = &amp;mut recorder.0;
     recorder.begin();
-    
+
     for i in 0..50 {
         recorder.set_position(Vec3::new(
             (i % 10) as f32 * 2.0,
             0.0,
             (i / 10) as f32 * 2.0,
         ));
-        
+
         // Each instance animates with a different phase
         recorder.set_appearance(
             AppearanceSnapshot::color_pulse(2.0, i as f32 / 50.0)
         );
-        
+
         recorder.sphere(0.3, ShapeDetail::Medium, [1.0, 0.0, 0.0, 1.0]);
     }
-    
-    recorder.render_batches(&amp;mut commands, &amp;mut meshes, None);
-}
-<span class="boring">}</span></code></pre>
+
+    recorder.end();
+    recorder.render_batches(&amp;mut commands, meshes, None);
+}</code></pre>
 <h2 id="how-it-works-1"><a class="header" href="#how-it-works-1">How It Works</a></h2>
 <ol>
 <li>Each instance carries an <code>AppearanceSnapshot</code> vec4 encoding speed, phase, and type</li>
@@ -1294,24 +1512,23 @@ fn draw(mut recorder: ResMut&lt;BatchRecorder&gt;) {
 <h2 id="how-it-works-2"><a class="header" href="#how-it-works-2">How It Works</a></h2>
 <ol>
 <li>Each frame, the camera distance to each batch is computed</li>
-<li>Based on distance, an LOD level (0–4) is selected</li>
+<li>Based on distance, an LOD level (0 to 4) is selected</li>
 <li>During transitions, both LOD levels render simultaneously with a Bayer dither mask</li>
 <li>The dither pattern smoothly fades between levels, eliminating visual pop-in</li>
 </ol>
 <h2 id="configuration"><a class="header" href="#configuration">Configuration</a></h2>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>use bevy_gradmesh::LodConfig;
-
-let lod_config = LodConfig {
-    near_distance: 5.0,    // Extreme detail (level 4)
-    mid_distance: 20.0,    // Medium detail (level 2)
-    far_distance: 50.0,    // Minimal detail (level 0)
-    transition_width: 3.0, // Distance range for cross-fade
-    hysteresis: 1.0,       // Prevents LOD flickering
-};
-commands.insert_resource(lod_config);
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
+</span><span class="boring">use bevy_gradmesh::LodConfig;
+</span><span class="boring">fn main() {}
+</span>fn configure_lod(mut commands: Commands) {
+    let lod_config = LodConfig {
+        // Distances where each level hands over to the next, nearest first
+        thresholds: [5.0, 20.0, 50.0, 100.0],
+        transition_width: 3.0, // Distance range for cross-fade
+        hysteresis: 0.2,       // Prevents LOD flickering (0.0 to 1.0)
+    };
+    commands.insert_resource(lod_config);
+}</code></pre>
 <h2 id="lod-levels"><a class="header" href="#lod-levels">LOD Levels</a></h2>
 <div class="table-wrapper">
 <table>
@@ -1319,25 +1536,23 @@ commands.insert_resource(lod_config);
 <tr><th>Level</th><th>Detail</th><th>Segments</th><th>Distance Range</th></tr>
 </thead>
 <tbody>
-<tr><td>4</td><td>Extreme</td><td>32</td><td>0–near</td></tr>
-<tr><td>3</td><td>High</td><td>24</td><td>near–mid</td></tr>
-<tr><td>2</td><td>Medium</td><td>16</td><td>mid–far</td></tr>
-<tr><td>1</td><td>Low</td><td>12</td><td>far–very far</td></tr>
-<tr><td>0</td><td>Minimal</td><td>8</td><td>very far</td></tr>
+<tr><td>4</td><td>Extreme</td><td>32</td><td>0 to <code>thresholds[0]</code></td></tr>
+<tr><td>3</td><td>High</td><td>24</td><td><code>thresholds[0]</code> to <code>thresholds[1]</code></td></tr>
+<tr><td>2</td><td>Medium</td><td>16</td><td><code>thresholds[1]</code> to <code>thresholds[2]</code></td></tr>
+<tr><td>1</td><td>Low</td><td>12</td><td><code>thresholds[2]</code> to <code>thresholds[3]</code></td></tr>
+<tr><td>0</td><td>Minimal</td><td>8</td><td>beyond <code>thresholds[3]</code></td></tr>
 </tbody>
 </table>
 </div>
 <h2 id="statistics"><a class="header" href="#statistics">Statistics</a></h2>
 <p>Monitor LOD distribution each frame:</p>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>use bevy_gradmesh::InstancedStats;
-
-fn log_stats(stats: Res&lt;InstancedStats&gt;) {
-    stats.log();
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
+</span><span class="boring">use bevy_gradmesh::InstancedStats;
+</span><span class="boring">fn main() {}
+</span>fn log_stats(stats: Res&lt;InstancedStats&gt;) {
+    info!("LOD distribution: {:?}", stats.lod_distribution);
     // Output: "LOD distribution: [12, 45, 230, 88, 125]"
-}
-<span class="boring">}</span></code></pre>
+}</code></pre>
 <h2 id="performance-2"><a class="header" href="#performance-2">Performance</a></h2>
 <p>LOD reduces GPU workload for distant objects automatically. The dither cross-fade adds minimal overhead during transitions, and hysteresis prevents rapid LOD switching.</p>
 <div style="break-before: page; page-break-before: always;"></div>
@@ -1364,19 +1579,19 @@ fn log_stats(stats: Res&lt;InstancedStats&gt;) {
 </code></pre>
 <h3 id="usage"><a class="header" href="#usage">Usage</a></h3>
 <p>The standalone pipeline is automatically enabled when you add <code>GradMeshPlugin</code>:</p>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>use bevy_gradmesh::{GradMeshPlugin, BatchRecorder, render_standalone_batches};
-
-// GradMeshPlugin includes StandaloneRenderPlugin by default
-app.add_plugins(GradMeshPlugin);
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
+</span><span class="boring">use bevy_gradmesh::GradMeshPlugin;
+</span><span class="boring">fn main() {}
+</span>fn add_plugin(app: &amp;mut App) {
+    // GradMeshPlugin includes StandaloneRenderPlugin by default
+    app.add_plugins(GradMeshPlugin);
+}</code></pre>
 <p>To use the standalone pipeline for rendering, use <code>render_standalone_batches()</code> instead of <code>BatchRecorder::render_batches()</code>:</p>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
 </span>use bevy_gradmesh::{BatchRecorder, ShapeDetail, render_standalone_batches};
-
-fn render(mut commands: Commands, mut meshes: ResMut&lt;Assets&lt;Mesh&gt;&gt;) {
+<span class="boring">fn main() {}
+</span>
+fn render(mut commands: Commands, meshes: ResMut&lt;Assets&lt;Mesh&gt;&gt;) {
     let mut recorder = BatchRecorder::new();
     recorder.begin();
 
@@ -1387,9 +1602,9 @@ fn render(mut commands: Commands, mut meshes: ResMut&lt;Assets&lt;Mesh&gt;&gt;) 
     recorder.sphere(0.5, ShapeDetail::Medium, [0.0, 1.0, 0.0, 1.0]);
 
     // Use standalone pipeline - no PBR, no descriptor pool pressure
+    recorder.end();
     let _entities = render_standalone_batches(&amp;mut recorder, &amp;mut commands, meshes, None);
-}
-<span class="boring">}</span></code></pre>
+}</code></pre>
 <p><em>The standalone pipeline: one shader pipeline and one bind group. Run <code>cargo run --example standalone</code> to reproduce it.</em></p>
 <h3 id="standalone-vs-pbr-pipeline"><a class="header" href="#standalone-vs-pbr-pipeline">Standalone vs PBR Pipeline</a></h3>
 <div class="table-wrapper">
@@ -1423,8 +1638,9 @@ fn render(mut commands: Commands, mut meshes: ResMut&lt;Assets&lt;Mesh&gt;&gt;) 
 <h1 id="advanced-topics"><a class="header" href="#advanced-topics">Advanced Topics</a></h1>
 <h2 id="frustum-culling"><a class="header" href="#frustum-culling">Frustum Culling</a></h2>
 <p>BevyGradmesh automatically culls instances outside the camera’s view frustum. Each batch stores a mesh AABB, and per-instance transforms are tested against 6 frustum planes extracted from the view-projection matrix.</p>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
+</span><span class="boring">use bevy_gradmesh::InstancedStats;
+</span><span class="boring">fn main() {}
 </span>// Culling is automatic - no configuration needed
 // Check stats to see how many instances were culled
 fn log_culling(stats: Res&lt;InstancedStats&gt;) {
@@ -1433,50 +1649,49 @@ fn log_culling(stats: Res&lt;InstancedStats&gt;) {
         stats.total_instances_before_cull,
         stats.culled_instances as f32 / stats.total_instances_before_cull as f32 * 100.0
     );
-}
-<span class="boring">}</span></code></pre>
+}</code></pre>
 <h2 id="mesh-caching"><a class="header" href="#mesh-caching">Mesh Caching</a></h2>
 <p>The <code>MeshCache</code> resource avoids regenerating identical geometry:</p>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>use bevy_gradmesh::MeshCache;
-
-fn check_cache(cache: Res&lt;MeshCache&gt;) {
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
+</span><span class="boring">use bevy_gradmesh::MeshCache;
+</span><span class="boring">fn main() {}
+</span>fn check_cache(cache: Res&lt;MeshCache&gt;) {
     info!("Cache hit rate: {:.1}%", cache.hit_rate() * 100.0);
-}
-<span class="boring">}</span></code></pre>
+}</code></pre>
 <h2 id="render-state-control"><a class="header" href="#render-state-control">Render State Control</a></h2>
 <p>Control depth test, depth write, and render layer per-batch:</p>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>use bevy_gradmesh::{RenderState, DepthTest, DepthWrite};
-
-recorder.set_render_state(RenderState {
-    layer: 0,
-    depth_test: DepthTest::LessEqual,
-    depth_write: DepthWrite::On,
-});
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::{BatchRecorder, DepthTest, DepthWrite, RenderState};
+</span><span class="boring">fn main() {}
+</span>fn set_state(recorder: &amp;mut BatchRecorder) {
+    recorder.set_render_state(RenderState {
+        layer: 0,
+        depth_test: DepthTest::LessEqual,
+        depth_write: DepthWrite::Enabled,
+    });
+}</code></pre>
 <h2 id="custom-shader-passthrough"><a class="header" href="#custom-shader-passthrough">Custom Shader Passthrough</a></h2>
 <p>Use any Bevy shader with gradmesh shapes:</p>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>use bevy_gradmesh::{BlendMode, Style};
-
-let custom_style = Style::custom(my_shader_handle, [1.0, 0.0, 0.0, 1.0]);
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
+</span><span class="boring">use bevy_gradmesh::Style;
+</span><span class="boring">fn main() {}
+</span>fn custom_style(my_shader_handle: Handle&lt;Shader&gt;) -&gt; Style {
+    Style::custom(my_shader_handle, Color::srgb(1.0, 0.0, 0.0))
+}</code></pre>
 <h2 id="physics-integration"><a class="header" href="#physics-integration">Physics Integration</a></h2>
-<p>BevyGradmesh meshes work with any Bevy physics plugin:</p>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>use avian3d::prelude::*;
-
-// Exact triangle-mesh collision
-let collider = Collider::trimesh_from_mesh(&amp;mesh);
-
-// Convex approximation
-let collider = Collider::convex_hull_from_mesh(&amp;mesh);
-<span class="boring">}</span></code></pre>
+<p>BevyGradmesh meshes work with any Bevy physics plugin. Read the vertices and
+triangles from the built mesh and pass them to the plugin’s trimesh or convex
+hull constructor:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
+</span><span class="boring">use bevy_gradmesh::Shape;
+</span><span class="boring">fn main() {}
+</span>fn collider_data(shape: &amp;Shape) -&gt; Option&lt;(Vec&lt;Vec3&gt;, Vec&lt;[u32; 3]&gt;)&gt; {
+    let mesh = shape.build();
+    let positions = mesh.attribute(Mesh::ATTRIBUTE_POSITION)?.as_float3()?;
+    let vertices: Vec&lt;Vec3&gt; = positions.iter().map(|p| Vec3::from(*p)).collect();
+    let indices: Vec&lt;u32&gt; = mesh.indices()?.iter().map(|i| i as u32).collect();
+    let triangles = indices.chunks_exact(3).map(|t| [t[0], t[1], t[2]]).collect();
+    Some((vertices, triangles))
+}</code></pre>
 <h2 id="performance-tuning"><a class="header" href="#performance-tuning">Performance Tuning</a></h2>
 <ol>
 <li><strong>Use batched mode</strong> for large numbers of similar shapes</li>
@@ -1490,7 +1705,7 @@ let collider = Collider::convex_hull_from_mesh(&amp;mesh);
 <li>No Order-Independent Transparency (OIT)</li>
 <li>No planar reflections</li>
 <li>No visual editor integration (Bevy has no editor)</li>
-<li>NURBS curves not supported (only cubic Bézier)</li>
+<li>NURBS curves not supported (only cubic Bezier)</li>
 <li>No secondary LOD membership during transitions</li>
 </ul>
 <h2 id="license"><a class="header" href="#license">License</a></h2>
@@ -1514,7 +1729,7 @@ let collider = Collider::convex_hull_from_mesh(&amp;mesh);
 <tr><td><code>immediate</code></td><td>Per-frame animated particles, push/pop state stacking, billboarding, and line drawing</td></tr>
 <tr><td><code>retained</code></td><td>Persistent shapes updated each frame via handles without recreating entities</td></tr>
 <tr><td><code>instanced</code></td><td>500 spheres rendered in a single GPU batch via <code>BatchRecorder</code></td></tr>
-<tr><td><code>standalone</code></td><td>Gradient shapes drawn without any PBR material or lights — one shader pipeline, one bind group</td></tr>
+<tr><td><code>standalone</code></td><td>Gradient shapes drawn without any PBR material or lights: one shader pipeline, one bind group</td></tr>
 <tr><td><code>curves</code></td><td>Spline and parametric curves rendered as smooth tubes</td></tr>
 <tr><td><code>polyline</code></td><td>Polylines with joint styles, width variation, gradient colors, and animated reveal</td></tr>
 <tr><td><code>sweep</code></td><td>Profiles swept along 3D paths: a wall with an arched gate and windows, a kerbed road, and a tapering pipe on a helix</td></tr>
@@ -1568,6 +1783,7 @@ let collider = Collider::convex_hull_from_mesh(&amp;mesh);
         <script src="book-609e4cb8.js"></script>
 
         <!-- Custom JS scripts -->
+        <script src="variant_switch-903d09f9.js"></script>
 
         <script>
         window.addEventListener('load', function() {

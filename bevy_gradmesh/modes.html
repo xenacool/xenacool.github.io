@@ -28,6 +28,7 @@
         <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
 
         <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="variant_switch-2015b158.css">
 
 
         <!-- Provide site root and default themes to javascript -->
@@ -35,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-77679fc6.js";
+            window.path_to_searchindex_js = "searchindex-6557ef1d.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-cbf67a2d.js"></script>
@@ -184,97 +185,124 @@
 <p>BevyGradmesh provides four rendering modes for different use cases.</p>
 <h2 id="direct-mode"><a class="header" href="#direct-mode">Direct Mode</a></h2>
 <p>The simplest approach: build a mesh and spawn it as a Bevy entity.</p>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>let mesh = meshes.add(Shape::sphere(1.0, ShapeDetail::Medium).build());
-let mat = materials.add(dual_directional(
-    [0.6, 0.4, 0.3], [0.96, 0.8, 0.69], [0.0, 1.0, 0.0]
-));
-commands.spawn((Mesh3d(mesh), MeshMaterial3d(mat)));
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
+</span><span class="boring">use bevy_gradmesh::{GradMeshMaterial, Shape, ShapeDetail, dual_directional};
+</span><span class="boring">fn main() {}
+</span>fn spawn_sphere(
+    mut commands: Commands,
+    mut meshes: ResMut&lt;Assets&lt;Mesh&gt;&gt;,
+    mut materials: ResMut&lt;Assets&lt;GradMeshMaterial&gt;&gt;,
+) {
+    let mesh = meshes.add(Shape::sphere(1.0, ShapeDetail::Medium).build());
+    let mat = materials.add(dual_directional(
+        [0.6, 0.4, 0.3], [0.96, 0.8, 0.69], [0.0, 1.0, 0.0]
+    ));
+    commands.spawn((Mesh3d(mesh), MeshMaterial3d(mat)));
+}</code></pre>
 <p><strong>Best for</strong>: Static scenes with a few shapes.</p>
 <h2 id="immediate-mode"><a class="header" href="#immediate-mode">Immediate Mode</a></h2>
 <p>Per-frame draw/dispose pattern using <code>ImmediateRecorder</code>. Supports push/pop state stacking and billboarding.</p>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>use bevy_gradmesh::{ImmediateRecorder, imm_opaque};
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
+</span><span class="boring">use bevy_gradmesh::{GradMeshMaterial, ImmediateRecorder, ShapeDetail, imm_opaque};
+</span><span class="boring">fn main() {}
+</span>#[derive(Resource)]
+struct Recorder(ImmediateRecorder);
 
-fn draw_frame(mut commands: Commands, mut meshes: ResMut&lt;Assets&lt;Mesh&gt;&gt;,
-              mut recorder: ResMut&lt;ImmediateRecorder&gt;) {
-    recorder.begin();
-    
+fn draw_frame(
+    mut commands: Commands,
+    mut meshes: ResMut&lt;Assets&lt;Mesh&gt;&gt;,
+    mut materials: ResMut&lt;Assets&lt;GradMeshMaterial&gt;&gt;,
+    mut recorder: ResMut&lt;Recorder&gt;,
+) {
+    let recorder = &amp;mut recorder.0;
+    recorder.begin(&amp;mut commands);
+
     recorder.push_state();
     recorder.set_position(Vec3::new(1.0, 0.0, 0.0));
-    recorder.sphere(0.5, ShapeDetail::Medium, imm_opaque(1.0, 0.0, 0.0));
+    recorder.sphere(
+        &amp;mut commands,
+        &amp;mut meshes,
+        &amp;mut materials,
+        0.5,
+        ShapeDetail::Medium,
+        imm_opaque(1.0, 0.0, 0.0),
+    );
     recorder.pop_state();
-    
-    recorder.render(&amp;mut commands, &amp;mut meshes);
-}
-<span class="boring">}</span></code></pre>
+}</code></pre>
 <p><strong>Best for</strong>: Particle systems, animated effects, debug visualization.</p>
 <p><em>Per-frame particles, push/pop state, billboarding and line drawing. Run <code>cargo run --example immediate</code> to reproduce it.</em></p>
 <h2 id="retained-mode"><a class="header" href="#retained-mode">Retained Mode</a></h2>
 <p>Persistent shapes managed by handle. Create once, update per-frame.</p>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>use bevy_gradmesh::{RetainedWorld, GradMeshHandle};
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
+</span><span class="boring">use bevy_gradmesh::{GradMeshHandle, RetainedWorld, ShapeDetail};
+</span><span class="boring">fn main() {}
+</span>#[derive(Resource)]
+struct Scene {
+    world: RetainedWorld,
+    ball: GradMeshHandle,
+}
 
-fn setup(mut commands: Commands, mut meshes: ResMut&lt;Assets&lt;Mesh&gt;&gt;,
-         mut retained: ResMut&lt;RetainedWorld&gt;,
-         mut handles: ResMut&lt;Assets&lt;GradMeshHandle&gt;&gt;) {
-    let handle = retained.sphere(
-        &amp;mut commands, &amp;mut meshes, 1.0, ShapeDetail::Medium,
+fn setup(mut commands: Commands, mut meshes: ResMut&lt;Assets&lt;Mesh&gt;&gt;) {
+    let mut world = RetainedWorld::new();
+    let ball = world.sphere(
+        &amp;mut commands, &amp;mut meshes, Vec3::ZERO, 1.0, ShapeDetail::Medium,
         [1.0, 0.0, 0.0, 1.0],
     );
-    let handle_res = handles.add(handle);
+    commands.insert_resource(Scene { world, ball });
 }
 
-fn update(mut retained: ResMut&lt;RetainedWorld&gt;, time: Res&lt;Time&gt;,
-          handle: Res&lt;GradMeshHandle&gt;) {
-    retained.set_position(*handle, Vec3::new(0.0, time.elapsed_secs().sin(), 0.0));
-}
-<span class="boring">}</span></code></pre>
+fn update(mut scene: ResMut&lt;Scene&gt;, time: Res&lt;Time&gt;) {
+    let ball = scene.ball;
+    scene.world.set_position(ball, Vec3::new(0.0, time.elapsed_secs().sin(), 0.0));
+}</code></pre>
 <p><strong>Best for</strong>: Scenes with persistent shapes that change position or properties each frame.</p>
 <p><em>Persistent shapes updated each frame through handles. Run <code>cargo run --example retained</code> to reproduce it.</em></p>
 <h2 id="batched-mode"><a class="header" href="#batched-mode">Batched Mode</a></h2>
 <p>Groups instances into batches for GPU instancing - thousands of shapes in far fewer draw calls.</p>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>use bevy_gradmesh::{BatchRecorder, AppearanceSnapshot};
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
+</span><span class="boring">use bevy_gradmesh::{AppearanceSnapshot, BatchRecorder, ShapeDetail};
+</span><span class="boring">fn main() {}
+</span>#[derive(Resource)]
+struct Recorder(BatchRecorder);
 
-fn draw_frame(mut recorder: ResMut&lt;BatchRecorder&gt;) {
+fn draw_frame(
+    mut commands: Commands,
+    meshes: ResMut&lt;Assets&lt;Mesh&gt;&gt;,
+    mut recorder: ResMut&lt;Recorder&gt;,
+) {
+    let recorder = &amp;mut recorder.0;
     recorder.begin();
-    
+
     for i in 0..100 {
         recorder.set_position(Vec3::new(
             (i % 10) as f32,
             0.0,
             (i / 10) as f32,
         ));
-        
+
         // Optional: add color animation
         recorder.set_appearance(
             AppearanceSnapshot::color_pulse(1.0, i as f32 / 100.0)
         );
-        
+
         recorder.sphere(0.3, ShapeDetail::Medium, [1.0, 0.0, 0.0, 1.0]);
     }
-    
-    recorder.render_batches(&amp;mut commands, &amp;mut meshes, None);
-}
-<span class="boring">}</span></code></pre>
+
+    recorder.end();
+    recorder.render_batches(&amp;mut commands, meshes, None);
+}</code></pre>
 <p><strong>Best for</strong>: Large numbers of similar shapes (terrain, crowds, particles).</p>
 <p><em>500 spheres drawn in one GPU batch with <code>BatchRecorder</code>. Run <code>cargo run --example instanced</code> to reproduce it.</em></p>
 <h3 id="dirty-tracking"><a class="header" href="#dirty-tracking">Dirty Tracking</a></h3>
 <p>Batched mode tracks which batches changed each frame, uploading only dirty data:</p>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>// Check statistics
-let stats = stats.read();
-info!("Batches: {}, Dirty: {}, Instances: {}",
-    stats.batch_count, stats.dirty_batch_count, stats.total_instances
-);
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
+</span><span class="boring">use bevy_gradmesh::InstancedStats;
+</span><span class="boring">fn main() {}
+</span>fn check_statistics(stats: Res&lt;InstancedStats&gt;) {
+    info!("Batches: {}, Dirty: {}, Instances: {}",
+        stats.batch_count, stats.dirty_batch_count, stats.total_instances
+    );
+}</code></pre>
 <h3 id="choosing-a-mode"><a class="header" href="#choosing-a-mode">Choosing a Mode</a></h3>
 <div class="table-wrapper">
 <table>
@@ -341,6 +369,7 @@ info!("Batches: {}, Dirty: {}, Instances: {}",
         <script src="book-609e4cb8.js"></script>
 
         <!-- Custom JS scripts -->
+        <script src="variant_switch-903d09f9.js"></script>
 
 
 

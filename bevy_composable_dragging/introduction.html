@@ -28,6 +28,7 @@
         <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
 
         <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="variant_switch-2015b158.css">
 
 
         <!-- Provide site root and default themes to javascript -->
@@ -35,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-5e46b0c3.js";
+            window.path_to_searchindex_js = "searchindex-ad779c5b.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-d11337db.js"></script>
@@ -187,7 +188,7 @@
 <p><em>A single draggable circle toggling between two states. Run <code>cargo run --example hello --features pbr</code> to reproduce it.</em></p>
 <h2 id="key-concepts"><a class="header" href="#key-concepts">Key Concepts</a></h2>
 <ul>
-<li><strong>Views</strong>: Plain-data descriptions of scenes — flat lists of nodes with geometry, transforms, colors, and optional drag specs</li>
+<li><strong>Views</strong>: Plain-data descriptions of scenes, flat lists of nodes with geometry, transforms, colors, and optional drag specs</li>
 <li><strong>Operators</strong>: Declarative drag behaviors (<code>between</code>, <code>closest</code>, <code>vary</code>, etc.) that compile into per-frame behavior</li>
 <li><strong>Drag Spaces</strong>: Planes, axes, and screen-facing planes that resolve pointer rays to world points</li>
 <li><strong>Blending</strong>: Smooth interpolation between views, with presence animations for emerging and disappearing nodes</li>
@@ -198,7 +199,7 @@
 <p>Bevy Composable Dragging follows these principles:</p>
 <ol>
 <li><strong>Declarative</strong>: Describe what a drag does, not how it works frame by frame</li>
-<li><strong>Composable</strong>: Specs are plain data that combine freely — no state machines or enums</li>
+<li><strong>Composable</strong>: Specs are plain data that combine freely, no state machines or enums</li>
 <li><strong>Pure views</strong>: The view function is pure; state holds everything, including HUD screen size</li>
 <li><strong>Bevy-native</strong>: Outputs standard <code>Mesh</code>, <code>Transform</code>, and <code>StandardMaterial</code> types</li>
 <li><strong>Feature-gated</strong>: The core library needs only <code>bevy_color</code>; PBR and gradient features are optional</li>
@@ -260,6 +261,7 @@
         <script src="book-609e4cb8.js"></script>
 
         <!-- Custom JS scripts -->
+        <script src="variant_switch-903d09f9.js"></script>
 
 
 

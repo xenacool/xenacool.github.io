@@ -1,0 +1,45 @@
+[package]
+name = "showcase_runner"
+version = "0.1.0"
+edition = "2024"
+publish = false
+autobins = false
+
+# Each gallery showcase is its own binary, so a visitor downloads only the showcase they run.
+# The binaries compile the multi-file examples of bevy_composable_dragging in place.
+
+[[bin]]
+name = "kart_racer_editor"
+path = "../../libs/bevy_composable_dragging/examples/kart_racer_editor/main.rs"
+test = false
+
+[[bin]]
+name = "cozy_castle"
+path = "../../libs/bevy_composable_dragging/examples/cozy_castle/main.rs"
+test = false
+
+[[bin]]
+name = "physics_lab"
+path = "../../libs/bevy_composable_dragging/examples/physics_lab/main.rs"
+test = false
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
+
+[dependencies]
+bevy = { version = "0.20", default-features = false, features = [
+    "bevy_render", "bevy_pbr", "bevy_sprite", "bevy_sprite_render",
+    "bevy_text", "bevy_ui", "bevy_log", "bevy_asset", "bevy_winit",
+    "bevy_core_pipeline", "bevy_gizmos", "default_font", "mesh_picking",
+    "tonemapping_luts", "png", "webgl2", "ktx2", "zstd_rust"
+] }
+bevy_gradmesh = { path = "../../libs/bevy_gradmesh" }
+bevy_composable_dragging = { path = "../../libs/bevy_composable_dragging", features = ["shapes-3d"] }
+avian3d = { version = "0.8", default-features = false, features = ["3d", "parry-f32", "collider-from-mesh"] }
+
+[patch.crates-io]
+bevy_gradmesh = { path = "../../libs/bevy_gradmesh" }

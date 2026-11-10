@@ -28,6 +28,7 @@
         <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
 
         <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="variant_switch-2015b158.css">
 
 
         <!-- Provide site root and default themes to javascript -->
@@ -35,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-77679fc6.js";
+            window.path_to_searchindex_js = "searchindex-6557ef1d.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-cbf67a2d.js"></script>
@@ -225,20 +226,26 @@ works, but each distinct parameter set is a distinct mesh.</p>
 (<code>unit_quad()</code>). Edges are anti-aliased from screen-space derivatives, so no MSAA
 is needed. Radius, rim width, arc, gradient and dash are material floats: changing
 them creates no mesh and no pipeline.</p>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>let quad = meshes.add(unit_quad());
-let material = SdfMaterial2d::disc(80.0)
-    .with_rim(10.0)
-    .with_arc(0.0, std::f32::consts::PI * 1.5)
-    .with_dash(Dash2d::by_length(14.0, 8.0).with_snap(DashSnap::EndToEnd))
-    .with_colors(Color::srgb(1.0, 0.35, 0.25), Color::srgb(1.0, 0.9, 0.35));
-commands.spawn((
-    Mesh2d(quad.clone()),
-    Transform::from_scale(material.quad_scale()),
-    MeshMaterial2d(materials.add(material)),
-));
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
+</span><span class="boring">use bevy_gradmesh::{Dash2d, DashSnap, SdfMaterial2d, unit_quad};
+</span><span class="boring">fn main() {}
+</span>fn spawn_disc(
+    mut commands: Commands,
+    mut meshes: ResMut&lt;Assets&lt;Mesh&gt;&gt;,
+    mut materials: ResMut&lt;Assets&lt;SdfMaterial2d&gt;&gt;,
+) {
+    let quad = meshes.add(unit_quad());
+    let material = SdfMaterial2d::disc(80.0)
+        .with_rim(10.0)
+        .with_arc(0.0, std::f32::consts::PI * 1.5)
+        .with_dash(Dash2d::by_length(14.0, 8.0).with_snap(DashSnap::EndToEnd))
+        .with_colors(Color::srgb(1.0, 0.35, 0.25), Color::srgb(1.0, 0.9, 0.35));
+    commands.spawn((
+        Mesh2d(quad.clone()),
+        Transform::from_scale(material.quad_scale()),
+        MeshMaterial2d(materials.add(material)),
+    ));
+}</code></pre>
 <p>Gradients: <code>with_colors</code> (linear, along <code>with_gradient_direction</code>),
 <code>with_radial_gradient()</code> (fitted to the shape bounds), <code>with_angular_gradient(start)</code>
 (mirrored, no seam) and <code>with_angular_sweep(start)</code> (one turn, hard seam). All of
@@ -264,10 +271,12 @@ dashes meet in a mitre. <code>Transform</code> scale must be <code>SdfMaterial2d
 For a PBR-free app, switch default features off and add the mobile plugin:</p>
 <pre><code class="language-toml">bevy_gradmesh = { version = "0.3", default-features = false }
 </code></pre>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>app.add_plugins(GradMeshPlugin::for_mobile());
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
+</span><span class="boring">use bevy_gradmesh::GradMeshPlugin;
+</span><span class="boring">fn main() {}
+</span>fn add_mobile_plugin(app: &amp;mut App) {
+    app.add_plugins(GradMeshPlugin::for_mobile());
+}</code></pre>
 <p><code>for_mobile()</code> registers the standalone pipeline, the Mesh2d gradient material and
 <code>SdfMaterial2d</code>. Without <code>pbr</code> the Material and Instanced backends and
 <code>RetainedWorld::flush</code> are not available. Check that none of your other
@@ -324,6 +333,7 @@ dependencies enables <code>bevy_pbr</code> again (<code>cargo tree -e features -
         <script src="book-609e4cb8.js"></script>
 
         <!-- Custom JS scripts -->
+        <script src="variant_switch-903d09f9.js"></script>
 
 
 

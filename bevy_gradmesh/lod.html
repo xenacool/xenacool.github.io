@@ -28,6 +28,7 @@
         <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
 
         <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="variant_switch-2015b158.css">
 
 
         <!-- Provide site root and default themes to javascript -->
@@ -35,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-77679fc6.js";
+            window.path_to_searchindex_js = "searchindex-6557ef1d.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-cbf67a2d.js"></script>
@@ -185,24 +186,23 @@
 <h2 id="how-it-works"><a class="header" href="#how-it-works">How It Works</a></h2>
 <ol>
 <li>Each frame, the camera distance to each batch is computed</li>
-<li>Based on distance, an LOD level (0–4) is selected</li>
+<li>Based on distance, an LOD level (0 to 4) is selected</li>
 <li>During transitions, both LOD levels render simultaneously with a Bayer dither mask</li>
 <li>The dither pattern smoothly fades between levels, eliminating visual pop-in</li>
 </ol>
 <h2 id="configuration"><a class="header" href="#configuration">Configuration</a></h2>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>use bevy_gradmesh::LodConfig;
-
-let lod_config = LodConfig {
-    near_distance: 5.0,    // Extreme detail (level 4)
-    mid_distance: 20.0,    // Medium detail (level 2)
-    far_distance: 50.0,    // Minimal detail (level 0)
-    transition_width: 3.0, // Distance range for cross-fade
-    hysteresis: 1.0,       // Prevents LOD flickering
-};
-commands.insert_resource(lod_config);
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
+</span><span class="boring">use bevy_gradmesh::LodConfig;
+</span><span class="boring">fn main() {}
+</span>fn configure_lod(mut commands: Commands) {
+    let lod_config = LodConfig {
+        // Distances where each level hands over to the next, nearest first
+        thresholds: [5.0, 20.0, 50.0, 100.0],
+        transition_width: 3.0, // Distance range for cross-fade
+        hysteresis: 0.2,       // Prevents LOD flickering (0.0 to 1.0)
+    };
+    commands.insert_resource(lod_config);
+}</code></pre>
 <h2 id="lod-levels"><a class="header" href="#lod-levels">LOD Levels</a></h2>
 <div class="table-wrapper">
 <table>
@@ -210,25 +210,23 @@ commands.insert_resource(lod_config);
 <tr><th>Level</th><th>Detail</th><th>Segments</th><th>Distance Range</th></tr>
 </thead>
 <tbody>
-<tr><td>4</td><td>Extreme</td><td>32</td><td>0–near</td></tr>
-<tr><td>3</td><td>High</td><td>24</td><td>near–mid</td></tr>
-<tr><td>2</td><td>Medium</td><td>16</td><td>mid–far</td></tr>
-<tr><td>1</td><td>Low</td><td>12</td><td>far–very far</td></tr>
-<tr><td>0</td><td>Minimal</td><td>8</td><td>very far</td></tr>
+<tr><td>4</td><td>Extreme</td><td>32</td><td>0 to <code>thresholds[0]</code></td></tr>
+<tr><td>3</td><td>High</td><td>24</td><td><code>thresholds[0]</code> to <code>thresholds[1]</code></td></tr>
+<tr><td>2</td><td>Medium</td><td>16</td><td><code>thresholds[1]</code> to <code>thresholds[2]</code></td></tr>
+<tr><td>1</td><td>Low</td><td>12</td><td><code>thresholds[2]</code> to <code>thresholds[3]</code></td></tr>
+<tr><td>0</td><td>Minimal</td><td>8</td><td>beyond <code>thresholds[3]</code></td></tr>
 </tbody>
 </table>
 </div>
 <h2 id="statistics"><a class="header" href="#statistics">Statistics</a></h2>
 <p>Monitor LOD distribution each frame:</p>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>use bevy_gradmesh::InstancedStats;
-
-fn log_stats(stats: Res&lt;InstancedStats&gt;) {
-    stats.log();
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
+</span><span class="boring">use bevy_gradmesh::InstancedStats;
+</span><span class="boring">fn main() {}
+</span>fn log_stats(stats: Res&lt;InstancedStats&gt;) {
+    info!("LOD distribution: {:?}", stats.lod_distribution);
     // Output: "LOD distribution: [12, 45, 230, 88, 125]"
-}
-<span class="boring">}</span></code></pre>
+}</code></pre>
 <h2 id="performance"><a class="header" href="#performance">Performance</a></h2>
 <p>LOD reduces GPU workload for distant objects automatically. The dither cross-fade adds minimal overhead during transitions, and hysteresis prevents rapid LOD switching.</p>
 
@@ -283,6 +281,7 @@ fn log_stats(stats: Res&lt;InstancedStats&gt;) {
         <script src="book-609e4cb8.js"></script>
 
         <!-- Custom JS scripts -->
+        <script src="variant_switch-903d09f9.js"></script>
 
 
 

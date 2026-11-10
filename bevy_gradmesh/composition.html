@@ -28,6 +28,7 @@
         <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
 
         <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="variant_switch-2015b158.css">
 
 
         <!-- Provide site root and default themes to javascript -->
@@ -35,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-77679fc6.js";
+            window.path_to_searchindex_js = "searchindex-6557ef1d.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-cbf67a2d.js"></script>
@@ -184,16 +185,22 @@
 <h2 id="flat-shapes-with-mesh2d"><a class="header" href="#flat-shapes-with-mesh2d">Flat shapes with <code>Mesh2d</code></a></h2>
 <p><code>Shape::build_2d()</code> returns geometry in the XY plane facing +Z with gradient UVs. Pair it with
 <code>GradMeshMaterial2d</code> (built from a <code>Style</code>) and a <code>Camera2d</code>:</p>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>use bevy::prelude::*;
-use bevy_gradmesh::{Shape, ShapeDetail, Style};
-
-let mesh = Shape::disc(0.5, ShapeDetail::High).build_2d();
-let material = Style::dual_radial(Color::WHITE, Color::srgb(0.9, 0.4, 0.5)).build_2d();
-// commands.spawn((Mesh2d(meshes.add(mesh)), MeshMaterial2d(materials.add(material)),
-//     Transform::from_xyz(0.0, 0.0, 5.0).with_scale(Vec3::splat(120.0))));
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
+</span><span class="boring">use bevy_gradmesh::{GradMeshMaterial2d, Shape, ShapeDetail, Style};
+</span><span class="boring">fn main() {}
+</span>fn spawn_disc(
+    mut commands: Commands,
+    mut meshes: ResMut&lt;Assets&lt;Mesh&gt;&gt;,
+    mut materials: ResMut&lt;Assets&lt;GradMeshMaterial2d&gt;&gt;,
+) {
+    let mesh = Shape::disc(0.5, ShapeDetail::High).build_2d();
+    let material = Style::dual_radial(Color::WHITE, Color::srgb(0.9, 0.4, 0.5)).build_2d();
+    commands.spawn((
+        Mesh2d(meshes.add(mesh)),
+        MeshMaterial2d(materials.add(material)),
+        Transform::from_xyz(0.0, 0.0, 5.0).with_scale(Vec3::splat(120.0)),
+    ));
+}</code></pre>
 <ul>
 <li><code>Transform</code> scale resizes the shape on the XY plane; gradients and dashes follow because they are
 computed from the mesh UVs.</li>
@@ -209,19 +216,18 @@ curve, <code>v</code> across it).</li>
 <p><em>Gradient cards, a translucent dragged card layered by z, a radial disc, a pulsing star, a dashed ring and a polygon with a hole. Run <code>cargo run --example gradient_2d</code> to reproduce it.</em></p>
 <h2 id="outlines-extrusion-holes"><a class="header" href="#outlines-extrusion-holes">Outlines, extrusion, holes</a></h2>
 <p><code>arch</code>, <code>rounded_rectangle</code> and <code>blob</code> return counter-clockwise outlines centred on the origin.</p>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>use bevy::prelude::*;
-use bevy_gradmesh::{Shape, ShapeDetail, arch, rounded_rectangle};
-
-let wall = Shape::extruded_polygon_with_holes(
-    rounded_rectangle(Vec2::new(4.0, 3.4), 0.15, 3),
-    vec![arch(1.2, 2.0, 10)],
-    0.5,  // depth
-    0.35, // roundness of the rim
-    ShapeDetail::High,
-);
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
+</span><span class="boring">use bevy_gradmesh::{Shape, ShapeDetail, arch, rounded_rectangle};
+</span><span class="boring">fn main() {}
+</span>fn wall() -&gt; Shape {
+    Shape::extruded_polygon_with_holes(
+        rounded_rectangle(Vec2::new(4.0, 3.4), 0.15, 3),
+        vec![arch(1.2, 2.0, 10)],
+        0.5,  // depth
+        0.35, // roundness of the rim
+        ShapeDetail::High,
+    )
+}</code></pre>
 <p><code>Shape::extruded_polygon</code> and <code>extruded_polygon_colored</code> handle single outlines (the colours are
 per vertex and multiply the gradient), <code>arbitrary_polygon_with_holes</code> builds the flat version. Either
 winding is accepted; extrusion is centred on <code>z = 0</code>.</p>
@@ -233,11 +239,21 @@ Compounds are <code>Hash + Eq</code> and work with <code>MeshCache</code>.</p>
 crisp, gentle ones are smoothed, and open ends away from the axis get caps.</p>
 <p><em>A compound tower, a wall with an arched opening, extruded cobbles, an emissive torch, a metallic gem and a ghost piece that casts no shadow. Run <code>cargo run --example composed_shapes</code> to reproduce it.</em></p>
 <h2 id="sharing-meshes-and-materials"><a class="header" href="#sharing-meshes-and-materials">Sharing meshes and materials</a></h2>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>// let mesh_handle = cache.get_or_build_handle(&amp;shape, &amp;mut meshes);
-// let material_handle = pool.get_or_add(&amp;style, &amp;mut materials);
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
+</span><span class="boring">use bevy_gradmesh::{GradMeshMaterial, GradMeshMaterialPool, MeshCache, Shape, Style};
+</span><span class="boring">fn main() {}
+</span>fn share_assets(
+    shape: &amp;Shape,
+    style: &amp;Style,
+    cache: &amp;mut MeshCache,
+    pool: &amp;mut GradMeshMaterialPool,
+    meshes: &amp;mut Assets&lt;Mesh&gt;,
+    materials: &amp;mut Assets&lt;GradMeshMaterial&gt;,
+) -&gt; (Handle&lt;Mesh&gt;, Handle&lt;GradMeshMaterial&gt;) {
+    let mesh_handle = cache.get_or_build_handle(shape, meshes);
+    let material_handle = pool.get_or_add(style, materials);
+    (mesh_handle, material_handle)
+}</code></pre>
 <p>Equal shapes return the same <code>Handle&lt;Mesh&gt;</code>, equal styles (<code>Style: PartialEq</code>) the same material, so a
 per-frame sync of an unchanged node allocates nothing.</p>
 <h2 id="style-additions"><a class="header" href="#style-additions">Style additions</a></h2>
@@ -330,6 +346,7 @@ path.</p>
         <script src="book-609e4cb8.js"></script>
 
         <!-- Custom JS scripts -->
+        <script src="variant_switch-903d09f9.js"></script>
 
 
 

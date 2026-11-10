@@ -5,6 +5,9 @@ demos/wasm/**/*.wasm
 demos/wasm/**/*.js
 demos/wasm/**/*.d.ts
 demos/wasm_runner/dist/
+demos/gallery/**/*.wasm
+demos/gallery/**/*.js
+demos/gallery/**/*.d.ts
 
 # Rust build artifacts
 target/

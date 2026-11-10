@@ -28,6 +28,7 @@
         <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
 
         <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="variant_switch-2015b158.css">
 
 
         <!-- Provide site root and default themes to javascript -->
@@ -35,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-77679fc6.js";
+            window.path_to_searchindex_js = "searchindex-6557ef1d.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-cbf67a2d.js"></script>
@@ -184,126 +185,204 @@
 <p>BevyGradmesh provides a wide variety of procedural primitives, all generated at runtime with proper normals and UVs.</p>
 <h2 id="3d-primitives"><a class="header" href="#3d-primitives">3D Primitives</a></h2>
 <h3 id="sphere"><a class="header" href="#sphere">Sphere</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>Shape::sphere(radius, detail)
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::{Shape, ShapeDetail};
+</span><span class="boring">fn main() {}
+</span>fn sphere() -&gt; Shape {
+    Shape::sphere(1.0, ShapeDetail::Medium)
+}</code></pre>
 <h3 id="ellipsoid"><a class="header" href="#ellipsoid">Ellipsoid</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>Shape::ellipsoid(size, detail)
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
+</span><span class="boring">use bevy_gradmesh::{Shape, ShapeDetail};
+</span><span class="boring">fn main() {}
+</span>fn ellipsoid() -&gt; Shape {
+    Shape::ellipsoid(Vec3::new(2.0, 1.0, 1.5), ShapeDetail::Medium)
+}</code></pre>
 <h3 id="cuboid"><a class="header" href="#cuboid">Cuboid</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>Shape::cuboid(size, roundness, detail)
-<span class="boring">}</span></code></pre>
-<p>The <code>roundness</code> parameter (0.0–1.0) creates rounded edges. At 0.0, produces a sharp box.</p>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
+</span><span class="boring">use bevy_gradmesh::{Shape, ShapeDetail};
+</span><span class="boring">fn main() {}
+</span>fn cuboid() -&gt; Shape {
+    let roundness = 0.2;
+    Shape::cuboid(Vec3::new(1.0, 2.0, 1.0), roundness, ShapeDetail::Medium)
+}</code></pre>
+<p>The <code>roundness</code> parameter (0.0 to 1.0) creates rounded edges. At 0.0, produces a sharp box.</p>
 <h3 id="cylinder"><a class="header" href="#cylinder">Cylinder</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>Shape::cylinder(radius, height, detail)
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::{Shape, ShapeDetail};
+</span><span class="boring">fn main() {}
+</span>fn cylinder() -&gt; Shape {
+    Shape::cylinder(0.5, 2.0, ShapeDetail::Medium)
+}</code></pre>
 <h3 id="cone"><a class="header" href="#cone">Cone</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>Shape::cone(radius, height, detail)
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::{Shape, ShapeDetail};
+</span><span class="boring">fn main() {}
+</span>fn cone() -&gt; Shape {
+    Shape::cone(0.5, 2.0, ShapeDetail::Medium)
+}</code></pre>
 <h3 id="capsule"><a class="header" href="#capsule">Capsule</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>Shape::capsule(radius, height, detail)
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::{Shape, ShapeDetail};
+</span><span class="boring">fn main() {}
+</span>fn capsule() -&gt; Shape {
+    Shape::capsule(0.5, 2.0, ShapeDetail::Medium)
+}</code></pre>
 <h3 id="hemisphere"><a class="header" href="#hemisphere">Hemisphere</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>Shape::hemisphere(radius, capped, detail)
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::{Shape, ShapeDetail};
+</span><span class="boring">fn main() {}
+</span>fn hemisphere() -&gt; Shape {
+    let capped = true;
+    Shape::hemisphere(1.0, capped, ShapeDetail::Medium)
+}</code></pre>
 <p>When <code>capped</code> is true, the flat face is filled with geometry.</p>
 <h3 id="torus"><a class="header" href="#torus">Torus</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>Shape::torus(radius, thickness, start_angle, span)
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::Shape;
+</span><span class="boring">fn main() {}
+</span>fn torus() -&gt; Shape {
+    let start_angle = 0.0;
+    let span = std::f32::consts::TAU;
+    Shape::torus(1.0, 0.25, start_angle, span)
+}</code></pre>
 <p>Supports partial torus arcs. Use <code>start_angle = 0.0</code> and <code>span = TAU</code> for a full torus.</p>
 <h3 id="regular-prism"><a class="header" href="#regular-prism">Regular Prism</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>Shape::regular_prism(sides, radius, height, roundness, detail)
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::{Shape, ShapeDetail};
+</span><span class="boring">fn main() {}
+</span>fn regular_prism() -&gt; Shape {
+    let sides = 6;
+    let roundness = 0.1;
+    Shape::regular_prism(sides, 1.0, 2.0, roundness, ShapeDetail::Medium)
+}</code></pre>
 <h3 id="pyramid"><a class="header" href="#pyramid">Pyramid</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>Shape::pyramid(sides, radius, height, detail)
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::{Shape, ShapeDetail};
+</span><span class="boring">fn main() {}
+</span>fn pyramid() -&gt; Shape {
+    let sides = 4;
+    Shape::pyramid(sides, 1.0, 1.5, ShapeDetail::Medium)
+}</code></pre>
 <h3 id="tapered-cylinder"><a class="header" href="#tapered-cylinder">Tapered Cylinder</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>Shape::tapered_cylinder(top_radius, bottom_radius, height, detail)
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::{Shape, ShapeDetail};
+</span><span class="boring">fn main() {}
+</span>fn tapered_cylinder() -&gt; Shape {
+    let top_radius = 0.3;
+    let bottom_radius = 0.6;
+    Shape::tapered_cylinder(top_radius, bottom_radius, 2.0, ShapeDetail::Medium)
+}</code></pre>
 <p>A cone-frustum with flat top and bottom. When radii are equal, equivalent to a regular cylinder.</p>
 <p><em>The 3D primitives, shaded with dual-directional gradients. Run <code>cargo run --example shapes</code> to reproduce it.</em></p>
 <h2 id="2d-primitives"><a class="header" href="#2d-primitives">2D Primitives</a></h2>
 <p>All 2D shapes are flat quads facing the camera (billboarded).</p>
 <h3 id="rectangle"><a class="header" href="#rectangle">Rectangle</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>Shape::rectangle(size, detail)
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
+</span><span class="boring">use bevy_gradmesh::{Shape, ShapeDetail};
+</span><span class="boring">fn main() {}
+</span>fn rectangle() -&gt; Shape {
+    Shape::rectangle(Vec2::new(2.0, 1.0), ShapeDetail::Medium)
+}</code></pre>
 <h3 id="disc"><a class="header" href="#disc">Disc</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>Shape::disc(radius, detail)
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::{Shape, ShapeDetail};
+</span><span class="boring">fn main() {}
+</span>fn disc() -&gt; Shape {
+    Shape::disc(1.0, ShapeDetail::Medium)
+}</code></pre>
 <h3 id="polygon"><a class="header" href="#polygon">Polygon</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>Shape::polygon(sides, radius, detail)
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::{Shape, ShapeDetail};
+</span><span class="boring">fn main() {}
+</span>fn polygon() -&gt; Shape {
+    let sides = 5;
+    Shape::polygon(sides, 1.0, ShapeDetail::Medium)
+}</code></pre>
 <h3 id="ellipse"><a class="header" href="#ellipse">Ellipse</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>Shape::ellipse(radius, detail)
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
+</span><span class="boring">use bevy_gradmesh::{Shape, ShapeDetail};
+</span><span class="boring">fn main() {}
+</span>fn ellipse() -&gt; Shape {
+    Shape::ellipse(Vec2::new(1.5, 0.75), ShapeDetail::Medium)
+}</code></pre>
 <h3 id="star"><a class="header" href="#star">Star</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>Shape::star(points, outer_radius, inner_radius, detail)
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::{Shape, ShapeDetail};
+</span><span class="boring">fn main() {}
+</span>fn star() -&gt; Shape {
+    let points = 5;
+    let outer_radius = 1.0;
+    let inner_radius = 0.4;
+    Shape::star(points, outer_radius, inner_radius, ShapeDetail::Medium)
+}</code></pre>
 <p>N-pointed star. The <code>inner_radius</code> controls how deep the indentations are.</p>
 <h3 id="ring"><a class="header" href="#ring">Ring</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>Shape::ring(outer_radius, inner_radius, detail)
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::{Shape, ShapeDetail};
+</span><span class="boring">fn main() {}
+</span>fn ring() -&gt; Shape {
+    let outer_radius = 1.0;
+    let inner_radius = 0.6;
+    Shape::ring(outer_radius, inner_radius, ShapeDetail::Medium)
+}</code></pre>
 <p>Annulus (2D donut with a hole).</p>
 <h3 id="wedge"><a class="header" href="#wedge">Wedge</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>Shape::wedge(radius, angle, detail)
-<span class="boring">}</span></code></pre>
-<p>Pie-slice shape. Angle is in radians (0 to 2π).</p>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::{Shape, ShapeDetail};
+</span><span class="boring">fn main() {}
+</span>fn wedge() -&gt; Shape {
+    let angle = std::f32::consts::FRAC_PI_2;
+    Shape::wedge(1.0, angle, ShapeDetail::Medium)
+}</code></pre>
+<p>Pie-slice shape. Angle is in radians (0 to 2 pi).</p>
 <p><em>Custom polygons with per-vertex colours, stars, rings, wedges and a tapered cylinder. Run <code>cargo run --example arbitrary_shapes</code> to reproduce it.</em></p>
 <h3 id="arbitrary-polygon"><a class="header" href="#arbitrary-polygon">Arbitrary Polygon</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>Shape::arbitrary_polygon(vertices, detail)
-Shape::arbitrary_polygon_colored(vertices, colors, detail)
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
+</span><span class="boring">use bevy_gradmesh::{Shape, ShapeDetail};
+</span><span class="boring">fn main() {}
+</span>fn arbitrary_polygon() -&gt; Shape {
+    let vertices = vec![
+        Vec2::new(-1.0, -1.0),
+        Vec2::new(1.0, -1.0),
+        Vec2::new(0.0, 1.0),
+    ];
+    Shape::arbitrary_polygon(vertices, ShapeDetail::Medium)
+}
+
+fn arbitrary_polygon_colored() -&gt; Shape {
+    let vertices = vec![
+        Vec2::new(-1.0, -1.0),
+        Vec2::new(1.0, -1.0),
+        Vec2::new(0.0, 1.0),
+    ];
+    let colors = vec![
+        [1.0, 0.0, 0.0, 1.0],
+        [0.0, 1.0, 0.0, 1.0],
+        [0.0, 0.0, 1.0, 1.0],
+    ];
+    Shape::arbitrary_polygon_colored(vertices, colors, ShapeDetail::Medium)
+}</code></pre>
 <p>Accepts any set of 2D vertices. Triangulated using ear-clipping algorithm. Supports optional per-vertex RGBA colors.</p>
 <h2 id="advanced-geometry"><a class="header" href="#advanced-geometry">Advanced Geometry</a></h2>
 <h3 id="3d-polyline"><a class="header" href="#3d-polyline">3D Polyline</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>Shape::polyline3d(points, thickness, closed, segments, detail)
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
+</span><span class="boring">use bevy_gradmesh::{Shape, ShapeDetail};
+</span><span class="boring">fn main() {}
+</span>fn polyline3d() -&gt; Shape {
+    let points = vec![
+        Vec3::new(0.0, 0.0, 0.0),
+        Vec3::new(1.0, 1.0, 0.0),
+        Vec3::new(2.0, 0.0, 1.0),
+    ];
+    let thickness = 0.1;
+    let closed = false;
+    let segments = 8;
+    Shape::polyline3d(points, thickness, closed, segments, ShapeDetail::Medium)
+}</code></pre>
 <p>Renders as tube geometry along the point path.</p>
-<h3 id="bézier-curve"><a class="header" href="#bézier-curve">Bézier Curve</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>Shape::bezier_curve(control_points, thickness, segments, detail)
-<span class="boring">}</span></code></pre>
-<p>Supports linear (2 points), quadratic (3 points), and cubic (4+ points) Bézier curves rendered as tubes.</p>
+<h3 id="bezier-curve"><a class="header" href="#bezier-curve">Bezier Curve</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
+</span><span class="boring">use bevy_gradmesh::{Shape, ShapeDetail};
+</span><span class="boring">fn main() {}
+</span>fn bezier_curve() -&gt; Shape {
+    let control_points = vec![
+        Vec3::new(0.0, 0.0, 0.0),
+        Vec3::new(1.0, 2.0, 0.0),
+        Vec3::new(2.0, 2.0, 0.0),
+        Vec3::new(3.0, 0.0, 0.0),
+    ];
+    let thickness = 0.1;
+    let segments = 32;
+    Shape::bezier_curve(control_points, thickness, segments, ShapeDetail::Medium)
+}</code></pre>
+<p>Supports linear (2 points), quadratic (3 points), and cubic (4+ points) Bezier curves rendered as tubes.</p>
 
                     </main>
 
@@ -356,6 +435,7 @@ Shape::arbitrary_polygon_colored(vertices, colors, detail)
         <script src="book-609e4cb8.js"></script>
 
         <!-- Custom JS scripts -->
+        <script src="variant_switch-903d09f9.js"></script>
 
 
 

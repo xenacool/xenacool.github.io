@@ -28,6 +28,7 @@
         <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
 
         <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="variant_switch-2015b158.css">
 
 
         <!-- Provide site root and default themes to javascript -->
@@ -35,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-77679fc6.js";
+            window.path_to_searchindex_js = "searchindex-6557ef1d.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-cbf67a2d.js"></script>
@@ -185,65 +186,74 @@
 <h2 id="animation-types"><a class="header" href="#animation-types">Animation Types</a></h2>
 <h3 id="color-pulse"><a class="header" href="#color-pulse">Color Pulse</a></h3>
 <p>Blend between primary and secondary color over time:</p>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>use bevy_gradmesh::AppearanceSnapshot;
-
-let appearance = AppearanceSnapshot::color_pulse(
-    1.0,  // 1 cycle per second
-    0.0,  // phase offset (0.0–1.0)
-);
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::AppearanceSnapshot;
+</span><span class="boring">fn main() {}
+</span>fn pulse() -&gt; AppearanceSnapshot {
+    AppearanceSnapshot::color_pulse(
+        1.0,  // 1 cycle per second
+        0.0,  // phase offset (0.0 to 1.0)
+    )
+}</code></pre>
 <h3 id="color-cycle"><a class="header" href="#color-cycle">Color Cycle</a></h3>
 <p>Shift through color hues continuously:</p>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>let appearance = AppearanceSnapshot::color_cycle(
-    0.5,  // 0.5 cycles per second
-    0.25, // starting hue offset
-);
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::AppearanceSnapshot;
+</span><span class="boring">fn main() {}
+</span>fn cycle() -&gt; AppearanceSnapshot {
+    AppearanceSnapshot::color_cycle(
+        0.5,  // 0.5 cycles per second
+        0.25, // starting hue offset
+    )
+}</code></pre>
 <h3 id="gradient-shift"><a class="header" href="#gradient-shift">Gradient Shift</a></h3>
 <p>Shift the gradient direction over time:</p>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>let appearance = AppearanceSnapshot::gradient_shift(
-    0.3,  // rotation speed
-    0.0,  // starting angle
-);
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::AppearanceSnapshot;
+</span><span class="boring">fn main() {}
+</span>fn shift() -&gt; AppearanceSnapshot {
+    AppearanceSnapshot::gradient_shift(
+        0.3,  // rotation speed
+        0.0,  // starting angle
+    )
+}</code></pre>
 <h3 id="static-no-animation"><a class="header" href="#static-no-animation">Static (No Animation)</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>let appearance = AppearanceSnapshot::static_appearance();
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::AppearanceSnapshot;
+</span><span class="boring">fn main() {}
+</span>fn still() -&gt; AppearanceSnapshot {
+    AppearanceSnapshot::static_appearance()
+}</code></pre>
 <p><em>Static, colour pulse, colour cycle and gradient shift rows; the phase is staggered over the instances, and the shader animates what the CPU uploaded once. Run <code>cargo run --example appearance</code> to reproduce it.</em></p>
 <h2 id="using-with-batchrecorder"><a class="header" href="#using-with-batchrecorder">Using with BatchRecorder</a></h2>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>use bevy_gradmesh::{BatchRecorder, AppearanceSnapshot};
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
+</span><span class="boring">use bevy_gradmesh::{AppearanceSnapshot, BatchRecorder, ShapeDetail};
+</span><span class="boring">fn main() {}
+</span>#[derive(Resource)]
+struct Recorder(BatchRecorder);
 
-fn draw(mut recorder: ResMut&lt;BatchRecorder&gt;) {
+fn draw(
+    mut commands: Commands,
+    meshes: ResMut&lt;Assets&lt;Mesh&gt;&gt;,
+    mut recorder: ResMut&lt;Recorder&gt;,
+) {
+    let recorder = &amp;mut recorder.0;
     recorder.begin();
-    
+
     for i in 0..50 {
         recorder.set_position(Vec3::new(
             (i % 10) as f32 * 2.0,
             0.0,
             (i / 10) as f32 * 2.0,
         ));
-        
+
         // Each instance animates with a different phase
         recorder.set_appearance(
             AppearanceSnapshot::color_pulse(2.0, i as f32 / 50.0)
         );
-        
+
         recorder.sphere(0.3, ShapeDetail::Medium, [1.0, 0.0, 0.0, 1.0]);
     }
-    
-    recorder.render_batches(&amp;mut commands, &amp;mut meshes, None);
-}
-<span class="boring">}</span></code></pre>
+
+    recorder.end();
+    recorder.render_batches(&amp;mut commands, meshes, None);
+}</code></pre>
 <h2 id="how-it-works"><a class="header" href="#how-it-works">How It Works</a></h2>
 <ol>
 <li>Each instance carries an <code>AppearanceSnapshot</code> vec4 encoding speed, phase, and type</li>
@@ -305,6 +315,7 @@ fn draw(mut recorder: ResMut&lt;BatchRecorder&gt;) {
         <script src="book-609e4cb8.js"></script>
 
         <!-- Custom JS scripts -->
+        <script src="variant_switch-903d09f9.js"></script>
 
 
 

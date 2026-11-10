@@ -28,6 +28,7 @@
         <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
 
         <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="variant_switch-2015b158.css">
 
 
         <!-- Provide site root and default themes to javascript -->
@@ -35,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-77679fc6.js";
+            window.path_to_searchindex_js = "searchindex-6557ef1d.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-cbf67a2d.js"></script>
@@ -183,28 +184,26 @@
                         <h1 id="styles--materials"><a class="header" href="#styles--materials">Styles &amp; Materials</a></h1>
 <h2 id="dual-directional-shading"><a class="header" href="#dual-directional-shading">Dual-Directional Shading</a></h2>
 <p>The signature feature of BevyGradmesh. Colors a surface with a smooth gradient between two colors along a given direction.</p>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>use bevy_gradmesh::dual_directional;
-
-let mat = dual_directional(
-    [0.6, 0.4, 0.3],  // dark color (RGB)
-    [0.96, 0.8, 0.69], // light color (RGB)
-    [0.0, 1.0, 0.0],   // gradient direction
-);
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::{GradMeshMaterial, dual_directional};
+</span><span class="boring">fn main() {}
+</span>fn directional_material() -&gt; GradMeshMaterial {
+    dual_directional(
+        [0.6, 0.4, 0.3],   // dark color (RGB)
+        [0.96, 0.8, 0.69], // light color (RGB)
+        [0.0, 1.0, 0.0],   // gradient direction
+    )
+}</code></pre>
 <h2 id="color-spaces"><a class="header" href="#color-spaces">Color Spaces</a></h2>
 <p>Gradients blend in OKLAB by default, which avoids the muddy midpoints that
 RGB interpolation produces. Pick another space with <code>with_mix_space</code>:</p>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>use bevy_gradmesh::{MixSpace, dual_directional, with_mix_space};
-
-let mat = with_mix_space(
-    dual_directional([0.6, 0.4, 0.3], [0.96, 0.8, 0.69], [0.0, 1.0, 0.0]),
-    MixSpace::Oklch,
-);
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::{GradMeshMaterial, MixSpace, dual_directional, with_mix_space};
+</span><span class="boring">fn main() {}
+</span>fn oklch_material() -&gt; GradMeshMaterial {
+    with_mix_space(
+        dual_directional([0.6, 0.4, 0.3], [0.96, 0.8, 0.69], [0.0, 1.0, 0.0]),
+        MixSpace::Oklch,
+    )
+}</code></pre>
 <div class="table-wrapper">
 <table>
 <thead>
@@ -241,81 +240,80 @@ exact for every shape kind. <code>Shape::bounds_2d()</code> does the same for
 read it every frame.</p>
 <h2 id="dual-radial-shading"><a class="header" href="#dual-radial-shading">Dual-Radial Shading</a></h2>
 <p>Gradient radiates from the center outward:</p>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>use bevy_gradmesh::dual_radial;
-
-let mat = dual_radial(
-    [0.6, 0.4, 0.3],
-    [0.96, 0.8, 0.69],
-);
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::{GradMeshMaterial, dual_radial};
+</span><span class="boring">fn main() {}
+</span>fn radial_material() -&gt; GradMeshMaterial {
+    dual_radial(
+        [0.6, 0.4, 0.3],   // inner color
+        [0.96, 0.8, 0.69], // outer color
+    )
+}</code></pre>
 <h2 id="blend-modes"><a class="header" href="#blend-modes">Blend Modes</a></h2>
 <p><em>Opaque, transparent, additive, multiplicative, screen, dither and dashed styles. Run <code>cargo run --example styles</code> to reproduce it.</em></p>
 <h3 id="opaque"><a class="header" href="#opaque">Opaque</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>use bevy_gradmesh::opaque;
-let mat = opaque(1.0, 0.0, 0.0);
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::{GradMeshMaterial, opaque};
+</span><span class="boring">fn main() {}
+</span>fn opaque_material() -&gt; GradMeshMaterial {
+    opaque(1.0, 0.0, 0.0)
+}</code></pre>
 <h3 id="transparent"><a class="header" href="#transparent">Transparent</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>use bevy_gradmesh::transparent;
-let mat = transparent(1.0, 0.0, 0.0, 0.5);
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::{GradMeshMaterial, transparent};
+</span><span class="boring">fn main() {}
+</span>fn transparent_material() -&gt; GradMeshMaterial {
+    transparent(1.0, 0.0, 0.0, 0.5)
+}</code></pre>
 <h3 id="additive-glow-effect"><a class="header" href="#additive-glow-effect">Additive (Glow Effect)</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>use bevy_gradmesh::additive;
-let mat = additive(1.0, 0.5, 0.0);
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::{GradMeshMaterial, additive};
+</span><span class="boring">fn main() {}
+</span>fn additive_material() -&gt; GradMeshMaterial {
+    additive(1.0, 0.5, 0.0)
+}</code></pre>
 <h3 id="multiplicative"><a class="header" href="#multiplicative">Multiplicative</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>use bevy_gradmesh::multiplicative;
-let mat = multiplicative(0.5, 0.5, 0.5);
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::{GradMeshMaterial, multiplicative};
+</span><span class="boring">fn main() {}
+</span>fn multiplicative_material() -&gt; GradMeshMaterial {
+    multiplicative(0.5, 0.5, 0.5)
+}</code></pre>
 <h3 id="screen"><a class="header" href="#screen">Screen</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>use bevy_gradmesh::screen;
-let mat = screen(1.0, 1.0, 0.0);
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::{GradMeshMaterial, screen};
+</span><span class="boring">fn main() {}
+</span>fn screen_material() -&gt; GradMeshMaterial {
+    screen(1.0, 1.0, 0.0)
+}</code></pre>
 <h3 id="dither"><a class="header" href="#dither">Dither</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>use bevy_gradmesh::dither;
-let mat = dither(1.0, 0.0, 0.0, 0.5);
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::{GradMeshMaterial, dither};
+</span><span class="boring">fn main() {}
+</span>fn dither_material() -&gt; GradMeshMaterial {
+    dither(1.0, 0.0, 0.0, 0.5)
+}</code></pre>
 <h3 id="dashed-outlines"><a class="header" href="#dashed-outlines">Dashed Outlines</a></h3>
 <p>Use <code>Style::with_dash</code> to add a dash pattern to any style:</p>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>use bevy_gradmesh::{Style, Dash};
-
-let style = Style::opaque(Color::WHITE).with_dash(
-    Dash::fixed(4, 0.2),
-);
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
+</span><span class="boring">use bevy_gradmesh::{Dash, Style};
+</span><span class="boring">fn main() {}
+</span>fn dashed_style() -&gt; Style {
+    Style::opaque(Color::WHITE).with_dash(Dash::fixed(4, 0.2))
+}</code></pre>
 <h2 id="custom-shaders"><a class="header" href="#custom-shaders">Custom Shaders</a></h2>
 <p>Attach any Bevy shader:</p>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>use bevy_gradmesh::BlendMode;
-use bevy::asset::Handle;
-
-let style = Style::custom(my_shader_handle, [1.0, 0.0, 0.0, 1.0]);
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
+</span><span class="boring">use bevy_gradmesh::Style;
+</span><span class="boring">fn main() {}
+</span>fn custom_style(my_shader_handle: Handle&lt;Shader&gt;) -&gt; Style {
+    Style::custom(my_shader_handle, Color::srgb(1.0, 0.0, 0.0))
+}</code></pre>
 <h2 id="pbr-properties"><a class="header" href="#pbr-properties">PBR Properties</a></h2>
 <p>All materials support Bevy’s PBR properties:</p>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>let mut mat = dual_directional([...], [...], [...]);
-mat.roughness = 0.1;    // Polished surface
-mat.metallic = 1.0;     // Metallic
-mat.emissive = Color::srgb(1.0, 0.0, 0.0).to_linear(); // Glow
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
+</span><span class="boring">use bevy_gradmesh::{GradMeshMaterial, dual_directional};
+</span><span class="boring">fn main() {}
+</span>fn pbr_material() -&gt; GradMeshMaterial {
+    let mut mat = dual_directional([0.2, 0.2, 0.8], [0.8, 0.2, 0.2], [0.0, 1.0, 0.0]);
+    mat.base.perceptual_roughness = 0.1; // Polished surface
+    mat.base.metallic = 1.0; // Metallic
+    mat.base.emissive = Color::srgb(1.0, 0.0, 0.0).to_linear(); // Glow
+    mat
+}</code></pre>
 <p><em>Transparency, emissive glow, metallic surfaces and combinations. Run <code>cargo run --example pbr_effects</code> to reproduce it.</em></p>
 
                     </main>
@@ -369,6 +367,7 @@ mat.emissive = Color::srgb(1.0, 0.0, 0.0).to_linear(); // Glow
         <script src="book-609e4cb8.js"></script>
 
         <!-- Custom JS scripts -->
+        <script src="variant_switch-903d09f9.js"></script>
 
 
 

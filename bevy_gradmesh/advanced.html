@@ -28,6 +28,7 @@
         <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
 
         <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="variant_switch-2015b158.css">
 
 
         <!-- Provide site root and default themes to javascript -->
@@ -35,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-77679fc6.js";
+            window.path_to_searchindex_js = "searchindex-6557ef1d.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-cbf67a2d.js"></script>
@@ -183,8 +184,9 @@
                         <h1 id="advanced-topics"><a class="header" href="#advanced-topics">Advanced Topics</a></h1>
 <h2 id="frustum-culling"><a class="header" href="#frustum-culling">Frustum Culling</a></h2>
 <p>BevyGradmesh automatically culls instances outside the camera’s view frustum. Each batch stores a mesh AABB, and per-instance transforms are tested against 6 frustum planes extracted from the view-projection matrix.</p>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
+</span><span class="boring">use bevy_gradmesh::InstancedStats;
+</span><span class="boring">fn main() {}
 </span>// Culling is automatic - no configuration needed
 // Check stats to see how many instances were culled
 fn log_culling(stats: Res&lt;InstancedStats&gt;) {
@@ -193,50 +195,49 @@ fn log_culling(stats: Res&lt;InstancedStats&gt;) {
         stats.total_instances_before_cull,
         stats.culled_instances as f32 / stats.total_instances_before_cull as f32 * 100.0
     );
-}
-<span class="boring">}</span></code></pre>
+}</code></pre>
 <h2 id="mesh-caching"><a class="header" href="#mesh-caching">Mesh Caching</a></h2>
 <p>The <code>MeshCache</code> resource avoids regenerating identical geometry:</p>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>use bevy_gradmesh::MeshCache;
-
-fn check_cache(cache: Res&lt;MeshCache&gt;) {
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
+</span><span class="boring">use bevy_gradmesh::MeshCache;
+</span><span class="boring">fn main() {}
+</span>fn check_cache(cache: Res&lt;MeshCache&gt;) {
     info!("Cache hit rate: {:.1}%", cache.hit_rate() * 100.0);
-}
-<span class="boring">}</span></code></pre>
+}</code></pre>
 <h2 id="render-state-control"><a class="header" href="#render-state-control">Render State Control</a></h2>
 <p>Control depth test, depth write, and render layer per-batch:</p>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>use bevy_gradmesh::{RenderState, DepthTest, DepthWrite};
-
-recorder.set_render_state(RenderState {
-    layer: 0,
-    depth_test: DepthTest::LessEqual,
-    depth_write: DepthWrite::On,
-});
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::{BatchRecorder, DepthTest, DepthWrite, RenderState};
+</span><span class="boring">fn main() {}
+</span>fn set_state(recorder: &amp;mut BatchRecorder) {
+    recorder.set_render_state(RenderState {
+        layer: 0,
+        depth_test: DepthTest::LessEqual,
+        depth_write: DepthWrite::Enabled,
+    });
+}</code></pre>
 <h2 id="custom-shader-passthrough"><a class="header" href="#custom-shader-passthrough">Custom Shader Passthrough</a></h2>
 <p>Use any Bevy shader with gradmesh shapes:</p>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>use bevy_gradmesh::{BlendMode, Style};
-
-let custom_style = Style::custom(my_shader_handle, [1.0, 0.0, 0.0, 1.0]);
-<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
+</span><span class="boring">use bevy_gradmesh::Style;
+</span><span class="boring">fn main() {}
+</span>fn custom_style(my_shader_handle: Handle&lt;Shader&gt;) -&gt; Style {
+    Style::custom(my_shader_handle, Color::srgb(1.0, 0.0, 0.0))
+}</code></pre>
 <h2 id="physics-integration"><a class="header" href="#physics-integration">Physics Integration</a></h2>
-<p>BevyGradmesh meshes work with any Bevy physics plugin:</p>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>use avian3d::prelude::*;
-
-// Exact triangle-mesh collision
-let collider = Collider::trimesh_from_mesh(&amp;mesh);
-
-// Convex approximation
-let collider = Collider::convex_hull_from_mesh(&amp;mesh);
-<span class="boring">}</span></code></pre>
+<p>BevyGradmesh meshes work with any Bevy physics plugin. Read the vertices and
+triangles from the built mesh and pass them to the plugin’s trimesh or convex
+hull constructor:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
+</span><span class="boring">use bevy_gradmesh::Shape;
+</span><span class="boring">fn main() {}
+</span>fn collider_data(shape: &amp;Shape) -&gt; Option&lt;(Vec&lt;Vec3&gt;, Vec&lt;[u32; 3]&gt;)&gt; {
+    let mesh = shape.build();
+    let positions = mesh.attribute(Mesh::ATTRIBUTE_POSITION)?.as_float3()?;
+    let vertices: Vec&lt;Vec3&gt; = positions.iter().map(|p| Vec3::from(*p)).collect();
+    let indices: Vec&lt;u32&gt; = mesh.indices()?.iter().map(|i| i as u32).collect();
+    let triangles = indices.chunks_exact(3).map(|t| [t[0], t[1], t[2]]).collect();
+    Some((vertices, triangles))
+}</code></pre>
 <h2 id="performance-tuning"><a class="header" href="#performance-tuning">Performance Tuning</a></h2>
 <ol>
 <li><strong>Use batched mode</strong> for large numbers of similar shapes</li>
@@ -250,7 +251,7 @@ let collider = Collider::convex_hull_from_mesh(&amp;mesh);
 <li>No Order-Independent Transparency (OIT)</li>
 <li>No planar reflections</li>
 <li>No visual editor integration (Bevy has no editor)</li>
-<li>NURBS curves not supported (only cubic Bézier)</li>
+<li>NURBS curves not supported (only cubic Bezier)</li>
 <li>No secondary LOD membership during transitions</li>
 </ul>
 <h2 id="license"><a class="header" href="#license">License</a></h2>
@@ -307,6 +308,7 @@ let collider = Collider::convex_hull_from_mesh(&amp;mesh);
         <script src="book-609e4cb8.js"></script>
 
         <!-- Custom JS scripts -->
+        <script src="variant_switch-903d09f9.js"></script>
 
 
 

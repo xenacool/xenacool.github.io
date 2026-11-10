@@ -1,0 +1,28 @@
+/* Bevy appends its own canvas to the body and sizes it to 1280x720 with inline styles.
+   The max sizes scale it down to the frame, which keeps the 16:9 shape of the frame. */
+
+.showcase-frame {
+  --frame-bg: #1a1a2e;
+  --frame-fg: #ffffff;
+
+  display: grid;
+  place-items: center;
+  height: 100vh;
+  margin: 0;
+  overflow: hidden;
+  background: var(--frame-bg);
+}
+
+canvas {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.showcase-frame__status {
+  position: absolute;
+  margin: 0;
+  color: var(--frame-fg);
+  font-family: sans-serif;
+  font-size: 14px;
+}

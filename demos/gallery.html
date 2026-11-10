@@ -3,109 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Interactive gallery of Bevy examples running in your browser via WebAssembly">
-  <title>Example Gallery — xenacool</title>
+  <meta name="description" content="Showcase applications built with bevy_composable_dragging and bevy_gradmesh, running in your browser">
+  <title>Gallery: xenacool</title>
   <link rel="stylesheet" href="../css/main.css">
-  <style>
-    /* Gallery-specific styles */
-    .gallery-intro {
-      max-width: 800px;
-      margin: 0 auto 2rem;
-      text-align: center;
-      color: var(--color-text-secondary);
-    }
-
-    .gallery-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
-      gap: 2rem;
-      max-width: 1400px;
-      margin: 0 auto;
-      padding: 0 1rem;
-    }
-
-    .gallery-item {
-      border: 1px solid var(--color-border);
-      border-radius: var(--radius-lg);
-      overflow: hidden;
-      background: var(--color-bg-secondary);
-      box-shadow: var(--color-card-shadow);
-      transition: box-shadow var(--transition-normal);
-    }
-
-    .gallery-item:hover {
-      box-shadow: var(--color-card-shadow-hover);
-    }
-
-    .gallery-item__header {
-      padding: 0.75rem 1rem;
-      border-bottom: 1px solid var(--color-border);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      background: var(--color-bg-tertiary);
-    }
-
-    .gallery-item__name {
-      font-family: var(--font-heading);
-      font-weight: 600;
-      font-size: 0.95rem;
-      color: var(--color-text);
-    }
-
-    .gallery-item__lib {
-      font-size: 0.75rem;
-      color: var(--color-text-muted);
-      background: var(--color-bg);
-      padding: 0.2rem 0.5rem;
-      border-radius: var(--radius-sm);
-    }
-
-    .gallery-item__iframe {
-      width: 100%;
-      height: 225px;
-      border: none;
-      display: block;
-      background: #1a1a2e;
-    }
-
-    .gallery-item__footer {
-      padding: 0.5rem 1rem;
-      border-top: 1px solid var(--color-border);
-      display: flex;
-      justify-content: flex-end;
-    }
-
-    .gallery-item__source {
-      font-size: 0.8rem;
-      color: var(--color-accent);
-      text-decoration: none;
-    }
-
-    .gallery-item__source:hover {
-      text-decoration: underline;
-    }
-
-    .gallery-section-title {
-      font-family: var(--font-heading);
-      font-size: 1.5rem;
-      font-weight: 600;
-      color: var(--color-text);
-      margin: 3rem 0 1.5rem;
-      padding-bottom: 0.5rem;
-      border-bottom: 2px solid var(--color-accent);
-      max-width: 1400px;
-      margin-left: auto;
-      margin-right: auto;
-      padding-left: 1rem;
-    }
-
-    @media (max-width: 768px) {
-      .gallery-grid {
-        grid-template-columns: 1fr;
-      }
-    }
-  </style>
+  <link rel="stylesheet" href="../css/book_demos.css">
+  <link rel="stylesheet" href="../css/gallery.css">
 </head>
 <body>
   <input type="checkbox" id="theme-toggle" class="theme-toggle__input" aria-label="Toggle dark mode">
@@ -118,7 +20,7 @@
       <ul class="nav__links">
         <li><a href="/bevy_composable_dragging/index.html" class="nav__link">Dragging Book</a></li>
         <li><a href="/bevy_gradmesh/index.html" class="nav__link">Gradmesh Book</a></li>
-        <li><a href="/demos/gallery.html" class="nav__link">Gallery</a></li>
+        <li><a href="/demos/gallery.html" class="nav__link" aria-current="page">Gallery</a></li>
       </ul>
 
       <div class="nav__personal">
@@ -134,76 +36,63 @@
     </div>
   </nav>
 
-  <!-- Main Content -->
   <main class="main">
     <section class="hero">
-      <h1 class="hero__title">Example Gallery</h1>
+      <h1 class="hero__title">Gallery</h1>
       <p class="hero__subtitle">
-        Live interactive examples running Bevy in your browser via WebAssembly.
-        Each example loads the shared runtime once, then switches instantly.
+        Larger applications built from bevy_composable_dragging and bevy_gradmesh.
+        Each one downloads on its own when you press Run.
       </p>
     </section>
 
-    <p class="gallery-intro">
-      Click an example to interact with it. The first example downloads the shared runtime (~12 MB compressed),
-      after that all examples load instantly from cache.
-    </p>
+    <div class="gallery">
+      <article class="showcase" data-showcase="kart_racer_editor">
+        <div class="showcase__stage"></div>
+        <h2 class="showcase__title">Kart racer editor</h2>
+        <p class="showcase__description">
+          A track editor. Pull the control points of a closed loop to bend the road, pull the
+          width handle to widen it, and drag the land up or down to raise hills under it.
+        </p>
+        <a class="showcase__source" href="https://github.com/xenacool/bevy_composable_dragging/tree/main/examples/kart_racer_editor">View source</a>
+      </article>
 
-    <!-- Gallery content is auto-generated from examples.json -->
-    <div id="gallery-content"></div>
+      <article class="showcase" data-showcase="cozy_castle">
+        <div class="showcase__stage"></div>
+        <h2 class="showcase__title">Cozy castle</h2>
+        <p class="showcase__description">
+          A castle builder. Choose pieces from a radial menu, stack them, open arches in walls
+          with a gate, and stretch walls with a scale gizmo. Every drop is previewed while the
+          pointer is still down.
+        </p>
+        <a class="showcase__source" href="https://github.com/xenacool/bevy_composable_dragging/tree/main/examples/cozy_castle">View source</a>
+      </article>
+
+      <article class="showcase" data-showcase="physics_lab">
+        <div class="showcase__stage"></div>
+        <h2 class="showcase__title">Physics lab</h2>
+        <p class="showcase__description">
+          A drag-and-drop editor for physics scenarios. Place gradmesh shapes on a grid, tune
+          colliders, timestep and friction from a radial menu, then press Play and grab the
+          bodies while avian simulates them.
+        </p>
+        <a class="showcase__source" href="https://github.com/xenacool/bevy_composable_dragging/tree/main/examples/physics_lab">View source</a>
+      </article>
+
+      <article class="showcase" data-showcase="composable_dragging_synth_demo">
+        <div class="showcase__stage">
+          <p class="showcase__placeholder">Coming soon</p>
+        </div>
+        <h2 class="showcase__title">Synth demo</h2>
+        <p class="showcase__description">
+          A synthesizer built on bevy_composable_dragging. It is in progress, and its Run
+          button appears here once it has a build.
+        </p>
+        <a class="showcase__source" href="https://github.com/xenacool/composable_dragging_synth_demo">View source</a>
+      </article>
+    </div>
   </main>
 
-  <!-- Gallery renderer: loads examples.json and builds the grid -->
-  <script>
-    (function() {
-      var container = document.getElementById('gallery-content');
-      if (!container) return;
-
-      fetch('wasm/examples.json')
-        .then(function(r) { return r.json(); })
-        .then(function(examples) {
-          var byLib = {};
-          examples.forEach(function(ex) {
-            var lib = ex.lib;
-            if (!byLib[lib]) byLib[lib] = [];
-            byLib[lib].push(ex);
-          });
-
-          var html = '';
-          var libOrder = ['bevy_gradmesh', 'bevy_composable_dragging'];
-          Object.keys(byLib).forEach(function(lib) {
-            if (libOrder.indexOf(lib) === -1) libOrder.push(lib);
-          });
-
-          libOrder.forEach(function(lib) {
-            var list = byLib[lib];
-            if (!list) return;
-            var libLabel = lib.replace('bevy_', '').replace(/_/g, ' ');
-            html += '<h2 class="gallery-section-title">' + lib + '</h2>';
-            html += '<div class="gallery-grid">';
-            list.forEach(function(ex) {
-              var libShort = lib === 'bevy_gradmesh' ? 'gradmesh' : 'dragging';
-              html += '<div class="gallery-item">';
-              html += '<div class="gallery-item__header">';
-              html += '<span class="gallery-item__name">' + ex.title + '</span>';
-              html += '<span class="gallery-item__lib">' + libShort + '</span>';
-              html += '</div>';
-              html += '<iframe class="gallery-item__iframe" src="wasm/demo-frame.html?example=' + ex.name + '" loading="lazy" title="' + ex.title + ' example"></iframe>';
-              html += '<div class="gallery-item__footer">';
-              html += '<a class="gallery-item__source" href="' + ex.source + '" target="_blank" rel="noopener noreferrer">View source</a>';
-              html += '</div>';
-              html += '</div>';
-            });
-            html += '</div>';
-          });
-
-          container.innerHTML = html;
-        })
-        .catch(function(err) {
-          container.innerHTML = '<p class="gallery-intro">Failed to load example list: ' + err.message + '</p>';
-        });
-    })();
-  </script>
+  <script type="module" src="../js/gallery/main.js"></script>
 
   <!-- Theme persistence script -->
   <script>
