@@ -4,6 +4,3 @@
 [submodule "libs/bevy_gradmesh"]
 	path = libs/bevy_gradmesh
 	url = git@github.com:xenacool/bevy_gradmesh.git
-[submodule "libs/composable_dragging_synth_demo"]
-	path = libs/composable_dragging_synth_demo
-	url = git@github.com:xenacool/composable_dragging_synth_demo.git

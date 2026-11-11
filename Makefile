@@ -16,13 +16,11 @@ GRADMESH_WASM_OUTPUT := bevy_gradmesh/wasm
 # Gallery showcases: one WASM binary each, built from demos/showcase_runner
 SHOWCASES := kart_racer_editor cozy_castle physics_lab
 SHOWCASE_RELEASE_DIR := demos/showcase_runner/target/wasm32-unknown-unknown/release
-SYNTH_SUBMODULE := libs/composable_dragging_synth_demo
-SYNTH_RELEASE_DIR := $(SYNTH_SUBMODULE)/target/wasm32-unknown-unknown/release
 
 # Default port for local server
 PORT ?= 8000
 
-.PHONY: all build-dragging build-gradmesh build build-wasm build-wasm-dragging build-wasm-gradmesh build-wasm-runner build-gallery build-gallery-showcases build-gallery-synth serve clean publish check-links check-links-local check-versions check-main-pages test-js help
+.PHONY: all build-dragging build-gradmesh build build-wasm build-wasm-dragging build-wasm-gradmesh build-wasm-runner build-gallery build-gallery-showcases serve clean publish check-links check-links-local check-versions check-main-pages test-js help
 
 all: build
 
@@ -68,8 +66,8 @@ build-wasm-runner:
 	echo "Shared WASM runtime: $$size bytes ($$(( size / 1024 / 1024 )) MB)"
 	@echo "Done: demos/wasm/"
 
-## Build the gallery: one binary per showcase, the synth demo when it has code, and the manifest
-build-gallery: build-gallery-showcases build-gallery-synth
+## Build the gallery: one binary per showcase and the manifest
+build-gallery: build-gallery-showcases
 	@mkdir -p demos/gallery
 	cp demos/showcase_runner/frame.html demos/gallery/frame.html
 	python3 scripts/gen_gallery_manifest.py
@@ -82,15 +80,6 @@ build-gallery-showcases:
 		scripts/package_showcase.sh $(SHOWCASE_RELEASE_DIR)/$$showcase.wasm || exit 1; \
 	done
 
-## Build the synth demo once its submodule has a Cargo.toml; its binary must be named after the repo
-build-gallery-synth:
-	@if [ -f $(SYNTH_SUBMODULE)/Cargo.toml ]; then \
-		echo "Building composable_dragging_synth_demo..."; \
-		(cd $(SYNTH_SUBMODULE) && cargo build --target wasm32-unknown-unknown --release) && \
-		scripts/package_showcase.sh $(SYNTH_RELEASE_DIR)/composable_dragging_synth_demo.wasm; \
-	else \
-		echo "Skipping composable_dragging_synth_demo: $(SYNTH_SUBMODULE) has no Cargo.toml yet"; \
-	fi
 
 ## Serve the site locally using Python's http.server
 serve:
