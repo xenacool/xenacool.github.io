@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-ad8b84fd.js";
+            window.path_to_searchindex_js = "searchindex-741896a4.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-d11337db.js"></script>
@@ -306,7 +306,7 @@ ViewNode::sdf("panel", SdfShape::rect(Vec2::new(200.0, 100.0)).with_corner_radiu
 <li><strong><code>drop_target</code> bounds.</strong> The default measures the target in the state the drag started from, so it keeps working when a drop removes the target. Dragology measures it in the target state; <code>drop_target_with_bounds</code> does that.</li>
 <li><strong><code>with_overlay</code>.</strong> The overlay is a list of ordinary non-draggable nodes, in the <code>overlay-</code> namespace, instead of SVG. There is no tree view or overlay visualization of operators.</li>
 <li><strong><code>with_chaining</code></strong> and the chaining of <code>with_snap_radius_options</code> need a state that can be compared with <code>PartialEq</code>, because Dragology compares drop and start state with deep equality.</li>
-<li><strong><code>substate</code></strong> previews of the sub-spec are not draggable, because a drag factory of the part cannot be turned into one of the whole.</li>
+<li><strong><code>substate</code></strong> previews keep all nodes draggable. The inner spec focuses on one node (a zipper over the view), merging its transform into the full view while preserving every sibling’s drag factory.</li>
 <li><strong><code>tactile_tessellations</code>.</strong> A new tile starts at its palette item instead of the canvas origin, the dragged tile is raised by the spec instead of through a z-index from the dragged id, the center of the tile follows the pointer by resetting the grab offset (Dragology’s <code>withInitContext({ anchorPos })</code>), and the outline of a polygon is a larger polygon behind it. Snap candidates, the overlap test, rotation along the shortest arc, <code>when_far</code> and the trash bin behave as in the original.</li>
 <li><strong>3D drag spaces and gizmos are additions.</strong> Dragology drags in the plane of the page. Here a drag resolves the pointer in a <code>DragSpace</code> (plane, axis or camera-facing plane), operators work on world positions and <code>Transform</code>s, nodes are picked by oriented bounds, and the value operators and <code>Gizmo</code> build on that. <code>Geometry::Grad</code> takes any <code>bevy_gradmesh</code> shape where Dragology draws SVG elements; text, filters and drop shadows have no counterpart.</li>
 <li><strong>Blending of different point counts.</strong> Dragology morphs paths with different segment counts; <code>bevy_gradmesh</code> 0.3 resamples polygons of different lengths in <code>Shape::lerp</code>, so tiles that change their number of sides morph here too. Shapes of different kinds still come from the nearer state.</li>
@@ -325,10 +325,14 @@ ViewNode::sdf("panel", SdfShape::rect(Vec2::new(200.0, 100.0)).with_corner_radiu
 <tr><td><code>reorder_list</code></td><td><code>closest</code> + floating</td></tr>
 <tr><td><code>ring_of_beads</code></td><td><code>closest</code> on a ring</td></tr>
 <tr><td><code>slider</code></td><td><code>vary</code> with a range constraint</td></tr>
+<tr><td><code>equal_constraint</code></td><td><code>vary</code> with <code>equal</code> constraint linking two parameters</td></tr>
+<tr><td><code>stickiness</code></td><td><code>closest</code> with stickiness bias toward the current branch</td></tr>
 <tr><td><code>clock</code></td><td><code>vary</code> one angle</td></tr>
-<tr><td><code>scheduler</code></td><td><code>closest</code> + <code>vary</code></td></tr>
-<tr><td><code>lists_in_lists</code></td><td>rows nested to any depth, <code>when_far</code> snap-or-free, <code>with_overlay</code> insertion marker</td></tr>
-<tr><td><code>tessellations</code></td><td>toolbar and trash bin</td></tr>
+<tr><td><code>constellation</code></td><td><code>substate</code>: a star focuses on its own position, kept in the sky, while its lines stretch and every other star stays draggable</td></tr>
+<tr><td><code>dag</code></td><td><code>substate</code>: a node focuses on its position and an arrowhead on one end of one edge, which snaps to nodes that keep the graph acyclic, floats when far and deletes the edge if dropped loose</td></tr>
+<tr><td><code>scheduler</code></td><td><code>substate</code>: one meeting’s lane and time, siblings stay draggable</td></tr>
+<tr><td><code>lists_in_lists</code></td><td><code>substate</code>: rows nested to any depth, <code>when_far</code> snap-or-free, <code>with_overlay</code> insertion marker</td></tr>
+<tr><td><code>tessellations</code></td><td><code>substate</code>: one tile’s cell, toolbar and trash bin</td></tr>
 <tr><td><code>gradient_hanoi_3d</code></td><td><code>shapes-3d</code></td></tr>
 <tr><td><code>gradient_kanban_2d</code></td><td><code>shapes-2d</code></td></tr>
 <tr><td><code>chain_of_cells</code></td><td><code>with_chaining</code>, overlay underline, drop transition</td></tr>

@@ -38,7 +38,7 @@ bevy = { version = "0.20", default-features = false, features = [
     "tonemapping_luts", "png", "webgl2", "ktx2", "zstd_rust"
 ] }
 bevy_gradmesh = { path = "../../libs/bevy_gradmesh" }
-bevy_composable_dragging = { path = "../../libs/bevy_composable_dragging", features = ["shapes-3d"] }
+bevy_composable_dragging = { path = "../../libs/bevy_composable_dragging", features = ["shapes-3d", "basic-terrain"] }
 avian3d = { version = "0.8", default-features = false, features = ["3d", "parry-f32", "collider-from-mesh"] }
 
 [patch.crates-io]

@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-ad8b84fd.js";
+            window.path_to_searchindex_js = "searchindex-741896a4.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-d11337db.js"></script>
@@ -442,6 +442,19 @@ ViewNode::circle("item", 0.3)
     })))
 <span class="boring">}</span></code></pre>
 <p><em>Drag items to reorder a list. Run <code>cargo run --example reorder_list --features pbr</code>.</em></p>
+<p>To resist flicker at the boundary between two branches, add stickiness:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use bevy_composable_dragging::ops::closest_states_with_stickiness;
+
+closest_states_with_stickiness(
+    [State { pos: 0 }, State { pos: 1 }, State { pos: 2 }],
+    1.0,  // world units of bias toward the current branch
+)
+<span class="boring">}</span></code></pre>
+<p>The current branch is kept until another branch is nearer to the pointer by more than the
+stickiness value. A value of zero behaves like plain <code>closest_states</code>.</p>
+<p><em>Three slots with a sticky dot. Run <code>cargo run --example stickiness --features pbr</code>.</em></p>
 <h2 id="vary--continuously-change-a-value"><a class="header" href="#vary--continuously-change-a-value"><code>vary</code> — Continuously Change a Value</a></h2>
 <p>Continuously change a numeric parameter of your state as you drag.</p>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
@@ -465,20 +478,120 @@ vary_constrained(
 )
 <span class="boring">}</span></code></pre>
 <p><em>A continuous slider. Run <code>cargo run --example slider --features pbr</code>.</em></p>
-<h2 id="substate--delegate-to-a-nested-state"><a class="header" href="#substate--delegate-to-a-nested-state"><code>substate</code> — Delegate to a Nested State</a></h2>
-<p>Apply an operator to a field of your state, using a <code>Lens</code>:</p>
+<p>When the state depends on numbers that are not direct fields, use <code>vary_func</code> to vary raw
+numbers and build the state from them. For example, a point constrained to a line <code>y = 2x</code> needs
+only one solver variable:</p>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
-</span>use bevy_composable_dragging::ops::{substate, between, Lens};
+</span>use bevy_composable_dragging::ops::{VaryOptions, vary_func};
 
-let lens = Lens::new(
-    |s: &amp;MyState| s.inner.clone(),
-    |s: &amp;MyState, inner| MyState { inner, ..s.clone() },
+vary_func(
+    [0.0],
+    |v| Point { x: v[0], y: v[0] * 2.0 },
+    VaryOptions::new().with_scale(10.0),
+)
+<span class="boring">}</span></code></pre>
+<p>The <code>build</code> closure receives the current solver values and returns the complete state. The <code>scale</code>
+option sizes the solver’s first steps to match the typical magnitude of those values. <code>vary_func</code>
+also accepts constraints and pins via <a href="#varyoptions"><code>VaryOptions</code></a>.</p>
+<h2 id="constraints"><a class="header" href="#constraints">Constraints</a></h2>
+<p>The <code>constraint</code> module provides helpers that restrict how <code>vary</code> changes parameters. Each constraint reports a violation score: zero when satisfied, positive when violated. The solver minimizes both the pointer distance and the total violation.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Constraint</th><th>Meaning</th></tr>
+</thead>
+<tbody>
+<tr><td><code>constraint::less_than(a, b)</code></td><td><code>a &lt;= b</code></td></tr>
+<tr><td><code>constraint::more_than(a, b)</code></td><td><code>a &gt;= b</code></td></tr>
+<tr><td><code>constraint::equal(a, b)</code></td><td><code>a == b</code></td></tr>
+<tr><td><code>constraint::in_order([a, b, c])</code></td><td><code>a &lt;= b &lt;= c</code></td></tr>
+<tr><td><code>constraint::at_least(a, min)</code></td><td><code>a &gt;= min</code></td></tr>
+<tr><td><code>constraint::at_most(a, max)</code></td><td><code>a &lt;= max</code></td></tr>
+<tr><td><code>constraint::in_range(a, min, max)</code></td><td><code>min &lt;= a &lt;= max</code></td></tr>
+<tr><td><code>constraint::and([c1, c2])</code></td><td>All constraints at once</td></tr>
+</tbody>
+</table>
+</div>
+<p>For example, <code>equal</code> locks two parameters together so dragging one forces the other to match:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use bevy_composable_dragging::constraint::equal;
+use bevy_composable_dragging::ops::vary_constrained;
+
+vary_constrained(
+    state.clone(),
+    [param!(State, a), param!(State, b)],
+    equal(param!(State, a), param!(State, b)),
+)
+<span class="boring">}</span></code></pre>
+<p><em>Two knobs locked together. Run <code>cargo run --example equal_constraint --features pbr</code>.</em></p>
+<h2 id="substate--isolate-one-item-with-a-lens-the-zipper-pattern"><a class="header" href="#substate--isolate-one-item-with-a-lens-the-zipper-pattern"><code>substate</code> — Isolate One Item with a Lens (the Zipper Pattern)</a></h2>
+<p><code>substate</code> is the most important operator for collections. When you drag one item in a list, grid, or graph, <code>substate</code> isolates that item’s state so the inner drag spec operates on a small value instead of the entire collection. This is called the <strong>zipper pattern</strong>: you zoom into one element, manipulate it, and zip back out.</p>
+<h3 id="why-use-substate"><a class="header" href="#why-use-substate">Why Use Substate</a></h3>
+<p><strong>1. Sibling drag factories are preserved.</strong> This is the primary benefit. Without <code>substate</code>, the preview frame strips drag factories from every node except the one being dragged. With <code>substate</code>, the library renders the full view (all nodes with their drag factories intact) and only merges the dragged node’s transform from the inner spec. The result: while dragging one item, every sibling remains fully interactive and draggable.</p>
+<p><strong>2. Smaller state means less cloning.</strong> Each snap branch or <code>vary_constrained</code> baseline clones the state. With <code>substate</code>, each branch clones a small struct (e.g., a <code>Vec2</code> position or a <code>Pose { pos, rot }</code>) instead of the entire collection. For a board with 20 tiles and 15 snap positions, this reduces cloning from 15 full boards to 15 small structs.</p>
+<p><strong>3. Scoped constraints.</strong> Constraints operate on the isolated state, not the full collection. A <code>no_overlap</code> constraint sees only the dragged tile’s pose, not the entire board. It cannot accidentally read or write another item’s state.</p>
+<h3 id="how-it-works"><a class="header" href="#how-it-works">How It Works</a></h3>
+<p>A <code>Lens</code> defines how to extract and inject the isolated state:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use bevy_composable_dragging::ops::{substate, closest, state, Lens};
+
+// Extract one tile's position from the full board.
+let tile = Lens::new(
+    |board: &amp;Board| board.tiles[dragged_id].pos,
+    |board: &amp;Board, pos| {
+        let mut b = board.clone();
+        b.tiles[dragged_id].pos = pos;
+        b
+    },
 );
 
-ViewNode::circle("nested", 0.3)
-    .draggable(|| substate(lens.clone(), between([0, 1, 2])))
+// The inner spec operates on Vec2, not Board.
+substate(tile, closest(branches))
 <span class="boring">}</span></code></pre>
+<p>The <code>substate</code> operator’s <code>lift</code> function (the zipper) works like this:</p>
+<ol>
+<li>Render the full view via the view function — this includes all drag factories from all nodes.</li>
+<li>Run the inner spec to get the dragged node’s new transform.</li>
+<li>Merge only that transform into the full view, leaving every other node untouched.</li>
+</ol>
+<h3 id="nested-substate"><a class="header" href="#nested-substate">Nested Substate</a></h3>
+<p>For operations like <code>when_far</code> inside <code>closest</code>, nest <code>substate</code> calls:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use bevy_composable_dragging::ops::{substate, closest, state, vary_constrained, Lens};
+
+// Outer lens: Board -&gt; Option&lt;TilePose&gt; (None if dropped on trash)
+let tile = Lens::new(
+    |board: &amp;Board| board.tile_pose(id),
+    |board: &amp;Board, pose| board.with_tile(id, pose),
+);
+
+// Inner lens: Option&lt;TilePose&gt; -&gt; TilePose (unwrap or use default)
+let pose = Lens::new(
+    |opt: &amp;Option&lt;TilePose&gt;| opt.unwrap_or(default),
+    |_, pose| Some(pose),
+);
+
+substate(
+    tile,
+    closest(branches)
+        .when_far(substate(pose, free_drag), GAP),
+)
+<span class="boring">}</span></code></pre>
+<p>The outer <code>substate</code> isolates the tile from the board. The inner <code>substate</code> unwraps the <code>Option</code> so <code>vary_constrained</code> operates on a concrete <code>TilePose</code>.</p>
+<h3 id="real-examples"><a class="header" href="#real-examples">Real Examples</a></h3>
+<ul>
+<li><strong><code>constellation</code></strong> — each star’s position is isolated via <code>substate</code>. While dragging one star, the others stay draggable and their connecting lines stretch naturally.</li>
+<li><strong><code>tactile_tessellations</code></strong> — one tile’s pose (position + rotation) is isolated. Snap branches are <code>Some(TilePose)</code> instead of full board clones. The <code>no_overlap</code> constraint scores only the dragged tile’s pose.</li>
+<li><strong><code>tactile_tessellations_3d</code></strong> — same pattern in 3D: one tile’s <code>Pose</code> isolates position and rotation on a face grid.</li>
+<li><strong><code>dag</code></strong> — an arrowhead’s target is isolated via <code>substate</code>, snapping to nodes that keep the graph acyclic.</li>
+<li><strong><code>scheduler</code></strong> — one meeting’s <code>(lane, start, end)</code> is isolated from the full schedule. While dragging one meeting, others remain interactive.</li>
+</ul>
+<h3 id="when-not-to-use-it"><a class="header" href="#when-not-to-use-it">When Not to Use It</a></h3>
+<p>If your state IS the value you’re dragging (a single scalar, a toggle, a slider), <code>substate</code> adds unnecessary indirection. Use it when your state is a collection and you’re dragging one element.</p>
 <h2 id="drop_target--define-a-drop-zone"><a class="header" href="#drop_target--define-a-drop-zone"><code>drop_target</code> — Define a Drop Zone</a></h2>
 <p>Mark a node as a drop target that accepts drops from other nodes.</p>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
@@ -1390,7 +1503,7 @@ ViewNode::sdf("panel", SdfShape::rect(Vec2::new(200.0, 100.0)).with_corner_radiu
 <li><strong><code>drop_target</code> bounds.</strong> The default measures the target in the state the drag started from, so it keeps working when a drop removes the target. Dragology measures it in the target state; <code>drop_target_with_bounds</code> does that.</li>
 <li><strong><code>with_overlay</code>.</strong> The overlay is a list of ordinary non-draggable nodes, in the <code>overlay-</code> namespace, instead of SVG. There is no tree view or overlay visualization of operators.</li>
 <li><strong><code>with_chaining</code></strong> and the chaining of <code>with_snap_radius_options</code> need a state that can be compared with <code>PartialEq</code>, because Dragology compares drop and start state with deep equality.</li>
-<li><strong><code>substate</code></strong> previews of the sub-spec are not draggable, because a drag factory of the part cannot be turned into one of the whole.</li>
+<li><strong><code>substate</code></strong> previews keep all nodes draggable. The inner spec focuses on one node (a zipper over the view), merging its transform into the full view while preserving every sibling’s drag factory.</li>
 <li><strong><code>tactile_tessellations</code>.</strong> A new tile starts at its palette item instead of the canvas origin, the dragged tile is raised by the spec instead of through a z-index from the dragged id, the center of the tile follows the pointer by resetting the grab offset (Dragology’s <code>withInitContext({ anchorPos })</code>), and the outline of a polygon is a larger polygon behind it. Snap candidates, the overlap test, rotation along the shortest arc, <code>when_far</code> and the trash bin behave as in the original.</li>
 <li><strong>3D drag spaces and gizmos are additions.</strong> Dragology drags in the plane of the page. Here a drag resolves the pointer in a <code>DragSpace</code> (plane, axis or camera-facing plane), operators work on world positions and <code>Transform</code>s, nodes are picked by oriented bounds, and the value operators and <code>Gizmo</code> build on that. <code>Geometry::Grad</code> takes any <code>bevy_gradmesh</code> shape where Dragology draws SVG elements; text, filters and drop shadows have no counterpart.</li>
 <li><strong>Blending of different point counts.</strong> Dragology morphs paths with different segment counts; <code>bevy_gradmesh</code> 0.3 resamples polygons of different lengths in <code>Shape::lerp</code>, so tiles that change their number of sides morph here too. Shapes of different kinds still come from the nearer state.</li>
@@ -1409,10 +1522,14 @@ ViewNode::sdf("panel", SdfShape::rect(Vec2::new(200.0, 100.0)).with_corner_radiu
 <tr><td><code>reorder_list</code></td><td><code>closest</code> + floating</td></tr>
 <tr><td><code>ring_of_beads</code></td><td><code>closest</code> on a ring</td></tr>
 <tr><td><code>slider</code></td><td><code>vary</code> with a range constraint</td></tr>
+<tr><td><code>equal_constraint</code></td><td><code>vary</code> with <code>equal</code> constraint linking two parameters</td></tr>
+<tr><td><code>stickiness</code></td><td><code>closest</code> with stickiness bias toward the current branch</td></tr>
 <tr><td><code>clock</code></td><td><code>vary</code> one angle</td></tr>
-<tr><td><code>scheduler</code></td><td><code>closest</code> + <code>vary</code></td></tr>
-<tr><td><code>lists_in_lists</code></td><td>rows nested to any depth, <code>when_far</code> snap-or-free, <code>with_overlay</code> insertion marker</td></tr>
-<tr><td><code>tessellations</code></td><td>toolbar and trash bin</td></tr>
+<tr><td><code>constellation</code></td><td><code>substate</code>: a star focuses on its own position, kept in the sky, while its lines stretch and every other star stays draggable</td></tr>
+<tr><td><code>dag</code></td><td><code>substate</code>: a node focuses on its position and an arrowhead on one end of one edge, which snaps to nodes that keep the graph acyclic, floats when far and deletes the edge if dropped loose</td></tr>
+<tr><td><code>scheduler</code></td><td><code>substate</code>: one meeting’s lane and time, siblings stay draggable</td></tr>
+<tr><td><code>lists_in_lists</code></td><td><code>substate</code>: rows nested to any depth, <code>when_far</code> snap-or-free, <code>with_overlay</code> insertion marker</td></tr>
+<tr><td><code>tessellations</code></td><td><code>substate</code>: one tile’s cell, toolbar and trash bin</td></tr>
 <tr><td><code>gradient_hanoi_3d</code></td><td><code>shapes-3d</code></td></tr>
 <tr><td><code>gradient_kanban_2d</code></td><td><code>shapes-2d</code></td></tr>
 <tr><td><code>chain_of_cells</code></td><td><code>with_chaining</code>, overlay underline, drop transition</td></tr>
