@@ -27,7 +27,7 @@ fn main() {
 
     let dragging: &[&str] = &[
         "blend_square", "chain_of_cells", "clock", "gizmo_3d",
-        "gradient_hanoi_3d", "gradient_kanban_2d", "hello",
+        "gradient_hanoi_3d", "gradient_kanban_2d",
         "lists_in_lists", "reorder_list", "ring_of_beads", "scheduler",
         "slider", "tactile_tessellations", "tessellations", "three_way", "toggle",
     ];
@@ -391,7 +391,6 @@ fn strip_add_plugins(text: &str) -> String {
             // Find the end of this add_plugins call (matching parens)
             let mut depth = 0;
             let mut end_line = i;
-            let mut found_close = false;
             for ch in lines[i].chars() {
                 if ch == '(' {
                     depth += 1;

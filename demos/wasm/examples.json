@@ -26,7 +26,6 @@
   {"name":"gizmo_3d","lib":"bevy_composable_dragging","title":"Gizmo 3d","source":"https://github.com/xenacool/bevy_composable_dragging/tree/main/examples/gizmo_3d.rs"},
   {"name":"gradient_hanoi_3d","lib":"bevy_composable_dragging","title":"Gradient Hanoi 3d","source":"https://github.com/xenacool/bevy_composable_dragging/tree/main/examples/gradient_hanoi_3d.rs"},
   {"name":"gradient_kanban_2d","lib":"bevy_composable_dragging","title":"Gradient Kanban 2d","source":"https://github.com/xenacool/bevy_composable_dragging/tree/main/examples/gradient_kanban_2d.rs"},
-  {"name":"hello","lib":"bevy_composable_dragging","title":"Hello","source":"https://github.com/xenacool/bevy_composable_dragging/tree/main/examples/hello.rs"},
   {"name":"lists_in_lists","lib":"bevy_composable_dragging","title":"Lists In Lists","source":"https://github.com/xenacool/bevy_composable_dragging/tree/main/examples/lists_in_lists.rs"},
   {"name":"reorder_list","lib":"bevy_composable_dragging","title":"Reorder List","source":"https://github.com/xenacool/bevy_composable_dragging/tree/main/examples/reorder_list.rs"},
   {"name":"ring_of_beads","lib":"bevy_composable_dragging","title":"Ring Of Beads","source":"https://github.com/xenacool/bevy_composable_dragging/tree/main/examples/ring_of_beads.rs"},

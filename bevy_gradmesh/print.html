@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-ea5652b6.js";
+            window.path_to_searchindex_js = "searchindex-a3413240.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-cbf67a2d.js"></script>
@@ -279,8 +279,8 @@ PBR pipeline). Turn it off for PBR-free builds:</p>
 <pre><code class="language-toml">[dependencies]
 bevy_gradmesh = { version = "0.3", default-features = false }
 </code></pre>
-<p>These examples run without <code>pbr</code> (<code>cargo run --example &lt;name&gt; --no-default-features</code>): <code>shapes</code>, <code>styles</code>,
-<code>mix_spaces</code>, <code>curves</code>, <code>polyline</code>, <code>composed_shapes</code>, <code>arbitrary_shapes</code>, <code>gradient_2d</code>, <code>sdf_2d</code>,
+<p>These examples run without <code>pbr</code> (<code>cargo run --example &lt;name&gt; --no-default-features</code>): <code>styles</code>,
+<code>mix_spaces</code>, <code>curves</code>, <code>polyline</code>, <code>arbitrary_shapes</code>, <code>gradient_2d</code>, <code>sdf_2d</code>,
 <code>sdf_dash_gallery</code> and <code>standalone</code>. The others need <code>pbr</code>, which Cargo enables by default.</p>
 <h2 id="detail-levels"><a class="header" href="#detail-levels">Detail Levels</a></h2>
 <p>Control mesh resolution with <code>ShapeDetail</code>:</p>
@@ -352,12 +352,12 @@ bevy_gradmesh = { version = "0.3", default-features = false }
 }</code></pre>
 <p>When <code>capped</code> is true, the flat face is filled with geometry.</p>
 <h3 id="torus"><a class="header" href="#torus">Torus</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::Shape;
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::{Shape, ShapeDetail};
 </span><span class="boring">fn main() {}
 </span>fn torus() -&gt; Shape {
     let start_angle = 0.0;
     let span = std::f32::consts::TAU;
-    Shape::torus(1.0, 0.25, start_angle, span)
+    Shape::torus(1.0, 0.25, start_angle, span, ShapeDetail::Medium)
 }</code></pre>
 <p>Supports partial torus arcs. Use <code>start_angle = 0.0</code> and <code>span = TAU</code> for a full torus.</p>
 <h3 id="regular-prism"><a class="header" href="#regular-prism">Regular Prism</a></h3>
@@ -1877,6 +1877,7 @@ hull constructor:</p>
 <tr><td><code>deformation</code></td><td>Vertex shader animations: wobble, pulse, and morph effects</td></tr>
 <tr><td><code>appearance</code></td><td>Per-instance colour animation: static, pulse, cycle, and gradient shift</td></tr>
 <tr><td><code>arbitrary_shapes</code></td><td>Custom polygons with per-vertex colors, star shapes, annular rings, pie-slice wedges, and the side profiles of tapered cylinders</td></tr>
+<tr><td><code>lerp</code></td><td>Six animated shape morphs: disc↔star, rectangle↔ring, polygon↔disc rim, ring↔disc, disc rim↔rectangle, wedge↔disc</td></tr>
 </tbody>
 </table>
 </div>

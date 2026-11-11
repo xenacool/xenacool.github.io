@@ -700,7 +700,7 @@ dependencies = [
 
 [[package]]
 name = "bevy_composable_dragging"
-version = "0.3.5"
+version = "0.3.6"
 dependencies = [
  "bevy",
  "bevy_gradmesh",
@@ -1011,7 +1011,7 @@ dependencies = [
 
 [[package]]
 name = "bevy_gradmesh"
-version = "0.3.5"
+version = "0.3.6"
 dependencies = [
  "bevy",
  "bevy_asset",
