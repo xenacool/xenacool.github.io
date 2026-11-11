@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-ad779c5b.js";
+            window.path_to_searchindex_js = "searchindex-741896a4.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-d11337db.js"></script>
@@ -185,147 +185,115 @@
                         <h1 id="advanced-topics"><a class="header" href="#advanced-topics">Advanced Topics</a></h1>
 <h2 id="custom-operators"><a class="header" href="#custom-operators">Custom Operators</a></h2>
 <p>Build a custom operator by returning a <code>DragSpec</code> from a function:</p>
-<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::Vec3;
-</span>use bevy_composable_dragging::{DragSpec, DragBehavior, DragContext, Frame, Pointer};
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use bevy_composable_dragging::{DragSpec, DragBehavior, DragContext};
+use bevy_composable_dragging::behavior::Frame;
 
-fn my_operator&lt;S: Clone + Send + Sync + 'static&gt;(
-    states: impl IntoIterator&lt;Item = S&gt;,
-) -&gt; DragSpec&lt;S&gt; {
-    let first = states.into_iter().next().expect("my_operator needs a state");
+fn my_operator&lt;S: Clone&gt;(states: impl IntoIterator&lt;Item = S&gt;) -&gt; DragSpec&lt;S&gt; {
     DragSpec::new(move |context: &amp;DragContext&lt;S&gt;| {
-        let view = context.render(&amp;first);
-        let anchor = context.anchor_in(&amp;view).unwrap_or(Vec3::ZERO);
-        let drop_state = first.clone();
         // Build a DragBehavior that produces Frame values
         // Each frame has a view, drop_state, and gap
-        let behavior: DragBehavior&lt;S&gt; = Box::new(move |pointer: Pointer| {
-            let gap = pointer.point.distance(anchor);
-            Frame::new(view.clone(), drop_state.clone(), gap)
-        });
-        behavior
+        DragBehavior::new(/* ... */)
     })
 }
-<span class="boring">fn main() {}</span></code></pre>
+<span class="boring">}</span></code></pre>
 <h2 id="parameters-and-constraints"><a class="header" href="#parameters-and-constraints">Parameters and Constraints</a></h2>
 <p>The <code>param!</code> macro builds getter/setter pairs for <code>f32</code> fields:</p>
-<pre class="playground"><code class="language-rust">use bevy_composable_dragging::{param, Constraint, Param};
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use bevy_composable_dragging::{param, Param};
 use bevy_composable_dragging::constraint;
 
 struct Meeting { start: f32 }
 struct Schedule { meetings: Vec&lt;Meeting&gt; }
 
-fn schedule_params() -&gt; (Param&lt;Schedule&gt;, Constraint&lt;Schedule&gt;) {
-    let second_start = param!(Schedule, meetings[1].start);
+let second_start = param!(Schedule, meetings[1].start);
 
-    // Constrain a parameter to a range
-    let bounded = constraint::in_range(
-        param!(Schedule, meetings[0].start),
-        0.0, 24.0,
-    );
-    (second_start, bounded)
-}
-<span class="boring">fn main() {}</span></code></pre>
+// Constrain a parameter to a range
+let bounded = constraint::in_range(
+    param!(Schedule, meetings[0].start),
+    0.0, 24.0,
+);
+<span class="boring">}</span></code></pre>
 <p>Combine constraints:</p>
-<pre class="playground"><code class="language-rust"><span class="boring">use bevy_composable_dragging::{param, Constraint};
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
 </span>use bevy_composable_dragging::constraint::{and, less_than, at_least};
 
-<span class="boring">struct State { x: f32, y: f32 }
-</span>fn ordered() -&gt; Constraint&lt;State&gt; {
-    and([
-        at_least(param!(State, x), 0.0),
-        less_than(param!(State, x), param!(State, y)),
-    ])
-}
-<span class="boring">fn main() {}</span></code></pre>
+let ordered = and([
+    at_least(param!(State, x), 0.0),
+    less_than(param!(State, x), param!(State, y)),
+]);
+<span class="boring">}</span></code></pre>
 <p>Set parameter scale for faster solver convergence:</p>
-<pre class="playground"><code class="language-rust"><span class="boring">use bevy_composable_dragging::{param, Param};
-</span><span class="boring">struct State { pixel_x: f32 }
-</span>fn scaled() -&gt; Param&lt;State&gt; {
-    param!(State, pixel_x).with_scale(100.0)
-}
-<span class="boring">fn main() {}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>let scaled = param!(State, pixel_x).with_scale(100.0);
+<span class="boring">}</span></code></pre>
 <h2 id="chaining-drags"><a class="header" href="#chaining-drags">Chaining Drags</a></h2>
 <p><code>.with_chaining()</code> continues a drag after switching states:</p>
-<pre class="playground"><code class="language-rust">use bevy_composable_dragging::ops::closest_states;
-use bevy_composable_dragging::ViewNode;
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use bevy_composable_dragging::ops::closest_states;
 
-<span class="boring">#[derive(Clone, PartialEq)]
-</span><span class="boring">struct MyState;
-</span>fn item_node(states: Vec&lt;MyState&gt;) -&gt; ViewNode&lt;MyState&gt; {
-    ViewNode::circle("item", 0.3).draggable(move || {
-        closest_states(states.clone()).with_chaining()
-    })
-}
-<span class="boring">fn main() {}</span></code></pre>
+ViewNode::circle("item", 0.3).draggable(|| {
+    closest_states(states).with_chaining()
+})
+<span class="boring">}</span></code></pre>
 <p>The <code>Chaining</code> struct controls which node and spec continue the drag:</p>
-<pre class="playground"><code class="language-rust">use bevy_composable_dragging::{Chaining, DragSpec};
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use bevy_composable_dragging::behavior::Chaining;
 
-<span class="boring">#[derive(Clone)]
-</span><span class="boring">struct MyState;
-</span>fn chaining(new_spec: DragSpec&lt;MyState&gt;) -&gt; Chaining&lt;MyState&gt; {
-    Chaining::&lt;MyState&gt;::new()
-        .dragging("new_node")
-        .following(new_spec)
-        .with_transition(0.2)
-}
-<span class="boring">fn main() {}</span></code></pre>
+Chaining::&lt;MyState&gt;::new()
+    .dragging("new_node")
+    .following(new_spec)
+    .with_transition(0.2)
+<span class="boring">}</span></code></pre>
 <h2 id="branch-transitions"><a class="header" href="#branch-transitions">Branch Transitions</a></h2>
 <p>When a spec switches between branches (e.g., from one target to another), the preview blends:</p>
-<pre class="playground"><code class="language-rust">use bevy_composable_dragging::ops::closest_states;
-use bevy_composable_dragging::DragSpec;
-
-fn branch_blend(states: Vec&lt;bool&gt;) -&gt; DragSpec&lt;bool&gt; {
-    closest_states(states)
-        .with_branch_transition(0.15)  // 150ms blend
-}
-<span class="boring">fn main() {}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>DragSpec::new(|ctx| /* ... */)
+    .with_branch_transition(0.15)  // 150ms blend
+<span class="boring">}</span></code></pre>
 <h2 id="drop-transitions"><a class="header" href="#drop-transitions">Drop Transitions</a></h2>
 <p>Control the animation duration after a drop:</p>
-<pre class="playground"><code class="language-rust">use bevy_composable_dragging::ops::closest_states;
-use bevy_composable_dragging::DragSpec;
-
-fn slow_drop(states: Vec&lt;bool&gt;) -&gt; DragSpec&lt;bool&gt; {
-    closest_states(states)
-        .with_drop_transition(0.3)  // 300ms animation
-}
-<span class="boring">fn main() {}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>DragSpec::new(|ctx| /* ... */)
+    .with_drop_transition(0.3)  // 300ms animation
+<span class="boring">}</span></code></pre>
 <h2 id="custom-meshes"><a class="header" href="#custom-meshes">Custom Meshes</a></h2>
 <p>Use application-generated meshes as node geometry (requires the <code>pbr</code> feature):</p>
-<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::{Assets, Mesh};
-</span>use bevy_composable_dragging::{MeshGeometry, ViewNode};
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use bevy_composable_dragging::MeshGeometry;
 
-<span class="boring">#[derive(Clone)]
-</span><span class="boring">struct MyState;
-</span>fn terrain_node(meshes: &amp;mut Assets&lt;Mesh&gt;, my_mesh: Mesh) -&gt; ViewNode&lt;MyState&gt; {
-    let mesh_geom = MeshGeometry::add(meshes, my_mesh);
-    ViewNode::mesh("terrain", mesh_geom)
-}
-<span class="boring">fn main() {}</span></code></pre>
-<p>The mesh handle identifies the geometry: two <code>MeshGeometry</code> values with the same handle are the same geometry. Add a new mesh asset when the mesh content changes. <code>MeshGeometry::new(handle, &amp;mesh)</code> wraps a handle you already hold.</p>
+let mesh_geom = MeshGeometry::new(0, my_mesh);
+ViewNode::mesh("terrain", mesh_geom)
+<span class="boring">}</span></code></pre>
+<p>The <code>key</code> (first argument) identifies the mesh: two <code>MeshGeometry</code> values with the same key share one mesh asset. Change the key when the mesh content changes.</p>
 <h2 id="mixing-2d-and-3d"><a class="header" href="#mixing-2d-and-3d">Mixing 2D and 3D</a></h2>
 <p>Overlay a 2D HUD on a 3D scene by mixing rendering modes:</p>
-<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::Vec2;
-</span>use bevy_composable_dragging::{SdfShape, View, ViewNode};
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use bevy_composable_dragging::SdfShape;
 
-<span class="boring">#[derive(Clone)]
-</span><span class="boring">struct MyState;
-</span>fn view(state: &amp;MyState) -&gt; View&lt;MyState&gt; {
-    View::new()
-        // 3D scene nodes (default)
-        .with(ViewNode::sphere("object", 1.0))
-        // 2D HUD nodes
-        .with(
-            ViewNode::sdf("panel", SdfShape::rect(Vec2::new(200.0, 100.0)).with_corner_radius(8.0))
-                .flat()
-                .on_layer(2),
-        )
-}
-<span class="boring">fn main() {}</span></code></pre>
+// 3D scene nodes (default)
+ViewNode::sphere("object", 1.0)
+
+// 2D HUD nodes
+ViewNode::sdf("panel", SdfShape::rect(Vec2::new(200.0, 100.0)).with_corner_radius(8.0))
+    .flat()
+    .on_layer(2)
+<span class="boring">}</span></code></pre>
 <h2 id="physics-integration"><a class="header" href="#physics-integration">Physics Integration</a></h2>
 <p>Combine dragging with physics engines like <code>avian3d</code>. The <code>physics_lab</code> example demonstrates dragging shapes onto a grid, simulating them with rigid bodies, and grabbing bodies during simulation.</p>
 <h2 id="performance"><a class="header" href="#performance">Performance</a></h2>
 <ul>
-<li>Views are plain data, no ECS overhead for speculative evaluation</li>
+<li>Views are plain data — no ECS overhead for speculative evaluation</li>
 <li>Geometry morphing is quantized to 32 steps</li>
 <li>A heightmap is two flat buffers, so a copy is two memory copies and an edit names only the chunks it reaches</li>
 <li>Gizmo handles use a dedicated render layer for fast picking</li>
@@ -333,12 +301,12 @@ fn slow_drop(states: Vec&lt;bool&gt;) -&gt; DragSpec&lt;bool&gt; {
 <h2 id="differences-from-dragology"><a class="header" href="#differences-from-dragology">Differences from Dragology</a></h2>
 <p>The port aims to be faithful to the operators and behavior of Dragology. These differences are deliberate:</p>
 <ul>
-<li><strong>Solver.</strong> Dragology minimizes with COBYLA. The only COBYLA crate for Rust declares no license, so <code>vary</code> uses a Nelder-Mead search with a penalty stage instead (<code>src/solver.rs</code>). It reproduces the cases of Dragology’s <code>optimization.test.ts</code> that are ported into the unit tests, including equality lines and a pin on a fixed distance from a point. It is meant for the one to three parameters that drags vary; with many parameters or hard curved constraints COBYLA may do better.</li>
+<li><strong>Solver.</strong> Dragology minimizes with COBYLA. The only COBYLA crate for Rust declares no license, so <code>vary</code> uses a Nelder–Mead search with a penalty stage instead (<code>src/solver.rs</code>). It reproduces the cases of Dragology’s <code>optimization.test.ts</code> that are ported into the unit tests, including equality lines and a pin on a fixed distance from a point. It is meant for the one to three parameters that drags vary; with many parameters or hard curved constraints COBYLA may do better.</li>
 <li><strong><code>between</code> drop rule.</strong> Dragology drops onto the target nearest the pointer. The default here drops onto the target with the largest blend weight; <code>DropRule::NearestTarget</code> selects Dragology’s rule.</li>
 <li><strong><code>drop_target</code> bounds.</strong> The default measures the target in the state the drag started from, so it keeps working when a drop removes the target. Dragology measures it in the target state; <code>drop_target_with_bounds</code> does that.</li>
 <li><strong><code>with_overlay</code>.</strong> The overlay is a list of ordinary non-draggable nodes, in the <code>overlay-</code> namespace, instead of SVG. There is no tree view or overlay visualization of operators.</li>
 <li><strong><code>with_chaining</code></strong> and the chaining of <code>with_snap_radius_options</code> need a state that can be compared with <code>PartialEq</code>, because Dragology compares drop and start state with deep equality.</li>
-<li><strong><code>substate</code></strong> previews of the sub-spec are not draggable, because a drag factory of the part cannot be turned into one of the whole.</li>
+<li><strong><code>substate</code></strong> previews keep all nodes draggable. The inner spec focuses on one node (a zipper over the view), merging its transform into the full view while preserving every sibling’s drag factory.</li>
 <li><strong><code>tactile_tessellations</code>.</strong> A new tile starts at its palette item instead of the canvas origin, the dragged tile is raised by the spec instead of through a z-index from the dragged id, the center of the tile follows the pointer by resetting the grab offset (Dragology’s <code>withInitContext({ anchorPos })</code>), and the outline of a polygon is a larger polygon behind it. Snap candidates, the overlap test, rotation along the shortest arc, <code>when_far</code> and the trash bin behave as in the original.</li>
 <li><strong>3D drag spaces and gizmos are additions.</strong> Dragology drags in the plane of the page. Here a drag resolves the pointer in a <code>DragSpace</code> (plane, axis or camera-facing plane), operators work on world positions and <code>Transform</code>s, nodes are picked by oriented bounds, and the value operators and <code>Gizmo</code> build on that. <code>Geometry::Grad</code> takes any <code>bevy_gradmesh</code> shape where Dragology draws SVG elements; text, filters and drop shadows have no counterpart.</li>
 <li><strong>Blending of different point counts.</strong> Dragology morphs paths with different segment counts; <code>bevy_gradmesh</code> 0.3 resamples polygons of different lengths in <code>Shape::lerp</code>, so tiles that change their number of sides morph here too. Shapes of different kinds still come from the nearer state.</li>
@@ -357,13 +325,16 @@ fn slow_drop(states: Vec&lt;bool&gt;) -&gt; DragSpec&lt;bool&gt; {
 <tr><td><code>reorder_list</code></td><td><code>closest</code> + floating</td></tr>
 <tr><td><code>ring_of_beads</code></td><td><code>closest</code> on a ring</td></tr>
 <tr><td><code>slider</code></td><td><code>vary</code> with a range constraint</td></tr>
+<tr><td><code>equal_constraint</code></td><td><code>vary</code> with <code>equal</code> constraint linking two parameters</td></tr>
+<tr><td><code>stickiness</code></td><td><code>closest</code> with stickiness bias toward the current branch</td></tr>
 <tr><td><code>clock</code></td><td><code>vary</code> one angle</td></tr>
-<tr><td><code>scheduler</code></td><td><code>closest</code> + <code>vary</code></td></tr>
-<tr><td><code>lists_in_lists</code></td><td>rows nested to any depth, <code>when_far</code> snap-or-free, <code>with_overlay</code> insertion marker</td></tr>
-<tr><td><code>tessellations</code></td><td>toolbar and trash bin</td></tr>
+<tr><td><code>constellation</code></td><td><code>substate</code>: a star focuses on its own position, kept in the sky, while its lines stretch and every other star stays draggable</td></tr>
+<tr><td><code>dag</code></td><td><code>substate</code>: a node focuses on its position and an arrowhead on one end of one edge, which snaps to nodes that keep the graph acyclic, floats when far and deletes the edge if dropped loose</td></tr>
+<tr><td><code>scheduler</code></td><td><code>substate</code>: one meeting’s lane and time, siblings stay draggable</td></tr>
+<tr><td><code>lists_in_lists</code></td><td><code>substate</code>: rows nested to any depth, <code>when_far</code> snap-or-free, <code>with_overlay</code> insertion marker</td></tr>
+<tr><td><code>tessellations</code></td><td><code>substate</code>: one tile’s cell, toolbar and trash bin</td></tr>
 <tr><td><code>gradient_hanoi_3d</code></td><td><code>shapes-3d</code></td></tr>
 <tr><td><code>gradient_kanban_2d</code></td><td><code>shapes-2d</code></td></tr>
-<tr><td><code>hello</code></td><td>minimal <code>state</code> example</td></tr>
 <tr><td><code>chain_of_cells</code></td><td><code>with_chaining</code>, overlay underline, drop transition</td></tr>
 <tr><td><code>blend_square</code></td><td><code>between_with</code> natural neighbor and sharpness</td></tr>
 <tr><td><code>tactile_tessellations</code></td><td>edge-to-edge snaps with rotation</td></tr>

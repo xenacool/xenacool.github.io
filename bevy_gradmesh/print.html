@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-6557ef1d.js";
+            window.path_to_searchindex_js = "searchindex-6a977d81.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-cbf67a2d.js"></script>
@@ -180,10 +180,10 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h1 id="introduction"><a class="header" href="#introduction">Introduction</a></h1>
-<p>BevyGradmesh is a procedural mesh generation library for <a href="https://bevyengine.org/">Bevy</a> that provides clean APIs for creating 3D primitives with gradient shading, inspired by Freya Holmer’s work.</p>
+<p>BevyGradmesh is a procedural mesh generation library for <a href="https://bevyengine.org/">Bevy</a> that provides clean APIs for creating 3D primitives with gradient shading, inspired by Freya Holmér’s work.</p>
 <h2 id="what-it-solves"><a class="header" href="#what-it-solves">What It Solves</a></h2>
 <p>Instead of manually creating mesh assets for every shape, BevyGradmesh generates watertight geometry at runtime with proper normals and UVs. Combined with dual-directional gradient materials, you get stylized 3D-looking characters and objects without any external assets.</p>
-<p><em>Every procedural primitive with dual-directional gradient shading. Run <code>cargo run --example shapes</code> to reproduce it.</em></p>
+<p><em>Every procedural primitive with dual-directional gradient shading, drawn without PBR. Run <code>cargo run --example shapes</code> to reproduce it.</em></p>
 <h2 id="key-concepts"><a class="header" href="#key-concepts">Key Concepts</a></h2>
 <ul>
 <li><strong>Shapes</strong>: Procedural primitives (spheres, cuboids, cylinders, etc.) generated at runtime</li>
@@ -195,7 +195,7 @@
 <p>BevyGradmesh follows these principles:</p>
 <ol>
 <li><strong>Zero external assets</strong>: Everything is generated procedurally</li>
-<li><strong>Bevy-native</strong>: Outputs standard <code>Mesh</code> and <code>StandardMaterial</code> types</li>
+<li><strong>Bevy-native</strong>: Outputs standard <code>Mesh</code> assets and Bevy materials (<code>GradMeshMaterial</code> extends <code>StandardMaterial</code>; the 2D, SDF and standalone backends need no PBR)</li>
 <li><strong>Performance-first</strong>: GPU instancing and dirty tracking minimize draw calls</li>
 <li><strong>Flexible</strong>: Multiple rendering modes for different patterns</li>
 </ol>
@@ -270,9 +270,18 @@ fn setup(
 <p>The core API has three main types:</p>
 <ol>
 <li><strong><code>Shape</code></strong> - Describes a procedural primitive. Call <code>.build()</code> to get a Bevy <code>Mesh</code>.</li>
-<li><strong><code>Style</code></strong> - Describes gradient material properties. Call <code>.build_material()</code> to get a <code>StandardMaterial</code>.</li>
+<li><strong><code>Style</code></strong> - Describes gradient material properties. Call <code>.build_material(&amp;mut materials)</code> to get a <code>Handle&lt;GradMeshMaterial&gt;</code> (needs the <code>pbr</code> feature), or <code>.build_2d()</code> for a <code>GradMeshMaterial2d</code>.</li>
 <li><strong><code>GradMeshPlugin</code></strong> - Registers the custom material and mesh cache with Bevy.</li>
 </ol>
+<h2 id="features-and-examples"><a class="header" href="#features-and-examples">Features and Examples</a></h2>
+<p>The <code>pbr</code> feature is on by default and enables the lit 3D backends (<code>GradMeshMaterial</code> and the instanced
+PBR pipeline). Turn it off for PBR-free builds:</p>
+<pre><code class="language-toml">[dependencies]
+bevy_gradmesh = { version = "0.3", default-features = false }
+</code></pre>
+<p>These examples run without <code>pbr</code> (<code>cargo run --example &lt;name&gt; --no-default-features</code>): <code>styles</code>,
+<code>mix_spaces</code>, <code>curves</code>, <code>polyline</code>, <code>arbitrary_shapes</code>, <code>gradient_2d</code>, <code>sdf_2d</code>,
+<code>sdf_dash_gallery</code> and <code>standalone</code>. The others need <code>pbr</code>, which Cargo enables by default.</p>
 <h2 id="detail-levels"><a class="header" href="#detail-levels">Detail Levels</a></h2>
 <p>Control mesh resolution with <code>ShapeDetail</code>:</p>
 <pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::{Shape, ShapeDetail};
@@ -343,12 +352,12 @@ fn setup(
 }</code></pre>
 <p>When <code>capped</code> is true, the flat face is filled with geometry.</p>
 <h3 id="torus"><a class="header" href="#torus">Torus</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::Shape;
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::{Shape, ShapeDetail};
 </span><span class="boring">fn main() {}
 </span>fn torus() -&gt; Shape {
     let start_angle = 0.0;
     let span = std::f32::consts::TAU;
-    Shape::torus(1.0, 0.25, start_angle, span)
+    Shape::torus(1.0, 0.25, start_angle, span, ShapeDetail::Medium)
 }</code></pre>
 <p>Supports partial torus arcs. Use <code>start_angle = 0.0</code> and <code>span = TAU</code> for a full torus.</p>
 <h3 id="regular-prism"><a class="header" href="#regular-prism">Regular Prism</a></h3>
@@ -375,65 +384,120 @@ fn setup(
     Shape::tapered_cylinder(top_radius, bottom_radius, 2.0, ShapeDetail::Medium)
 }</code></pre>
 <p>A cone-frustum with flat top and bottom. When radii are equal, equivalent to a regular cylinder.</p>
-<p><em>The 3D primitives, shaded with dual-directional gradients. Run <code>cargo run --example shapes</code> to reproduce it.</em></p>
+<p><em>Every primitive at several detail levels, shaded by dual-directional gradients instead of lights. Solids go through the standalone pipeline and flat shapes are <code>Mesh2d</code> meshes, so it runs without PBR. Run <code>cargo run --example shapes</code> to reproduce it.</em></p>
 <h2 id="2d-primitives"><a class="header" href="#2d-primitives">2D Primitives</a></h2>
-<p>All 2D shapes are flat quads facing the camera (billboarded).</p>
+<p>Rectangles, discs, ellipses, rings, wedges, polygons, stars and arbitrary polygons use the SDF
+backend (<code>SdfMaterial2d</code>). Each one is a material drawn on the shared <code>unit_quad()</code> mesh. Sizes are
+in world units (pixels with the default <code>Camera2d</code>), and the quad’s <code>Transform</code> scale must be
+<code>SdfMaterial2d::quad_scale()</code>. See <a href="#choosing-a-backend">Choosing a Backend</a> for the full SDF API.</p>
+<p>Polygons with holes, per-vertex colours and outlines of more than 16 vertices go through the mesh
+backend with <code>Shape::as_flat()?.build_2d()</code>. See <a href="#arbitrary-polygon-on-the-mesh-backend">Arbitrary Polygon on the mesh backend</a>.</p>
 <h3 id="rectangle"><a class="header" href="#rectangle">Rectangle</a></h3>
 <pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
-</span><span class="boring">use bevy_gradmesh::{Shape, ShapeDetail};
+</span><span class="boring">use bevy_gradmesh::SdfMaterial2d;
 </span><span class="boring">fn main() {}
-</span>fn rectangle() -&gt; Shape {
-    Shape::rectangle(Vec2::new(2.0, 1.0), ShapeDetail::Medium)
+</span>fn rectangle() -&gt; SdfMaterial2d {
+    let corner_radius = 8.0;
+    SdfMaterial2d::rect(Vec2::new(200.0, 100.0)).with_corner_radius(corner_radius)
 }</code></pre>
+<p>The corner radius is optional. Leave it out for sharp corners.</p>
 <h3 id="disc"><a class="header" href="#disc">Disc</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::{Shape, ShapeDetail};
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::SdfMaterial2d;
 </span><span class="boring">fn main() {}
-</span>fn disc() -&gt; Shape {
-    Shape::disc(1.0, ShapeDetail::Medium)
-}</code></pre>
-<h3 id="polygon"><a class="header" href="#polygon">Polygon</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::{Shape, ShapeDetail};
-</span><span class="boring">fn main() {}
-</span>fn polygon() -&gt; Shape {
-    let sides = 5;
-    Shape::polygon(sides, 1.0, ShapeDetail::Medium)
+</span>fn disc() -&gt; SdfMaterial2d {
+    SdfMaterial2d::disc(100.0)
 }</code></pre>
 <h3 id="ellipse"><a class="header" href="#ellipse">Ellipse</a></h3>
 <pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
-</span><span class="boring">use bevy_gradmesh::{Shape, ShapeDetail};
+</span><span class="boring">use bevy_gradmesh::SdfMaterial2d;
 </span><span class="boring">fn main() {}
-</span>fn ellipse() -&gt; Shape {
-    Shape::ellipse(Vec2::new(1.5, 0.75), ShapeDetail::Medium)
+</span>fn ellipse() -&gt; SdfMaterial2d {
+    SdfMaterial2d::ellipse(Vec2::new(150.0, 75.0))
 }</code></pre>
-<h3 id="star"><a class="header" href="#star">Star</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::{Shape, ShapeDetail};
-</span><span class="boring">fn main() {}
-</span>fn star() -&gt; Shape {
-    let points = 5;
-    let outer_radius = 1.0;
-    let inner_radius = 0.4;
-    Shape::star(points, outer_radius, inner_radius, ShapeDetail::Medium)
-}</code></pre>
-<p>N-pointed star. The <code>inner_radius</code> controls how deep the indentations are.</p>
 <h3 id="ring"><a class="header" href="#ring">Ring</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::{Shape, ShapeDetail};
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::SdfMaterial2d;
 </span><span class="boring">fn main() {}
-</span>fn ring() -&gt; Shape {
-    let outer_radius = 1.0;
-    let inner_radius = 0.6;
-    Shape::ring(outer_radius, inner_radius, ShapeDetail::Medium)
+</span>fn ring() -&gt; SdfMaterial2d {
+    let outer_radius = 100.0;
+    let inner_radius = 60.0;
+    let rim_width = outer_radius - inner_radius;
+    SdfMaterial2d::disc(outer_radius).with_rim(rim_width)
 }</code></pre>
-<p>Annulus (2D donut with a hole).</p>
+<p>Annulus (2D donut with a hole). The rim is drawn inside the outline of the disc.</p>
 <h3 id="wedge"><a class="header" href="#wedge">Wedge</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::{Shape, ShapeDetail};
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::SdfMaterial2d;
 </span><span class="boring">fn main() {}
-</span>fn wedge() -&gt; Shape {
-    let angle = std::f32::consts::FRAC_PI_2;
-    Shape::wedge(1.0, angle, ShapeDetail::Medium)
+</span>fn wedge() -&gt; SdfMaterial2d {
+    let start_angle = 0.0;
+    let span = std::f32::consts::FRAC_PI_2;
+    SdfMaterial2d::disc(100.0).with_arc(start_angle, span)
 }</code></pre>
-<p>Pie-slice shape. Angle is in radians (0 to 2 pi).</p>
-<p><em>Custom polygons with per-vertex colours, stars, rings, wedges and a tapered cylinder. Run <code>cargo run --example arbitrary_shapes</code> to reproduce it.</em></p>
+<p>Pie-slice shape. The arc starts at <code>start_angle</code> radians counter-clockwise from +X and covers
+<code>span</code> radians.</p>
+<h3 id="spawning-an-sdf-primitive"><a class="header" href="#spawning-an-sdf-primitive">Spawning an SDF primitive</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
+</span><span class="boring">use bevy_gradmesh::{SdfMaterial2d, unit_quad};
+</span><span class="boring">fn main() {}
+</span>fn spawn_primitive(
+    mut commands: Commands,
+    mut meshes: ResMut&lt;Assets&lt;Mesh&gt;&gt;,
+    mut materials: ResMut&lt;Assets&lt;SdfMaterial2d&gt;&gt;,
+) {
+    let material = SdfMaterial2d::disc(100.0)
+        .with_colors(Color::srgb(0.9, 0.4, 0.5), Color::WHITE);
+    commands.spawn((
+        Mesh2d(meshes.add(unit_quad())),
+        Transform::from_scale(material.quad_scale()),
+        MeshMaterial2d(materials.add(material)),
+    ));
+}</code></pre>
+<p>Add all primitives to the same <code>unit_quad()</code> handle to share one mesh asset.</p>
+<h3 id="polygon"><a class="header" href="#polygon">Polygon</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::SdfMaterial2d;
+</span><span class="boring">fn main() {}
+</span>fn polygon() -&gt; SdfMaterial2d {
+    let sides = 5;
+    let radius = 100.0;
+    SdfMaterial2d::polygon(sides, radius)
+}</code></pre>
+<p>Regular polygon with 3 to 64 sides and a vertex pointing up. <code>radius</code> is the distance from the
+centre to a vertex.</p>
+<h3 id="star"><a class="header" href="#star">Star</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::SdfMaterial2d;
+</span><span class="boring">fn main() {}
+</span>fn star() -&gt; SdfMaterial2d {
+    let points = 5;
+    let outer_radius = 100.0;
+    let inner_radius = 40.0;
+    SdfMaterial2d::star(points, outer_radius, inner_radius)
+}</code></pre>
+<p>N-pointed star with 3 to 64 points. The <code>inner_radius</code> controls how deep the indentations are. An
+inner radius at or above the outer radius gives a polygon with twice as many sides.</p>
 <h3 id="arbitrary-polygon"><a class="header" href="#arbitrary-polygon">Arbitrary Polygon</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
+</span><span class="boring">use bevy_gradmesh::{SdfMaterial2d, SdfPolygonError};
+</span><span class="boring">fn main() {}
+</span>fn arrow() -&gt; Result&lt;SdfMaterial2d, SdfPolygonError&gt; {
+    let points = [
+        Vec2::new(-70.0, -20.0),
+        Vec2::new(10.0, -20.0),
+        Vec2::new(10.0, -60.0),
+        Vec2::new(75.0, 0.0),
+        Vec2::new(10.0, 60.0),
+        Vec2::new(10.0, 20.0),
+        Vec2::new(-70.0, 20.0),
+    ];
+    SdfMaterial2d::polygon_from_points(&amp;points)
+}</code></pre>
+<p>Any outline of 3 to 16 points, concave outlines included, wound either way. Fewer than 3 or more
+than 16 points return a <code>SdfPolygonError</code> that names the count. The shape is centred on the middle
+of its bounding box.</p>
+<p>Polygons and stars support rims, arcs, gradients and colour modes like every other SDF shape. A
+rim is drawn inside the outline, so thin features of a concave shape can disappear under a wide
+rim. Dashes are not supported on these kinds: a dashed rim draws solid.</p>
+<p><em>Discs, ellipses, rounded rectangles, rims, arcs, polygons and stars on one shared quad. Run <code>cargo run --example sdf_2d</code> to reproduce it.</em></p>
+<p><em>Custom polygons with per-vertex colours, stars, rings, wedges and the side profiles of tapered cylinders (<code>Shape::as_flat</code> refuses the solid itself). Run <code>cargo run --example arbitrary_shapes</code> to reproduce it.</em></p>
+<h3 id="arbitrary-polygon-on-the-mesh-backend"><a class="header" href="#arbitrary-polygon-on-the-mesh-backend">Arbitrary Polygon on the mesh backend</a></h3>
 <pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
 </span><span class="boring">use bevy_gradmesh::{Shape, ShapeDetail};
 </span><span class="boring">fn main() {}
@@ -459,7 +523,13 @@ fn arbitrary_polygon_colored() -&gt; Shape {
     ];
     Shape::arbitrary_polygon_colored(vertices, colors, ShapeDetail::Medium)
 }</code></pre>
-<p>Accepts any set of 2D vertices. Triangulated using ear-clipping algorithm. Supports optional per-vertex RGBA colors.</p>
+<p>Accepts any simple (non-self-crossing) outline, convex or concave, in either winding. It is triangulated by
+ear clipping and always faces +Z. Repeated points, the closing duplicate and collinear or near-collinear
+vertices are cleaned up, so a puzzle piece whose edges are split into many almost straight points, with
+knobs and blanks, can be one single polygon instead of several simpler ones. Outlines with no area give an
+empty mesh, and outlines that cross themselves have no well-defined fill. Supports optional per-vertex RGBA
+colors, which stay with their vertices.
+Use this form for outlines of more than 16 vertices, polygons with holes and per-vertex colours.</p>
 <h2 id="advanced-geometry"><a class="header" href="#advanced-geometry">Advanced Geometry</a></h2>
 <h3 id="3d-polyline"><a class="header" href="#3d-polyline">3D Polyline</a></h3>
 <pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
@@ -477,7 +547,7 @@ fn arbitrary_polygon_colored() -&gt; Shape {
     Shape::polyline3d(points, thickness, closed, segments, ShapeDetail::Medium)
 }</code></pre>
 <p>Renders as tube geometry along the point path.</p>
-<h3 id="bezier-curve"><a class="header" href="#bezier-curve">Bezier Curve</a></h3>
+<h3 id="bézier-curve"><a class="header" href="#bézier-curve">Bézier Curve</a></h3>
 <pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
 </span><span class="boring">use bevy_gradmesh::{Shape, ShapeDetail};
 </span><span class="boring">fn main() {}
@@ -492,7 +562,69 @@ fn arbitrary_polygon_colored() -&gt; Shape {
     let segments = 32;
     Shape::bezier_curve(control_points, thickness, segments, ShapeDetail::Medium)
 }</code></pre>
-<p>Supports linear (2 points), quadratic (3 points), and cubic (4+ points) Bezier curves rendered as tubes.</p>
+<p>Supports linear (2 points), quadratic (3 points), and cubic (4+ points) Bézier curves rendered as tubes.</p>
+<h2 id="shape-morphing"><a class="header" href="#shape-morphing">Shape Morphing</a></h2>
+<p><code>Shape::lerp</code> blends two shapes by interpolating their parameters. When the shapes share the same
+kind, every continuous parameter (radius, height, size, roundness) is interpolated. Integer counts
+(sides, segments, points) and boolean flags (capped, closed) snap at <code>t = 0.5</code> — a prism cannot
+have 6.3 sides.</p>
+<h3 id="cross-kind-flat-shape-morphing"><a class="header" href="#cross-kind-flat-shape-morphing">Cross-kind flat shape morphing</a></h3>
+<p>Filled flat shapes of <strong>different kinds</strong> morph as outlines: a polygon can turn into a star, a
+disc rim can turn into a rectangle, and a ring can turn into a disc. The blend produces an
+arbitrary polygon. Supported kinds: rectangle, disc, ellipse, polygon, star, arbitrary polygon,
+rectangle rim, disc rim, ellipse rim, polygon rim, ring and wedge. For rims and rings only the
+outer edge participates; a ring’s inner hole is ignored.</p>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::{Shape, ShapeDetail};
+</span><span class="boring">fn main() {}
+</span>let a = Shape::disc(1.2, ShapeDetail::Medium);
+let b = Shape::star(5, 1.2, 0.5, ShapeDetail::Medium);
+let mid = a.lerp(&amp;b, 0.5); // an ArbitraryPolygon between disc and star</code></pre>
+<h3 id="ring-morph-example"><a class="header" href="#ring-morph-example">Ring morph example</a></h3>
+<p>A ring morphs into a disc by blending the ring’s outer edge with the disc’s outline:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::{Shape, ShapeDetail};
+</span><span class="boring">fn main() {}
+</span>let ring = Shape::ring(1.2, 0.5, ShapeDetail::Medium);
+let disc = Shape::disc(1.2, ShapeDetail::Medium);
+let mid = ring.lerp(&amp;disc, 0.5); // fills the hole gradually</code></pre>
+<p>A wedge morphs into a disc similarly:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::{Shape, ShapeDetail};
+</span><span class="boring">fn main() {}
+</span>let wedge = Shape::wedge(1.2, std::f32::consts::PI, ShapeDetail::Medium);
+let disc = Shape::disc(1.2, ShapeDetail::Medium);
+let mid = wedge.lerp(&amp;disc, 0.5);</code></pre>
+<h3 id="performance-pre-computing-keyframe-tables"><a class="header" href="#performance-pre-computing-keyframe-tables">Performance: pre-computing keyframe tables</a></h3>
+<p>Calling <code>lerp</code> with a different <code>t</code> each frame produces a new mesh each frame. At 60 Hz this is
+60 new meshes per second. To avoid this cost:</p>
+<ol>
+<li>
+<p><strong>Animate a continuous proxy</strong>: Keep a fixed mesh and animate its <code>Transform</code> (scale,
+position, rotation) instead of morphing the shape.</p>
+</li>
+<li>
+<p><strong>Pre-compute a keyframe table</strong>: Build intermediate shapes once at fixed <code>t</code> values and
+switch between them each frame:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span><span class="boring">use bevy_gradmesh::{Shape, ShapeDetail};
+</span><span class="boring">let a = Shape::disc(1.0, ShapeDetail::Medium);
+</span><span class="boring">let b = Shape::star(5, 1.0, 0.4, ShapeDetail::Medium);
+</span>// Build once (e.g. in Startup system)
+let keyframes: Vec&lt;Shape&gt; = (0..=10)
+    .map(|i| a.lerp(&amp;b, i as f32 / 10.0))
+    .collect();
+// Each frame, pick the nearest keyframe
+let idx = (t * 10.0).round() as usize;
+let shape = &amp;keyframes[idx.min(keyframes.len() - 1)];
+<span class="boring">}</span></code></pre>
+<p>This limits mesh generation to the number of keyframes (11 in the example) and makes each
+frame a cheap array lookup.</p>
+</li>
+<li>
+<p><strong>Quantise <code>t</code></strong>: Round <code>t</code> to a small set of steps before calling <code>lerp</code>, so repeated frames
+reuse the same <code>Shape</code> value.</p>
+</li>
+</ol>
+<p><em>Six morphing shapes: disc↔star, rect↔ring, polygon↔disc rim, ring↔disc, disc rim↔rect, wedge↔disc. Run <code>cargo run --example lerp</code> to reproduce it.</em></p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="styles--materials"><a class="header" href="#styles--materials">Styles &amp; Materials</a></h1>
 <h2 id="dual-directional-shading"><a class="header" href="#dual-directional-shading">Dual-Directional Shading</a></h2>
@@ -562,7 +694,7 @@ read it every frame.</p>
     )
 }</code></pre>
 <h2 id="blend-modes"><a class="header" href="#blend-modes">Blend Modes</a></h2>
-<p><em>Opaque, transparent, additive, multiplicative, screen, dither and dashed styles. Run <code>cargo run --example styles</code> to reproduce it.</em></p>
+<p><em>Colour modes, blend modes, dash patterns and style presets. Blends and solids use the standalone pipeline and dashed rims are <code>Mesh2d</code>, so the example runs without PBR. Run <code>cargo run --example styles</code> to reproduce it.</em></p>
 <h3 id="opaque"><a class="header" href="#opaque">Opaque</a></h3>
 <pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::{GradMeshMaterial, opaque};
 </span><span class="boring">fn main() {}
@@ -632,7 +764,7 @@ read it every frame.</p>
 <h1 id="composing-shapes-2d-and-ghost-previews"><a class="header" href="#composing-shapes-2d-and-ghost-previews">Composing Shapes, 2D and Ghost Previews</a></h1>
 <h2 id="flat-shapes-with-mesh2d"><a class="header" href="#flat-shapes-with-mesh2d">Flat shapes with <code>Mesh2d</code></a></h2>
 <p><code>Shape::build_2d()</code> returns geometry in the XY plane facing +Z with gradient UVs. Pair it with
-<code>GradMeshMaterial2d</code> (built from a <code>Style</code>) and a <code>Camera2d</code>:</p>
+<code>GradMeshMaterial2d</code> (built from a <code>Style</code>) and a <code>Camera2d</code>. <code>build_2d()</code> accepts every shape, including solids that have no flat form; call <code>Shape::as_flat()</code> first when you want the compiler to prove the shape is flat (it returns <code>Err(NotFlat)</code> for solids, tubes and meshes), then <code>FlatShape::build_2d()</code>:</p>
 <pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
 </span><span class="boring">use bevy_gradmesh::{GradMeshMaterial2d, Shape, ShapeDetail, Style};
 </span><span class="boring">fn main() {}
@@ -685,7 +817,7 @@ optional tint that multiplies the gradient through vertex colours, so parts keep
 Compounds are <code>Hash + Eq</code> and work with <code>MeshCache</code>.</p>
 <p><code>Shape::lathe(profile, segments, detail)</code> revolves <code>(radius, height)</code> points around Y. Crisp corners stay
 crisp, gentle ones are smoothed, and open ends away from the axis get caps.</p>
-<p><em>A compound tower, a wall with an arched opening, extruded cobbles, an emissive torch, a metallic gem and a ghost piece that casts no shadow. Run <code>cargo run --example composed_shapes</code> to reproduce it.</em></p>
+<p><em>A compound tower, a wall with an arched opening, extruded cobbles, a torch, a gem and heightfield terrain, drawn unlit by the standalone pipeline (no PBR, so no emissive, metallic or ghost pieces). Run <code>cargo run --example composed_shapes</code> to reproduce it.</em></p>
 <h2 id="sharing-meshes-and-materials"><a class="header" href="#sharing-meshes-and-materials">Sharing meshes and materials</a></h2>
 <pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
 </span><span class="boring">use bevy_gradmesh::{GradMeshMaterial, GradMeshMaterialPool, MeshCache, Shape, Style};
@@ -893,8 +1025,8 @@ first (mobile or desktop, 2D or 3D), then by the number of shapes.</p>
 <tr><td>Material (<code>GradMeshMaterial</code>)</td><td>3D</td><td>yes</td><td>full PBR</td><td>A few to a few hundred lit shapes, picking, shadows, height bands</td></tr>
 <tr><td>Instanced (<code>BatchRecorder</code>, <code>RetainedWorld</code>)</td><td>3D</td><td>yes</td><td>PBR</td><td>Thousands of similar shapes, animated appearance</td></tr>
 <tr><td>Standalone (<code>StandaloneRenderPlugin</code>)</td><td>3D</td><td>no</td><td>none</td><td>Mobile GPUs, flat-shaded crowds, anything that must avoid PBR</td></tr>
-<tr><td>Mesh2d gradient (<code>GradMeshMaterial2d</code>)</td><td>2D</td><td>no</td><td>none</td><td>Any 2D shape that comes from <code>Shape::build_2d</code> (stars, polygons, outlines)</td></tr>
-<tr><td>SDF 2D (<code>SdfMaterial2d</code>)</td><td>2D</td><td>no</td><td>none</td><td>Discs, ellipses and rounded rectangles with rims, arcs and dashes</td></tr>
+<tr><td>Mesh2d gradient (<code>GradMeshMaterial2d</code>)</td><td>2D</td><td>no</td><td>none</td><td>Any 2D shape that comes from <code>Shape::build_2d</code> (polygons with holes, per-vertex colours, outlines)</td></tr>
+<tr><td>SDF 2D (<code>SdfMaterial2d</code>)</td><td>2D</td><td>no</td><td>none</td><td>Discs, ellipses, rounded rectangles, polygons and stars with rims and arcs; dashes on rectangles and ellipses</td></tr>
 </tbody>
 </table>
 </div>
@@ -925,6 +1057,15 @@ works, but each distinct parameter set is a distinct mesh.</p>
 (<code>unit_quad()</code>). Edges are anti-aliased from screen-space derivatives, so no MSAA
 is needed. Radius, rim width, arc, gradient and dash are material floats: changing
 them creates no mesh and no pipeline.</p>
+<p>The SDF backend draws rectangles, ellipses, regular polygons (<code>polygon</code>), stars (<code>star</code>) and
+polygons from up to 16 points (<code>polygon_from_points</code>). Rings and wedges are a disc with a rim or
+an arc. Polygons with holes, polylines, Bézier curves and 3D solids need a mesh backend.</p>
+<p><code>Shape::as_flat()</code> proves a shape is flat and returns a <code>FlatShape</code> (or <code>NotFlat</code> for a solid, tube or
+mesh). <code>FlatShape::sdf_2d()</code> then converts a rectangle, disc, ellipse, regular polygon and rim, star,
+ring, wedge, or a polygon of up to 16 vertices into the matching <code>SdfMaterial2d</code>, so the same shape can
+go to either 2D backend. It returns <code>Err(SdfConvertError)</code> saying why when the SDF backend cannot draw
+the shape (degenerate size, holes, per-vertex colours, too many vertices, a curve or compound);
+<code>FlatShape::build_2d()</code> draws all of those.</p>
 <pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
 </span><span class="boring">use bevy_gradmesh::{Dash2d, DashSnap, SdfMaterial2d, unit_quad};
 </span><span class="boring">fn main() {}
@@ -949,8 +1090,9 @@ them creates no mesh and no pipeline.</p>
 <code>with_radial_gradient()</code> (fitted to the shape bounds), <code>with_angular_gradient(start)</code>
 (mirrored, no seam) and <code>with_angular_sweep(start)</code> (one turn, hard seam). All of
 them blend in the chosen <code>MixSpace</code>.</p>
-<p>Dashes (<code>Dash2d</code>) apply to rims. Give a length and a gap in world units, or a
-count and a gap ratio. The snap mode decides how the pattern fits the outline:</p>
+<p>Dashes (<code>Dash2d</code>) apply to rims of rectangles and ellipses; polygons and stars draw a solid rim.
+Give a length and a gap in world units, or a count and a gap ratio. The snap mode decides how
+the pattern fits the outline:</p>
 <ul>
 <li><code>Off</code> keeps the pattern as given and cuts it where the outline starts and ends.</li>
 <li><code>Tiling</code> rounds the number of periods to a whole number and rescales the period,
@@ -962,7 +1104,7 @@ starts at the arc start and the last dash ends at the arc end.</li>
 rectangles and a partial arc. Two things to know: on an eccentric ellipse dashes
 are spaced by angle, not by arc length, and at a sharp rectangle corner the
 dashes meet in a mitre. <code>Transform</code> scale must be <code>SdfMaterial2d::quad_scale()</code>.</p>
-<p><em>Discs, ellipses, rounded rectangles, rims and animated arcs on one shared quad. Run <code>cargo run --example sdf_2d</code> to reproduce it.</em></p>
+<p><em>Discs, ellipses, rounded rectangles, rims, animated arcs, polygons and stars on one shared quad. Run <code>cargo run --example sdf_2d</code> to reproduce it.</em></p>
 <p><em>Dashed rims compared across <code>Off</code>, <code>Tiling</code>, <code>EndToEnd</code> and count-based snap modes. Run <code>cargo run --example sdf_dash_gallery</code> to reproduce it.</em></p>
 <h2 id="without-pbr-the-pbr-feature-and-for_mobile"><a class="header" href="#without-pbr-the-pbr-feature-and-for_mobile">Without PBR: the <code>pbr</code> feature and <code>for_mobile()</code></a></h2>
 <p>The crate has a <code>pbr</code> cargo feature that is on by default. It gates <code>material.rs</code>,
@@ -1270,7 +1412,7 @@ counts only those. Hold the handle for as long as the material is shown.
 <p>See <code>examples/sweep.rs</code> and <code>examples/composed_shapes.rs</code>.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="curves--polylines"><a class="header" href="#curves--polylines">Curves &amp; Polylines</a></h1>
-<h2 id="bezier-curves"><a class="header" href="#bezier-curves">Bezier Curves</a></h2>
+<h2 id="bézier-curves"><a class="header" href="#bézier-curves">Bézier Curves</a></h2>
 <p>Render smooth curves as tube geometry:</p>
 <pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
 </span><span class="boring">use bevy_gradmesh::{Shape, ShapeDetail};
@@ -1316,7 +1458,7 @@ fn animate_curve(
         *mesh = rebuilt;
     }
 }</code></pre>
-<p><em>Spline and parametric curves rendered as smooth tubes. Run <code>cargo run --example curves</code> to reproduce it.</em></p>
+<p><em>Bezier curves of every degree and a 3D helix, drawn as tubes by the standalone pipeline without PBR. The standalone gradient is fixed to the world axis, so tubes far from the origin show only part of their blend. Run <code>cargo run --example curves</code> to reproduce it.</em></p>
 <h2 id="3d-polylines"><a class="header" href="#3d-polylines">3D Polylines</a></h2>
 <p>Connect points with tube geometry:</p>
 <pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
@@ -1344,10 +1486,10 @@ fn animate_curve(
     ];
     Shape::polyline3d(points, 0.05, true, 8, ShapeDetail::Medium).build()
 }</code></pre>
-<p><em>Joint styles, width variation, gradient colours and an animated reveal. Run <code>cargo run --example polyline</code> to reproduce it.</em></p>
+<p><em>Flat 2D polylines drawn as <code>Mesh2d</code> without PBR: open, closed, thick and thin, with a gradient along each line. The example is 2D only; <code>Shape::polyline3d</code> (above) builds tubes for a 3D camera. Run <code>cargo run --example polyline</code> to reproduce it.</em></p>
 <h2 id="use-cases"><a class="header" href="#use-cases">Use Cases</a></h2>
 <ul>
-<li><strong>Track paths</strong>: Define racing tracks with Bezier curves</li>
+<li><strong>Track paths</strong>: Define racing tracks with Bézier curves</li>
 <li><strong>Cables and wires</strong>: Connect objects with polylines</li>
 <li><strong>Animated trails</strong>: Update control points each frame</li>
 <li><strong>Data visualization</strong>: Plot 3D data as connected tubes</li>
@@ -1705,22 +1847,23 @@ hull constructor:</p>
 <li>No Order-Independent Transparency (OIT)</li>
 <li>No planar reflections</li>
 <li>No visual editor integration (Bevy has no editor)</li>
-<li>NURBS curves not supported (only cubic Bezier)</li>
+<li>NURBS curves not supported (only cubic Bézier)</li>
 <li>No secondary LOD membership during transitions</li>
 </ul>
 <h2 id="license"><a class="header" href="#license">License</a></h2>
 <p>Dual-licensed under MIT or Apache-2.0.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="gallery"><a class="header" href="#gallery">Gallery</a></h1>
+<p>Screenshots for every example are packaged in a zip archive attached to each <a href="https://github.com/xenacool/bevy_gradmesh/releases">GitHub Release</a>.</p>
 <div class="table-wrapper">
 <table>
 <thead>
 <tr><th>Example</th><th>Description</th></tr>
 </thead>
 <tbody>
-<tr><td><code>shapes</code></td><td>All procedural primitives with dual-directional gradient shading</td></tr>
+<tr><td><code>shapes</code></td><td>Procedural primitives at every detail level, shaded by dual-directional gradients</td></tr>
 <tr><td><code>character_creator</code></td><td>Character parts built from gradient-shaded primitives</td></tr>
-<tr><td><code>styles</code></td><td>Opaque, transparent, additive, multiplicative, screen, dither, and dashed blend modes</td></tr>
+<tr><td><code>styles</code></td><td>Colour modes, blend modes (opaque, transparent, additive, multiplicative, screen, dither), dash patterns and style presets</td></tr>
 <tr><td><code>mix_spaces</code></td><td>The same gradient in each <code>MixSpace</code> (OKLAB, OKLCH, linear RGB, sRGB)</td></tr>
 <tr><td><code>pbr_effects</code></td><td>Transparency, emissive glow, metallic surfaces, and combined effects</td></tr>
 <tr><td><code>gradient_2d</code></td><td><code>Camera2d</code> and <code>Mesh2d</code> with gradient cards, a radial disc, a pulsing star, a dashed ring and a polygon with a hole</td></tr>
@@ -1730,19 +1873,20 @@ hull constructor:</p>
 <tr><td><code>retained</code></td><td>Persistent shapes updated each frame via handles without recreating entities</td></tr>
 <tr><td><code>instanced</code></td><td>500 spheres rendered in a single GPU batch via <code>BatchRecorder</code></td></tr>
 <tr><td><code>standalone</code></td><td>Gradient shapes drawn without any PBR material or lights: one shader pipeline, one bind group</td></tr>
-<tr><td><code>curves</code></td><td>Spline and parametric curves rendered as smooth tubes</td></tr>
-<tr><td><code>polyline</code></td><td>Polylines with joint styles, width variation, gradient colors, and animated reveal</td></tr>
+<tr><td><code>curves</code></td><td>Bezier curves of every degree and a 3D helix rendered as smooth tubes by the standalone pipeline</td></tr>
+<tr><td><code>polyline</code></td><td>Flat 2D polylines (open, closed, thick and thin) with gradient colors, drawn as <code>Mesh2d</code> without PBR</td></tr>
 <tr><td><code>sweep</code></td><td>Profiles swept along 3D paths: a wall with an arched gate and windows, a kerbed road, and a tapering pipe on a helix</td></tr>
 <tr><td><code>road</code></td><td>Banked road using <code>Shape::sweep_frames</code> with width and roll channels</td></tr>
-<tr><td><code>composed_shapes</code></td><td>Compound tower, wall with arched opening, extruded cobbles, emissive torch, metallic gem, and translucent ghost piece</td></tr>
+<tr><td><code>composed_shapes</code></td><td>Compound tower, wall with arched opening, extruded cobbles, torch, gem and heightfield terrain, drawn unlit by the standalone pipeline</td></tr>
 <tr><td><code>terrain</code></td><td>Heightfield chunks with shared edge normals, relative height bands, and hole edges</td></tr>
 <tr><td><code>deformation</code></td><td>Vertex shader animations: wobble, pulse, and morph effects</td></tr>
 <tr><td><code>appearance</code></td><td>Per-instance colour animation: static, pulse, cycle, and gradient shift</td></tr>
-<tr><td><code>arbitrary_shapes</code></td><td>Custom polygons with per-vertex colors, star shapes, annular rings, pie-slice wedges, and tapered cylinders</td></tr>
+<tr><td><code>arbitrary_shapes</code></td><td>Custom polygons with per-vertex colors, star shapes, annular rings, pie-slice wedges, and the side profiles of tapered cylinders</td></tr>
+<tr><td><code>lerp</code></td><td>Six animated shape morphs: disc↔star, rectangle↔ring, polygon↔disc rim, ring↔disc, disc rim↔rectangle, wedge↔disc</td></tr>
 </tbody>
 </table>
 </div>
-<p>Run any example with <code>cargo run --example &lt;name&gt;</code>.</p>
+<p>Run any example with <code>cargo run --example &lt;name&gt;</code>. The examples listed under Features in <a href="#getting-started">Getting Started</a> also run with <code>--no-default-features</code>.</p>
 
                     </main>
 

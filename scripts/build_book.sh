@@ -51,7 +51,12 @@ root=$(mktemp -d)
 trap 'rm -rf "$root"' EXIT
 
 cp "$book_dir/book.toml" "$root/book.toml"
-ln -s "$book_dir/src" "$root/src"
+# Patch book.toml for linkcheck2 compatibility (submodule stays clean)
+sed -i.bak 's/\[output\.linkcheck\]/[output.linkcheck2]/' "$root/book.toml"
+rm -f "$root/book.toml.bak"
+# Copy src instead of symlinking; remove broken symlinks (e.g. screenshots/)
+cp -R "$book_dir/src" "$root/src"
+find "$root/src" -type l ! -exec test -e {} \; -print -delete
 cp "$repo_root/js/book_variant_switch_bootstrap.js" "$root/variant_switch.js"
 cp "$repo_root/js/book_demos/bootstrap.js" "$root/book_demos.js"
 cp "$repo_root/css/book_variant_switch.css" "$root/variant_switch.css"

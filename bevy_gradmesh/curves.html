@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-6557ef1d.js";
+            window.path_to_searchindex_js = "searchindex-6a977d81.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-cbf67a2d.js"></script>
@@ -182,7 +182,7 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h1 id="curves--polylines"><a class="header" href="#curves--polylines">Curves &amp; Polylines</a></h1>
-<h2 id="bezier-curves"><a class="header" href="#bezier-curves">Bezier Curves</a></h2>
+<h2 id="bézier-curves"><a class="header" href="#bézier-curves">Bézier Curves</a></h2>
 <p>Render smooth curves as tube geometry:</p>
 <pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
 </span><span class="boring">use bevy_gradmesh::{Shape, ShapeDetail};
@@ -228,7 +228,7 @@ fn animate_curve(
         *mesh = rebuilt;
     }
 }</code></pre>
-<p><em>Spline and parametric curves rendered as smooth tubes. Run <code>cargo run --example curves</code> to reproduce it.</em></p>
+<p><em>Bezier curves of every degree and a 3D helix, drawn as tubes by the standalone pipeline without PBR. The standalone gradient is fixed to the world axis, so tubes far from the origin show only part of their blend. Run <code>cargo run --example curves</code> to reproduce it.</em></p>
 <h2 id="3d-polylines"><a class="header" href="#3d-polylines">3D Polylines</a></h2>
 <p>Connect points with tube geometry:</p>
 <pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
@@ -256,10 +256,10 @@ fn animate_curve(
     ];
     Shape::polyline3d(points, 0.05, true, 8, ShapeDetail::Medium).build()
 }</code></pre>
-<p><em>Joint styles, width variation, gradient colours and an animated reveal. Run <code>cargo run --example polyline</code> to reproduce it.</em></p>
+<p><em>Flat 2D polylines drawn as <code>Mesh2d</code> without PBR: open, closed, thick and thin, with a gradient along each line. The example is 2D only; <code>Shape::polyline3d</code> (above) builds tubes for a 3D camera. Run <code>cargo run --example polyline</code> to reproduce it.</em></p>
 <h2 id="use-cases"><a class="header" href="#use-cases">Use Cases</a></h2>
 <ul>
-<li><strong>Track paths</strong>: Define racing tracks with Bezier curves</li>
+<li><strong>Track paths</strong>: Define racing tracks with Bézier curves</li>
 <li><strong>Cables and wires</strong>: Connect objects with polylines</li>
 <li><strong>Animated trails</strong>: Update control points each frame</li>
 <li><strong>Data visualization</strong>: Plot 3D data as connected tubes</li>

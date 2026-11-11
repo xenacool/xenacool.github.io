@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-6557ef1d.js";
+            window.path_to_searchindex_js = "searchindex-6a977d81.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-cbf67a2d.js"></script>
@@ -182,15 +182,16 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h1 id="gallery"><a class="header" href="#gallery">Gallery</a></h1>
+<p>Screenshots for every example are packaged in a zip archive attached to each <a href="https://github.com/xenacool/bevy_gradmesh/releases">GitHub Release</a>.</p>
 <div class="table-wrapper">
 <table>
 <thead>
 <tr><th>Example</th><th>Description</th></tr>
 </thead>
 <tbody>
-<tr><td><code>shapes</code></td><td>All procedural primitives with dual-directional gradient shading</td></tr>
+<tr><td><code>shapes</code></td><td>Procedural primitives at every detail level, shaded by dual-directional gradients</td></tr>
 <tr><td><code>character_creator</code></td><td>Character parts built from gradient-shaded primitives</td></tr>
-<tr><td><code>styles</code></td><td>Opaque, transparent, additive, multiplicative, screen, dither, and dashed blend modes</td></tr>
+<tr><td><code>styles</code></td><td>Colour modes, blend modes (opaque, transparent, additive, multiplicative, screen, dither), dash patterns and style presets</td></tr>
 <tr><td><code>mix_spaces</code></td><td>The same gradient in each <code>MixSpace</code> (OKLAB, OKLCH, linear RGB, sRGB)</td></tr>
 <tr><td><code>pbr_effects</code></td><td>Transparency, emissive glow, metallic surfaces, and combined effects</td></tr>
 <tr><td><code>gradient_2d</code></td><td><code>Camera2d</code> and <code>Mesh2d</code> with gradient cards, a radial disc, a pulsing star, a dashed ring and a polygon with a hole</td></tr>
@@ -200,19 +201,20 @@
 <tr><td><code>retained</code></td><td>Persistent shapes updated each frame via handles without recreating entities</td></tr>
 <tr><td><code>instanced</code></td><td>500 spheres rendered in a single GPU batch via <code>BatchRecorder</code></td></tr>
 <tr><td><code>standalone</code></td><td>Gradient shapes drawn without any PBR material or lights: one shader pipeline, one bind group</td></tr>
-<tr><td><code>curves</code></td><td>Spline and parametric curves rendered as smooth tubes</td></tr>
-<tr><td><code>polyline</code></td><td>Polylines with joint styles, width variation, gradient colors, and animated reveal</td></tr>
+<tr><td><code>curves</code></td><td>Bezier curves of every degree and a 3D helix rendered as smooth tubes by the standalone pipeline</td></tr>
+<tr><td><code>polyline</code></td><td>Flat 2D polylines (open, closed, thick and thin) with gradient colors, drawn as <code>Mesh2d</code> without PBR</td></tr>
 <tr><td><code>sweep</code></td><td>Profiles swept along 3D paths: a wall with an arched gate and windows, a kerbed road, and a tapering pipe on a helix</td></tr>
 <tr><td><code>road</code></td><td>Banked road using <code>Shape::sweep_frames</code> with width and roll channels</td></tr>
-<tr><td><code>composed_shapes</code></td><td>Compound tower, wall with arched opening, extruded cobbles, emissive torch, metallic gem, and translucent ghost piece</td></tr>
+<tr><td><code>composed_shapes</code></td><td>Compound tower, wall with arched opening, extruded cobbles, torch, gem and heightfield terrain, drawn unlit by the standalone pipeline</td></tr>
 <tr><td><code>terrain</code></td><td>Heightfield chunks with shared edge normals, relative height bands, and hole edges</td></tr>
 <tr><td><code>deformation</code></td><td>Vertex shader animations: wobble, pulse, and morph effects</td></tr>
 <tr><td><code>appearance</code></td><td>Per-instance colour animation: static, pulse, cycle, and gradient shift</td></tr>
-<tr><td><code>arbitrary_shapes</code></td><td>Custom polygons with per-vertex colors, star shapes, annular rings, pie-slice wedges, and tapered cylinders</td></tr>
+<tr><td><code>arbitrary_shapes</code></td><td>Custom polygons with per-vertex colors, star shapes, annular rings, pie-slice wedges, and the side profiles of tapered cylinders</td></tr>
+<tr><td><code>lerp</code></td><td>Six animated shape morphs: disc↔star, rectangle↔ring, polygon↔disc rim, ring↔disc, disc rim↔rectangle, wedge↔disc</td></tr>
 </tbody>
 </table>
 </div>
-<p>Run any example with <code>cargo run --example &lt;name&gt;</code>.</p>
+<p>Run any example with <code>cargo run --example &lt;name&gt;</code>. The examples listed under Features in <a href="./getting-started.html">Getting Started</a> also run with <code>--no-default-features</code>.</p>
 
                     </main>
 

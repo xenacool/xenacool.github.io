@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-ad779c5b.js";
+            window.path_to_searchindex_js = "searchindex-741896a4.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-d11337db.js"></script>
@@ -185,32 +185,16 @@
                         <h1 id="app-content"><a class="header" href="#app-content">App Content</a></h1>
 <p>A view is plain data, but the entity of a node that is on screen is an ordinary Bevy entity, and
 an app often wants more on it than the engine knows about: a marker component, an observer for
-<code>PointerClick</code>, a sound that plays when it is added. <code>ViewNode::with_scene</code> attaches a Bevy
-scene to a node for exactly that. The sphere in this example needs the <code>gradmesh</code> feature.</p>
-<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
-</span>use bevy_composable_dragging::ViewNode;
-
-#[derive(Component, Default, Clone)]
-struct Door;
-
-#[derive(EntityEvent)]
-struct DoorClicked {
-    entity: Entity,
-}
-
-<span class="boring">#[derive(Clone)]
-</span><span class="boring">struct MyState;
-</span>fn door_node() -&gt; ViewNode&lt;MyState&gt; {
-    ViewNode::sphere("door", 0.5).with_scene(|| {
-        bsn! {
-            Door
-            on(|event: On&lt;PointerClick&gt;, mut commands: Commands| {
-                commands.trigger(DoorClicked { entity: event.entity });
-            })
-        }
-    })
-}
-<span class="boring">fn main() {}</span></code></pre>
+<code>Pointer&lt;Click&gt;</code>, a sound that plays when it is added. <code>ViewNode::with_scene</code> attaches a Bevy
+scene to a node for exactly that.</p>
+<pre><code class="language-rust ignore">ViewNode::sphere("door", 0.5).with_scene(|| {
+    bsn! {
+        Door
+        on(|event: On&lt;Pointer&lt;Click&gt;&gt;, mut commands: Commands| {
+            commands.trigger(DoorClicked(event.entity));
+        })
+    }
+})</code></pre>
 <h2 id="the-contract"><a class="header" href="#the-contract">The contract</a></h2>
 <ul>
 <li><strong>The view stays pure.</strong> <code>view(&amp;S)</code> never reads or writes the world. The function you pass to

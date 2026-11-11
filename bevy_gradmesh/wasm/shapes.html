@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-6557ef1d.js";
+            window.path_to_searchindex_js = "searchindex-6a977d81.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-cbf67a2d.js"></script>
@@ -234,12 +234,12 @@
 }</code></pre>
 <p>When <code>capped</code> is true, the flat face is filled with geometry.</p>
 <h3 id="torus"><a class="header" href="#torus">Torus</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::Shape;
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::{Shape, ShapeDetail};
 </span><span class="boring">fn main() {}
 </span>fn torus() -&gt; Shape {
     let start_angle = 0.0;
     let span = std::f32::consts::TAU;
-    Shape::torus(1.0, 0.25, start_angle, span)
+    Shape::torus(1.0, 0.25, start_angle, span, ShapeDetail::Medium)
 }</code></pre>
 <p>Supports partial torus arcs. Use <code>start_angle = 0.0</code> and <code>span = TAU</code> for a full torus.</p>
 <h3 id="regular-prism"><a class="header" href="#regular-prism">Regular Prism</a></h3>
@@ -266,65 +266,120 @@
     Shape::tapered_cylinder(top_radius, bottom_radius, 2.0, ShapeDetail::Medium)
 }</code></pre>
 <p>A cone-frustum with flat top and bottom. When radii are equal, equivalent to a regular cylinder.</p>
-<p><em>The 3D primitives, shaded with dual-directional gradients. Run <code>cargo run --example shapes</code> to reproduce it.</em></p>
+<p><em>Every primitive at several detail levels, shaded by dual-directional gradients instead of lights. Solids go through the standalone pipeline and flat shapes are <code>Mesh2d</code> meshes, so it runs without PBR. Run <code>cargo run --example shapes</code> to reproduce it.</em></p>
 <h2 id="2d-primitives"><a class="header" href="#2d-primitives">2D Primitives</a></h2>
-<p>All 2D shapes are flat quads facing the camera (billboarded).</p>
+<p>Rectangles, discs, ellipses, rings, wedges, polygons, stars and arbitrary polygons use the SDF
+backend (<code>SdfMaterial2d</code>). Each one is a material drawn on the shared <code>unit_quad()</code> mesh. Sizes are
+in world units (pixels with the default <code>Camera2d</code>), and the quad’s <code>Transform</code> scale must be
+<code>SdfMaterial2d::quad_scale()</code>. See <a href="./backends.html">Choosing a Backend</a> for the full SDF API.</p>
+<p>Polygons with holes, per-vertex colours and outlines of more than 16 vertices go through the mesh
+backend with <code>Shape::as_flat()?.build_2d()</code>. See <a href="#arbitrary-polygon-on-the-mesh-backend">Arbitrary Polygon on the mesh backend</a>.</p>
 <h3 id="rectangle"><a class="header" href="#rectangle">Rectangle</a></h3>
 <pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
-</span><span class="boring">use bevy_gradmesh::{Shape, ShapeDetail};
+</span><span class="boring">use bevy_gradmesh::SdfMaterial2d;
 </span><span class="boring">fn main() {}
-</span>fn rectangle() -&gt; Shape {
-    Shape::rectangle(Vec2::new(2.0, 1.0), ShapeDetail::Medium)
+</span>fn rectangle() -&gt; SdfMaterial2d {
+    let corner_radius = 8.0;
+    SdfMaterial2d::rect(Vec2::new(200.0, 100.0)).with_corner_radius(corner_radius)
 }</code></pre>
+<p>The corner radius is optional. Leave it out for sharp corners.</p>
 <h3 id="disc"><a class="header" href="#disc">Disc</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::{Shape, ShapeDetail};
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::SdfMaterial2d;
 </span><span class="boring">fn main() {}
-</span>fn disc() -&gt; Shape {
-    Shape::disc(1.0, ShapeDetail::Medium)
-}</code></pre>
-<h3 id="polygon"><a class="header" href="#polygon">Polygon</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::{Shape, ShapeDetail};
-</span><span class="boring">fn main() {}
-</span>fn polygon() -&gt; Shape {
-    let sides = 5;
-    Shape::polygon(sides, 1.0, ShapeDetail::Medium)
+</span>fn disc() -&gt; SdfMaterial2d {
+    SdfMaterial2d::disc(100.0)
 }</code></pre>
 <h3 id="ellipse"><a class="header" href="#ellipse">Ellipse</a></h3>
 <pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
-</span><span class="boring">use bevy_gradmesh::{Shape, ShapeDetail};
+</span><span class="boring">use bevy_gradmesh::SdfMaterial2d;
 </span><span class="boring">fn main() {}
-</span>fn ellipse() -&gt; Shape {
-    Shape::ellipse(Vec2::new(1.5, 0.75), ShapeDetail::Medium)
+</span>fn ellipse() -&gt; SdfMaterial2d {
+    SdfMaterial2d::ellipse(Vec2::new(150.0, 75.0))
 }</code></pre>
-<h3 id="star"><a class="header" href="#star">Star</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::{Shape, ShapeDetail};
-</span><span class="boring">fn main() {}
-</span>fn star() -&gt; Shape {
-    let points = 5;
-    let outer_radius = 1.0;
-    let inner_radius = 0.4;
-    Shape::star(points, outer_radius, inner_radius, ShapeDetail::Medium)
-}</code></pre>
-<p>N-pointed star. The <code>inner_radius</code> controls how deep the indentations are.</p>
 <h3 id="ring"><a class="header" href="#ring">Ring</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::{Shape, ShapeDetail};
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::SdfMaterial2d;
 </span><span class="boring">fn main() {}
-</span>fn ring() -&gt; Shape {
-    let outer_radius = 1.0;
-    let inner_radius = 0.6;
-    Shape::ring(outer_radius, inner_radius, ShapeDetail::Medium)
+</span>fn ring() -&gt; SdfMaterial2d {
+    let outer_radius = 100.0;
+    let inner_radius = 60.0;
+    let rim_width = outer_radius - inner_radius;
+    SdfMaterial2d::disc(outer_radius).with_rim(rim_width)
 }</code></pre>
-<p>Annulus (2D donut with a hole).</p>
+<p>Annulus (2D donut with a hole). The rim is drawn inside the outline of the disc.</p>
 <h3 id="wedge"><a class="header" href="#wedge">Wedge</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::{Shape, ShapeDetail};
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::SdfMaterial2d;
 </span><span class="boring">fn main() {}
-</span>fn wedge() -&gt; Shape {
-    let angle = std::f32::consts::FRAC_PI_2;
-    Shape::wedge(1.0, angle, ShapeDetail::Medium)
+</span>fn wedge() -&gt; SdfMaterial2d {
+    let start_angle = 0.0;
+    let span = std::f32::consts::FRAC_PI_2;
+    SdfMaterial2d::disc(100.0).with_arc(start_angle, span)
 }</code></pre>
-<p>Pie-slice shape. Angle is in radians (0 to 2 pi).</p>
-<p><em>Custom polygons with per-vertex colours, stars, rings, wedges and a tapered cylinder. Run <code>cargo run --example arbitrary_shapes</code> to reproduce it.</em></p>
+<p>Pie-slice shape. The arc starts at <code>start_angle</code> radians counter-clockwise from +X and covers
+<code>span</code> radians.</p>
+<h3 id="spawning-an-sdf-primitive"><a class="header" href="#spawning-an-sdf-primitive">Spawning an SDF primitive</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
+</span><span class="boring">use bevy_gradmesh::{SdfMaterial2d, unit_quad};
+</span><span class="boring">fn main() {}
+</span>fn spawn_primitive(
+    mut commands: Commands,
+    mut meshes: ResMut&lt;Assets&lt;Mesh&gt;&gt;,
+    mut materials: ResMut&lt;Assets&lt;SdfMaterial2d&gt;&gt;,
+) {
+    let material = SdfMaterial2d::disc(100.0)
+        .with_colors(Color::srgb(0.9, 0.4, 0.5), Color::WHITE);
+    commands.spawn((
+        Mesh2d(meshes.add(unit_quad())),
+        Transform::from_scale(material.quad_scale()),
+        MeshMaterial2d(materials.add(material)),
+    ));
+}</code></pre>
+<p>Add all primitives to the same <code>unit_quad()</code> handle to share one mesh asset.</p>
+<h3 id="polygon"><a class="header" href="#polygon">Polygon</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::SdfMaterial2d;
+</span><span class="boring">fn main() {}
+</span>fn polygon() -&gt; SdfMaterial2d {
+    let sides = 5;
+    let radius = 100.0;
+    SdfMaterial2d::polygon(sides, radius)
+}</code></pre>
+<p>Regular polygon with 3 to 64 sides and a vertex pointing up. <code>radius</code> is the distance from the
+centre to a vertex.</p>
+<h3 id="star"><a class="header" href="#star">Star</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::SdfMaterial2d;
+</span><span class="boring">fn main() {}
+</span>fn star() -&gt; SdfMaterial2d {
+    let points = 5;
+    let outer_radius = 100.0;
+    let inner_radius = 40.0;
+    SdfMaterial2d::star(points, outer_radius, inner_radius)
+}</code></pre>
+<p>N-pointed star with 3 to 64 points. The <code>inner_radius</code> controls how deep the indentations are. An
+inner radius at or above the outer radius gives a polygon with twice as many sides.</p>
 <h3 id="arbitrary-polygon"><a class="header" href="#arbitrary-polygon">Arbitrary Polygon</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
+</span><span class="boring">use bevy_gradmesh::{SdfMaterial2d, SdfPolygonError};
+</span><span class="boring">fn main() {}
+</span>fn arrow() -&gt; Result&lt;SdfMaterial2d, SdfPolygonError&gt; {
+    let points = [
+        Vec2::new(-70.0, -20.0),
+        Vec2::new(10.0, -20.0),
+        Vec2::new(10.0, -60.0),
+        Vec2::new(75.0, 0.0),
+        Vec2::new(10.0, 60.0),
+        Vec2::new(10.0, 20.0),
+        Vec2::new(-70.0, 20.0),
+    ];
+    SdfMaterial2d::polygon_from_points(&amp;points)
+}</code></pre>
+<p>Any outline of 3 to 16 points, concave outlines included, wound either way. Fewer than 3 or more
+than 16 points return a <code>SdfPolygonError</code> that names the count. The shape is centred on the middle
+of its bounding box.</p>
+<p>Polygons and stars support rims, arcs, gradients and colour modes like every other SDF shape. A
+rim is drawn inside the outline, so thin features of a concave shape can disappear under a wide
+rim. Dashes are not supported on these kinds: a dashed rim draws solid.</p>
+<p><em>Discs, ellipses, rounded rectangles, rims, arcs, polygons and stars on one shared quad. Run <code>cargo run --example sdf_2d</code> to reproduce it.</em></p>
+<p><em>Custom polygons with per-vertex colours, stars, rings, wedges and the side profiles of tapered cylinders (<code>Shape::as_flat</code> refuses the solid itself). Run <code>cargo run --example arbitrary_shapes</code> to reproduce it.</em></p>
+<h3 id="arbitrary-polygon-on-the-mesh-backend"><a class="header" href="#arbitrary-polygon-on-the-mesh-backend">Arbitrary Polygon on the mesh backend</a></h3>
 <pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
 </span><span class="boring">use bevy_gradmesh::{Shape, ShapeDetail};
 </span><span class="boring">fn main() {}
@@ -350,7 +405,13 @@ fn arbitrary_polygon_colored() -&gt; Shape {
     ];
     Shape::arbitrary_polygon_colored(vertices, colors, ShapeDetail::Medium)
 }</code></pre>
-<p>Accepts any set of 2D vertices. Triangulated using ear-clipping algorithm. Supports optional per-vertex RGBA colors.</p>
+<p>Accepts any simple (non-self-crossing) outline, convex or concave, in either winding. It is triangulated by
+ear clipping and always faces +Z. Repeated points, the closing duplicate and collinear or near-collinear
+vertices are cleaned up, so a puzzle piece whose edges are split into many almost straight points, with
+knobs and blanks, can be one single polygon instead of several simpler ones. Outlines with no area give an
+empty mesh, and outlines that cross themselves have no well-defined fill. Supports optional per-vertex RGBA
+colors, which stay with their vertices.
+Use this form for outlines of more than 16 vertices, polygons with holes and per-vertex colours.</p>
 <h2 id="advanced-geometry"><a class="header" href="#advanced-geometry">Advanced Geometry</a></h2>
 <h3 id="3d-polyline"><a class="header" href="#3d-polyline">3D Polyline</a></h3>
 <pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
@@ -368,7 +429,7 @@ fn arbitrary_polygon_colored() -&gt; Shape {
     Shape::polyline3d(points, thickness, closed, segments, ShapeDetail::Medium)
 }</code></pre>
 <p>Renders as tube geometry along the point path.</p>
-<h3 id="bezier-curve"><a class="header" href="#bezier-curve">Bezier Curve</a></h3>
+<h3 id="bézier-curve"><a class="header" href="#bézier-curve">Bézier Curve</a></h3>
 <pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
 </span><span class="boring">use bevy_gradmesh::{Shape, ShapeDetail};
 </span><span class="boring">fn main() {}
@@ -383,7 +444,69 @@ fn arbitrary_polygon_colored() -&gt; Shape {
     let segments = 32;
     Shape::bezier_curve(control_points, thickness, segments, ShapeDetail::Medium)
 }</code></pre>
-<p>Supports linear (2 points), quadratic (3 points), and cubic (4+ points) Bezier curves rendered as tubes.</p>
+<p>Supports linear (2 points), quadratic (3 points), and cubic (4+ points) Bézier curves rendered as tubes.</p>
+<h2 id="shape-morphing"><a class="header" href="#shape-morphing">Shape Morphing</a></h2>
+<p><code>Shape::lerp</code> blends two shapes by interpolating their parameters. When the shapes share the same
+kind, every continuous parameter (radius, height, size, roundness) is interpolated. Integer counts
+(sides, segments, points) and boolean flags (capped, closed) snap at <code>t = 0.5</code> — a prism cannot
+have 6.3 sides.</p>
+<h3 id="cross-kind-flat-shape-morphing"><a class="header" href="#cross-kind-flat-shape-morphing">Cross-kind flat shape morphing</a></h3>
+<p>Filled flat shapes of <strong>different kinds</strong> morph as outlines: a polygon can turn into a star, a
+disc rim can turn into a rectangle, and a ring can turn into a disc. The blend produces an
+arbitrary polygon. Supported kinds: rectangle, disc, ellipse, polygon, star, arbitrary polygon,
+rectangle rim, disc rim, ellipse rim, polygon rim, ring and wedge. For rims and rings only the
+outer edge participates; a ring’s inner hole is ignored.</p>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::{Shape, ShapeDetail};
+</span><span class="boring">fn main() {}
+</span>let a = Shape::disc(1.2, ShapeDetail::Medium);
+let b = Shape::star(5, 1.2, 0.5, ShapeDetail::Medium);
+let mid = a.lerp(&amp;b, 0.5); // an ArbitraryPolygon between disc and star</code></pre>
+<h3 id="ring-morph-example"><a class="header" href="#ring-morph-example">Ring morph example</a></h3>
+<p>A ring morphs into a disc by blending the ring’s outer edge with the disc’s outline:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::{Shape, ShapeDetail};
+</span><span class="boring">fn main() {}
+</span>let ring = Shape::ring(1.2, 0.5, ShapeDetail::Medium);
+let disc = Shape::disc(1.2, ShapeDetail::Medium);
+let mid = ring.lerp(&amp;disc, 0.5); // fills the hole gradually</code></pre>
+<p>A wedge morphs into a disc similarly:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::{Shape, ShapeDetail};
+</span><span class="boring">fn main() {}
+</span>let wedge = Shape::wedge(1.2, std::f32::consts::PI, ShapeDetail::Medium);
+let disc = Shape::disc(1.2, ShapeDetail::Medium);
+let mid = wedge.lerp(&amp;disc, 0.5);</code></pre>
+<h3 id="performance-pre-computing-keyframe-tables"><a class="header" href="#performance-pre-computing-keyframe-tables">Performance: pre-computing keyframe tables</a></h3>
+<p>Calling <code>lerp</code> with a different <code>t</code> each frame produces a new mesh each frame. At 60 Hz this is
+60 new meshes per second. To avoid this cost:</p>
+<ol>
+<li>
+<p><strong>Animate a continuous proxy</strong>: Keep a fixed mesh and animate its <code>Transform</code> (scale,
+position, rotation) instead of morphing the shape.</p>
+</li>
+<li>
+<p><strong>Pre-compute a keyframe table</strong>: Build intermediate shapes once at fixed <code>t</code> values and
+switch between them each frame:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span><span class="boring">use bevy_gradmesh::{Shape, ShapeDetail};
+</span><span class="boring">let a = Shape::disc(1.0, ShapeDetail::Medium);
+</span><span class="boring">let b = Shape::star(5, 1.0, 0.4, ShapeDetail::Medium);
+</span>// Build once (e.g. in Startup system)
+let keyframes: Vec&lt;Shape&gt; = (0..=10)
+    .map(|i| a.lerp(&amp;b, i as f32 / 10.0))
+    .collect();
+// Each frame, pick the nearest keyframe
+let idx = (t * 10.0).round() as usize;
+let shape = &amp;keyframes[idx.min(keyframes.len() - 1)];
+<span class="boring">}</span></code></pre>
+<p>This limits mesh generation to the number of keyframes (11 in the example) and makes each
+frame a cheap array lookup.</p>
+</li>
+<li>
+<p><strong>Quantise <code>t</code></strong>: Round <code>t</code> to a small set of steps before calling <code>lerp</code>, so repeated frames
+reuse the same <code>Shape</code> value.</p>
+</li>
+</ol>
+<p><em>Six morphing shapes: disc↔star, rect↔ring, polygon↔disc rim, ring↔disc, disc rim↔rect, wedge↔disc. Run <code>cargo run --example lerp</code> to reproduce it.</em></p>
 
                     </main>
 

@@ -27,7 +27,7 @@ fn main() {
 
     let dragging: &[&str] = &[
         "blend_square", "chain_of_cells", "clock", "gizmo_3d",
-        "gradient_hanoi_3d", "gradient_kanban_2d", "hello",
+        "gradient_hanoi_3d", "gradient_kanban_2d",
         "lists_in_lists", "reorder_list", "ring_of_beads", "scheduler",
         "slider", "tactile_tessellations", "tessellations", "three_way", "toggle",
     ];
@@ -379,14 +379,72 @@ fn strip_add_plugins(text: &str) -> String {
     let lines: Vec<&str> = text.lines().collect();
     let mut result = Vec::new();
     let mut i = 0;
-    let mut stripped_default = false;
 
     while i < lines.len() {
         let line = lines[i];
         let stripped = line.trim();
 
-        // 1. Strip DefaultPlugins chain: "app" followed by ".add_plugins(" with "DefaultPlugins"
-        if !stripped_default && stripped == "app" {
+        // 1. Handle new pattern: app.add_plugins(common::default_plugins("name"))
+        //    followed by chained .add_plugins() calls.
+        //    Replace the default_plugins call with just "app" so the chain continues.
+        if stripped.starts_with("app.add_plugins(common::default_plugins(") {
+            // Find the end of this add_plugins call (matching parens)
+            let mut depth = 0;
+            let mut end_line = i;
+            for ch in lines[i].chars() {
+                if ch == '(' {
+                    depth += 1;
+                } else if ch == ')' {
+                    depth -= 1;
+                }
+            }
+            if depth <= 0 {
+                // Single line: app.add_plugins(common::default_plugins("name"))
+                // Check if it ends with ; (standalone) or chains to next line
+                if stripped.ends_with(';') {
+                    // Standalone statement - remove entirely
+                    i += 1;
+                    continue;
+                } else {
+                    // Chains to next line - replace with "app" to keep the chain
+                    let indent = line.chars().take_while(|c| c.is_whitespace()).collect::<String>();
+                    result.push(format!("{}app", indent));
+                    i += 1;
+                    continue;
+                }
+            } else {
+                // Multi-line: find the closing paren
+                end_line = i;
+                while end_line < lines.len() && depth > 0 {
+                    end_line += 1;
+                    for ch in lines[end_line].chars() {
+                        if ch == '(' {
+                            depth += 1;
+                        } else if ch == ')' {
+                            depth -= 1;
+                        }
+                    }
+                }
+                if depth <= 0 {
+                    // Check what comes after
+                    let mut next_i = end_line + 1;
+                    while next_i < lines.len() && lines[next_i].trim().is_empty() {
+                        next_i += 1;
+                    }
+                    if next_i < lines.len() && lines[next_i].trim().starts_with('.') {
+                        // Chains to next line - replace with "app"
+                        let indent = line.chars().take_while(|c| c.is_whitespace()).collect::<String>();
+                        result.push(format!("{}app", indent));
+                    }
+                    // else standalone - skip entirely
+                    i = next_i;
+                    continue;
+                }
+            }
+        }
+
+        // 2. Handle old pattern: "app" on its own line followed by .add_plugins(DefaultPlugins)
+        if stripped == "app" {
             let mut j = i + 1;
             while j < lines.len() && lines[j].trim().is_empty() {
                 j += 1;
@@ -426,10 +484,8 @@ fn strip_add_plugins(text: &str) -> String {
                                     || lines[next_i].trim().starts_with(".add_systems")
                                     || lines[next_i].trim().starts_with(".add_event"))
                             {
-                                stripped_default = true;
                                 break;
                             } else if next_i < lines.len() && lines[next_i].contains(';') {
-                                stripped_default = true;
                                 i = next_i + 1;
                                 break;
                             }
@@ -440,37 +496,72 @@ fn strip_add_plugins(text: &str) -> String {
             }
         }
 
-        // 2. Strip AutoScreenshotPlugin
-        if stripped.contains(".add_plugins(") {
-            let has_auto = stripped.contains("AutoScreenshotPlugin")
-                || (i + 1 < lines.len() && lines[i + 1].contains("AutoScreenshotPlugin"));
-            let has_default_plugins = stripped.contains("default_plugins")
-                || (i + 1 < lines.len() && lines[i + 1].contains("default_plugins"));
+        // 3. Strip AutoScreenshotPlugin calls (standalone or chained)
+        if stripped.contains(".add_plugins(") && stripped.contains("AutoScreenshotPlugin") {
+            // Skip this entire .add_plugins(AutoScreenshotPlugin...) block
+            let mut depth = 0;
+            let mut started = false;
+            while i < lines.len() {
+                for ch in lines[i].chars() {
+                    if ch == '(' {
+                        depth += 1;
+                        started = true;
+                    } else if ch == ')' {
+                        depth -= 1;
+                    }
+                }
+                i += 1;
+                if started && depth <= 0 {
+                    // Check if next line continues the chain
+                    let mut next_i = i;
+                    while next_i < lines.len() && lines[next_i].trim().is_empty() {
+                        next_i += 1;
+                    }
+                    if next_i < lines.len() && lines[next_i].trim().starts_with('.') {
+                        // Chain continues, keep going
+                    } else {
+                        // Statement ends here
+                        if next_i < lines.len() && lines[next_i].contains(';') {
+                            i = next_i + 1;
+                        }
+                    }
+                    break;
+                }
+            }
+            continue;
+        }
 
-            if has_auto || has_default_plugins {
+        // 4. Strip AutoScreenshotPlugin on next line after .add_plugins(
+        if stripped.contains(".add_plugins(") && !stripped.contains("AutoScreenshotPlugin") {
+            let mut j = i + 1;
+            while j < lines.len() && lines[j].trim().is_empty() {
+                j += 1;
+            }
+            if j < lines.len() && lines[j].contains("AutoScreenshotPlugin") {
+                // Skip from current line through the closing paren and semicolon
                 let mut depth = 0;
+                let mut started = false;
                 while i < lines.len() {
                     for ch in lines[i].chars() {
                         if ch == '(' {
                             depth += 1;
+                            started = true;
                         } else if ch == ')' {
                             depth -= 1;
                         }
                     }
                     i += 1;
-                    if depth <= 0 {
+                    if started && depth <= 0 {
                         let mut next_i = i;
                         while next_i < lines.len() && lines[next_i].trim().is_empty() {
                             next_i += 1;
                         }
-                        if next_i < lines.len() && lines[next_i].trim().starts_with(".add_") {
-                            break;
+                        if next_i < lines.len() && lines[next_i].trim().starts_with('.') {
+                            // Chain continues
                         } else if next_i < lines.len() && lines[next_i].contains(';') {
                             i = next_i + 1;
-                            break;
-                        } else {
-                            break;
                         }
+                        break;
                     }
                 }
                 continue;

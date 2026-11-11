@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-ad779c5b.js";
+            window.path_to_searchindex_js = "searchindex-741896a4.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-d11337db.js"></script>
@@ -184,23 +184,19 @@
                         <h1 id="gizmos"><a class="header" href="#gizmos">Gizmos</a></h1>
 <p>The <code>gizmo</code> module (behind the <code>gradmesh</code> feature) adds translate, rotate, and scale handles around a node as ordinary draggable nodes. Each handle uses value operators (<code>along_axis</code>, <code>around_axis</code>, <code>across_plane</code>) with snapping.</p>
 <h2 id="adding-a-gizmo"><a class="header" href="#adding-a-gizmo">Adding a Gizmo</a></h2>
-<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
-</span>use bevy_composable_dragging::gizmo::Gizmo;
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use bevy::prelude::Transform;
+use bevy_composable_dragging::gizmo::Gizmo;
 use bevy_composable_dragging::ops::Snap;
 use bevy_composable_dragging::{View, ViewNode};
 
-<span class="boring">#[derive(Clone)]
-</span><span class="boring">struct MyState {
-</span><span class="boring">    position: Vec3,
-</span><span class="boring">    rotation: Quat,
-</span><span class="boring">    scale: Vec3,
-</span><span class="boring">}
-</span>fn view(state: &amp;MyState) -&gt; View&lt;MyState&gt; {
+fn view(state: &amp;MyState) -&gt; View&lt;MyState&gt; {
     let mut view = View::new();
     view.push(ViewNode::sphere("object", 1.0).at(state.position));
-
+    
     let transform = Transform::from_translation(state.position);
-    Gizmo::&lt;MyState&gt;::new("object", transform)
+    Gizmo::new("object", transform)
         .translate(Snap::step(0.1), |s, offset| {
             let mut s = s.clone();
             s.position += offset;
@@ -219,7 +215,7 @@ use bevy_composable_dragging::{View, ViewNode};
         .add_to(&amp;mut view);
     view
 }
-<span class="boring">fn main() {}</span></code></pre>
+<span class="boring">}</span></code></pre>
 <h2 id="handle-types"><a class="header" href="#handle-types">Handle Types</a></h2>
 <div class="table-wrapper">
 <table>
@@ -238,29 +234,26 @@ use bevy_composable_dragging::{View, ViewNode};
 <p>Handles are color-coded by axis: red for X, green for Y, blue for Z.</p>
 <h2 id="snapping"><a class="header" href="#snapping">Snapping</a></h2>
 <p>Every handle accepts a <code>Snap</code> that pulls the preview onto discrete steps:</p>
-<pre class="playground"><code class="language-rust">use bevy_composable_dragging::ops::Snap;
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use bevy_composable_dragging::ops::Snap;
 
-fn snaps() -&gt; [Snap; 3] {
-    [
-        // No snapping, continuous values
-        Snap::NONE,
-        // Snap to multiples of 0.1
-        Snap::step(0.1),
-        // Snap to multiples of 0.1 with a wider pull radius
-        Snap::step(0.1).within(0.05),
-    ]
-}
-<span class="boring">fn main() {}</span></code></pre>
+// No snapping — continuous values
+Snap::NONE
+
+// Snap to multiples of 0.1
+Snap::step(0.1)
+
+// Snap to multiples with an offset
+Snap::step_with_offset(0.1, 0.05)
+<span class="boring">}</span></code></pre>
 <h2 id="revealing-gizmos"><a class="header" href="#revealing-gizmos">Revealing Gizmos</a></h2>
 <p>An editor typically shows the gizmo only for the selected object and only when the active tool transforms it. Implement <code>GizmoReveal</code> on your state:</p>
-<pre class="playground"><code class="language-rust">use bevy_composable_dragging::gizmo::GizmoReveal;
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use bevy_composable_dragging::gizmo::GizmoReveal;
 
-<span class="boring">#[derive(Clone, PartialEq)]
-</span><span class="boring">enum Tool {
-</span><span class="boring">    Select,
-</span><span class="boring">    Transform,
-</span><span class="boring">}
-</span>#[derive(Clone)]
+#[derive(Clone)]
 struct Editor {
     selected: Option&lt;String&gt;,
     tool: Tool,
@@ -271,49 +264,30 @@ impl GizmoReveal for Editor {
         self.selected.is_some() &amp;&amp; self.tool == Tool::Transform
     }
 }
-<span class="boring">fn main() {}</span></code></pre>
+<span class="boring">}</span></code></pre>
 <p>Then use <code>Gizmo::add_if_revealed</code> instead of <code>add_to</code>:</p>
-<pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
-</span><span class="boring">use bevy_composable_dragging::gizmo::{Gizmo, GizmoReveal};
-</span><span class="boring">use bevy_composable_dragging::ops::Snap;
-</span><span class="boring">use bevy_composable_dragging::View;
-</span><span class="boring">#[derive(Clone)]
-</span><span class="boring">struct Editor {
-</span><span class="boring">    position: Vec3,
-</span><span class="boring">    transform_tool: bool,
-</span><span class="boring">}
-</span><span class="boring">impl GizmoReveal for Editor {
-</span><span class="boring">    fn reveals_gizmo(&amp;self) -&gt; bool {
-</span><span class="boring">        self.transform_tool
-</span><span class="boring">    }
-</span><span class="boring">}
-</span>fn add_gizmo(view: &amp;mut View&lt;Editor&gt;, state: &amp;Editor) {
-    let transform = Transform::from_translation(state.position);
-    Gizmo::&lt;Editor&gt;::new("object", transform)
-        .translate(Snap::step(0.1), |s, offset| {
-            let mut s = s.clone();
-            s.position += offset;
-            s
-        })
-        .add_if_revealed(view, state);
-}
-<span class="boring">fn main() {}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>Gizmo::new("object", transform)
+    .translate(Snap::step(0.1), |s, offset| {
+        let mut s = s.clone();
+        s.position += offset;
+        s
+    })
+    .add_if_revealed(&amp;mut view, &amp;state);
+<span class="boring">}</span></code></pre>
 <h2 id="render-layer"><a class="header" href="#render-layer">Render Layer</a></h2>
 <p>Gizmo handles live on render layer 31 (<code>GIZMO_LAYER</code>) so they are always picked first, even when scene geometry covers them.</p>
 <h2 id="camera-helpers"><a class="header" href="#camera-helpers">Camera Helpers</a></h2>
-<p>A camera that shows the scene must also show the gizmo layer. The example helpers in <code>examples/common</code> do this when they spawn the camera:</p>
-<pre class="playground"><code class="language-rust"><span class="boring">use bevy::camera::visibility::RenderLayers;
-</span><span class="boring">use bevy::prelude::*;
-</span>use bevy_composable_dragging::GIZMO_LAYER;
+<p>The example helpers in <code>examples/common</code> include the gizmo layer automatically:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use bevy_composable_dragging::examples::common::spawn_perspective_scene;
 
 fn setup(mut commands: Commands) {
-    commands.spawn((
-        Camera3d::default(),
-        RenderLayers::from_layers(&amp;[0, GIZMO_LAYER]),
-        Transform::from_xyz(5.0, 5.0, 5.0).looking_at(Vec3::ZERO, Vec3::Y),
-    ));
+    spawn_perspective_scene(&amp;mut commands, Vec3::new(5.0, 5.0, 5.0), Vec3::ZERO);
 }
-<span class="boring">fn main() {}</span></code></pre>
+<span class="boring">}</span></code></pre>
 <h2 id="footprint"><a class="header" href="#footprint">Footprint</a></h2>
 <p><code>Gizmo::footprint</code> returns the world positions of all handle centers, useful for HUD layout to keep elements clear of the gizmo.</p>
 <p><em>Translate, rotate, and scale gizmo handles on a 3D object. Run <code>cargo run --example gizmo_3d --features shapes-3d</code>.</em></p>

@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-6557ef1d.js";
+            window.path_to_searchindex_js = "searchindex-6a977d81.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-cbf67a2d.js"></script>
@@ -184,7 +184,7 @@
                         <h1 id="composing-shapes-2d-and-ghost-previews"><a class="header" href="#composing-shapes-2d-and-ghost-previews">Composing Shapes, 2D and Ghost Previews</a></h1>
 <h2 id="flat-shapes-with-mesh2d"><a class="header" href="#flat-shapes-with-mesh2d">Flat shapes with <code>Mesh2d</code></a></h2>
 <p><code>Shape::build_2d()</code> returns geometry in the XY plane facing +Z with gradient UVs. Pair it with
-<code>GradMeshMaterial2d</code> (built from a <code>Style</code>) and a <code>Camera2d</code>:</p>
+<code>GradMeshMaterial2d</code> (built from a <code>Style</code>) and a <code>Camera2d</code>. <code>build_2d()</code> accepts every shape, including solids that have no flat form; call <code>Shape::as_flat()</code> first when you want the compiler to prove the shape is flat (it returns <code>Err(NotFlat)</code> for solids, tubes and meshes), then <code>FlatShape::build_2d()</code>:</p>
 <pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
 </span><span class="boring">use bevy_gradmesh::{GradMeshMaterial2d, Shape, ShapeDetail, Style};
 </span><span class="boring">fn main() {}
@@ -237,7 +237,7 @@ optional tint that multiplies the gradient through vertex colours, so parts keep
 Compounds are <code>Hash + Eq</code> and work with <code>MeshCache</code>.</p>
 <p><code>Shape::lathe(profile, segments, detail)</code> revolves <code>(radius, height)</code> points around Y. Crisp corners stay
 crisp, gentle ones are smoothed, and open ends away from the axis get caps.</p>
-<p><em>A compound tower, a wall with an arched opening, extruded cobbles, an emissive torch, a metallic gem and a ghost piece that casts no shadow. Run <code>cargo run --example composed_shapes</code> to reproduce it.</em></p>
+<p><em>A compound tower, a wall with an arched opening, extruded cobbles, a torch, a gem and heightfield terrain, drawn unlit by the standalone pipeline (no PBR, so no emissive, metallic or ghost pieces). Run <code>cargo run --example composed_shapes</code> to reproduce it.</em></p>
 <h2 id="sharing-meshes-and-materials"><a class="header" href="#sharing-meshes-and-materials">Sharing meshes and materials</a></h2>
 <pre class="playground"><code class="language-rust"><span class="boring">use bevy::prelude::*;
 </span><span class="boring">use bevy_gradmesh::{GradMeshMaterial, GradMeshMaterialPool, MeshCache, Shape, Style};

@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-ad779c5b.js";
+            window.path_to_searchindex_js = "searchindex-741896a4.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-d11337db.js"></script>
@@ -185,10 +185,10 @@
 <p>Bevy Composable Dragging is a declarative dragging library for <a href="https://bevyengine.org/">Bevy</a> 0.20, ported from <a href="https://declarative-dragging.github.io">Dragology</a>.</p>
 <h2 id="what-it-solves"><a class="header" href="#what-it-solves">What It Solves</a></h2>
 <p>Instead of writing hand-crafted drop zones, hit tests, and drag state machines, you describe your interface as a pure function from state to a <a href="https://docs.rs/bevy_composable_dragging/latest/bevy_composable_dragging/struct.View.html"><code>View</code></a>, and attach a <em>drag spec</em> to every node that can be dragged. The engine renders the target states speculatively, finds the dragged node by id in each of them, and synthesizes the preview while dragging and the new state on release.</p>
-<p><em>A single draggable circle toggling between two states. Run <code>cargo run --example hello --features pbr</code> to reproduce it.</em></p>
+<p><em>A single draggable circle toggling between two states. Run <code>cargo run --example toggle --features pbr</code> to reproduce it.</em></p>
 <h2 id="key-concepts"><a class="header" href="#key-concepts">Key Concepts</a></h2>
 <ul>
-<li><strong>Views</strong>: Plain-data descriptions of scenes, flat lists of nodes with geometry, transforms, colors, and optional drag specs</li>
+<li><strong>Views</strong>: Plain-data descriptions of scenes — flat lists of nodes with geometry, transforms, colors, and optional drag specs</li>
 <li><strong>Operators</strong>: Declarative drag behaviors (<code>between</code>, <code>closest</code>, <code>vary</code>, etc.) that compile into per-frame behavior</li>
 <li><strong>Drag Spaces</strong>: Planes, axes, and screen-facing planes that resolve pointer rays to world points</li>
 <li><strong>Blending</strong>: Smooth interpolation between views, with presence animations for emerging and disappearing nodes</li>
@@ -199,7 +199,7 @@
 <p>Bevy Composable Dragging follows these principles:</p>
 <ol>
 <li><strong>Declarative</strong>: Describe what a drag does, not how it works frame by frame</li>
-<li><strong>Composable</strong>: Specs are plain data that combine freely, no state machines or enums</li>
+<li><strong>Composable</strong>: Specs are plain data that combine freely — no state machines or enums</li>
 <li><strong>Pure views</strong>: The view function is pure; state holds everything, including HUD screen size</li>
 <li><strong>Bevy-native</strong>: Outputs standard <code>Mesh</code>, <code>Transform</code>, and <code>StandardMaterial</code> types</li>
 <li><strong>Feature-gated</strong>: The core library needs only <code>bevy_color</code>; PBR and gradient features are optional</li>

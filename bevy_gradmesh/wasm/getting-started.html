@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-6557ef1d.js";
+            window.path_to_searchindex_js = "searchindex-6a977d81.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-cbf67a2d.js"></script>
@@ -233,9 +233,18 @@ fn setup(
 <p>The core API has three main types:</p>
 <ol>
 <li><strong><code>Shape</code></strong> - Describes a procedural primitive. Call <code>.build()</code> to get a Bevy <code>Mesh</code>.</li>
-<li><strong><code>Style</code></strong> - Describes gradient material properties. Call <code>.build_material()</code> to get a <code>StandardMaterial</code>.</li>
+<li><strong><code>Style</code></strong> - Describes gradient material properties. Call <code>.build_material(&amp;mut materials)</code> to get a <code>Handle&lt;GradMeshMaterial&gt;</code> (needs the <code>pbr</code> feature), or <code>.build_2d()</code> for a <code>GradMeshMaterial2d</code>.</li>
 <li><strong><code>GradMeshPlugin</code></strong> - Registers the custom material and mesh cache with Bevy.</li>
 </ol>
+<h2 id="features-and-examples"><a class="header" href="#features-and-examples">Features and Examples</a></h2>
+<p>The <code>pbr</code> feature is on by default and enables the lit 3D backends (<code>GradMeshMaterial</code> and the instanced
+PBR pipeline). Turn it off for PBR-free builds:</p>
+<pre><code class="language-toml">[dependencies]
+bevy_gradmesh = { version = "0.3", default-features = false }
+</code></pre>
+<p>These examples run without <code>pbr</code> (<code>cargo run --example &lt;name&gt; --no-default-features</code>): <code>styles</code>,
+<code>mix_spaces</code>, <code>curves</code>, <code>polyline</code>, <code>arbitrary_shapes</code>, <code>gradient_2d</code>, <code>sdf_2d</code>,
+<code>sdf_dash_gallery</code> and <code>standalone</code>. The others need <code>pbr</code>, which Cargo enables by default.</p>
 <h2 id="detail-levels"><a class="header" href="#detail-levels">Detail Levels</a></h2>
 <p>Control mesh resolution with <code>ShapeDetail</code>:</p>
 <pre class="playground"><code class="language-rust"><span class="boring">use bevy_gradmesh::{Shape, ShapeDetail};
