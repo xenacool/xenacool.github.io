@@ -28,7 +28,7 @@ fn main() {
     let dragging: &[&str] = &[
         "blend_square", "chain_of_cells", "clock", "constellation",
         "dag", "equal_constraint", "gizmo_3d", "graspable_math",
-        "gradient_hanoi_3d", "gradient_kanban_2d",
+        "gradient_hanoi_3d", "gradient_kanban_2d", "gradmesh_showcase",
         "lists_in_lists", "reorder_list", "ring_of_beads", "scheduler",
         "slider", "stickiness", "tactile_tessellations", "tessellations",
         "three_way", "toggle",
@@ -195,11 +195,11 @@ fn generate_wrapper(lib: &str, name: &str, example_path: &Path) -> String {
             .to_string();
         let content = fs::read_to_string(entry.path())
             .unwrap_or_else(|e| panic!("Failed to read {}: {}", entry.path().display(), e));
-        // Inline the file content as a submodule
         common_inner.push_str(&format!("pub mod {} {{\n{}\n}}\n", module_name, content));
     }
 
-    // Read mod.rs and strip all mod declarations, inner doc comments, and inner attributes
+    // Read mod.rs and keep only function bodies, stripping mod declarations, doc comments,
+    // and #[cfg(test)] attributes
     let mod_rs_path = common_dir.join("mod.rs");
     let mod_rs_text = fs::read_to_string(&mod_rs_path)
         .unwrap_or_else(|e| panic!("Failed to read {}: {}", mod_rs_path.display(), e));
@@ -211,34 +211,20 @@ fn generate_wrapper(lib: &str, name: &str, example_path: &Path) -> String {
         let ms = ml.trim();
         if ms.starts_with("//!") || ms.starts_with("/*!") || ms.starts_with("*/")
             || ms.starts_with("#![")
+            || ms == "#[cfg(test)]"
             || (ms.starts_with("pub mod ") && ms.ends_with(';'))
             || (ms.starts_with("mod ") && ms.ends_with(';'))
         {
-            // Skip #[cfg(test)] if it precedes a mod declaration
-            if ms == "#[cfg(test)]" {
-                let mut peek = mi + 1;
-                while peek < mod_lines.len() && mod_lines[peek].trim().is_empty() {
-                    peek += 1;
-                }
-                if peek < mod_lines.len() {
-                    let next = mod_lines[peek].trim();
-                    if (next.starts_with("pub mod ") || next.starts_with("mod ")) && next.ends_with(';') {
-                        mi += 1;
-                        continue;
-                    }
-                }
-            } else {
-                mi += 1;
-                continue;
-            }
+            mi += 1;
+            continue;
         }
         mod_rs_cleaned.push(ml.to_string());
         mi += 1;
     }
     let mod_rs_cleaned = mod_rs_cleaned.join("\n");
 
+    // Strip `mod common;` and `fn main()` from the example; keep everything else including `pub fn run`
     let cleaned = strip_mod_common_and_main(&text);
-    let cleaned = strip_add_plugins(&cleaned);
     format!(
         "// Auto-generated wrapper for {}/{}\n\
          mod common {{\n\
@@ -250,20 +236,17 @@ fn generate_wrapper(lib: &str, name: &str, example_path: &Path) -> String {
     )
 }
 
+/// Remove `mod common;`, `fn main()`, and dangling inner doc comments from example source
+/// so the wrapper can inline common/ and call `pub fn run(app)` directly.
 fn strip_mod_common_and_main(text: &str) -> String {
     let lines: Vec<&str> = text.lines().collect();
     let mut result = Vec::new();
-    let mut skip_main = false;
-    let mut main_depth = 0;
-    let mut skip_test = false;
-    let mut test_depth = 0;
     let mut i = 0;
 
     while i < lines.len() {
-        let line = lines[i];
-        let stripped = line.trim();
+        let stripped = lines[i].trim();
 
-        // Skip #[path = "..."] mod common; pattern
+        // Skip `#[path = "..."] mod common;` two-line pattern
         if stripped.starts_with("#[path = ") && i + 1 < lines.len() {
             if lines[i + 1].trim() == "mod common;" {
                 i += 2;
@@ -271,306 +254,84 @@ fn strip_mod_common_and_main(text: &str) -> String {
             }
         }
 
-        // Skip mod common;
+        // Skip `mod common;`
         if stripped == "mod common;" {
             i += 1;
             continue;
         }
 
-        // Skip inner doc comments (//!) left dangling after mod common removal
-        if stripped.starts_with("//!") || stripped == "/*!" {
+        // Skip dangling inner doc comments left after mod common removal
+        if stripped.starts_with("//!") || stripped == "/*!" || stripped == "*/" {
             i += 1;
             continue;
         }
 
-        // Skip inner attributes like #![cfg_attr(...)]
+        // Skip inner attributes like #![cfg_attr(...)] that become dangling
         if stripped.starts_with("#![") {
             let mut depth = 0;
             let mut j = i;
             while j < lines.len() {
                 for ch in lines[j].chars() {
-                    if ch == '(' {
-                        depth += 1;
-                    } else if ch == ')' {
-                        depth -= 1;
-                    }
+                    if ch == '(' { depth += 1; }
+                    else if ch == ')' { depth -= 1; }
                 }
-                j += 1;
-                if depth <= 0 {
+                if depth <= 0 && j >= i {
+                    i = j + 1;
                     break;
                 }
-            }
-            i = j;
-            continue;
-        }
-
-        // Skip fn main() { ... }
-        if !skip_main && stripped.starts_with("fn main") {
-            skip_main = true;
-            main_depth = 0;
-            for ch in line.chars() {
-                if ch == '{' {
-                    main_depth += 1;
-                } else if ch == '}' {
-                    main_depth -= 1;
-                }
-            }
-            if main_depth <= 0 {
-                skip_main = false;
-            }
-            i += 1;
-            continue;
-        }
-        if skip_main {
-            for ch in line.chars() {
-                if ch == '{' {
-                    main_depth += 1;
-                } else if ch == '}' {
-                    main_depth -= 1;
-                }
-            }
-            if main_depth <= 0 {
-                skip_main = false;
-            }
-            i += 1;
-            continue;
-        }
-
-        // Skip #[cfg(test)] mod tests { ... }
-        if !skip_test && stripped == "#[cfg(test)]" {
-            if i + 1 < lines.len() && lines[i + 1].trim().starts_with("mod tests") {
-                skip_test = true;
-                test_depth = 0;
-                for ch in lines[i + 1].chars() {
-                    if ch == '{' {
-                        test_depth += 1;
-                    } else if ch == '}' {
-                        test_depth -= 1;
-                    }
-                }
-                i += 2;
-                if test_depth <= 0 {
-                    skip_test = false;
-                }
-                continue;
-            }
-        }
-        if skip_test {
-            for ch in line.chars() {
-                if ch == '{' {
-                    test_depth += 1;
-                } else if ch == '}' {
-                    test_depth -= 1;
-                }
-            }
-            if test_depth <= 0 {
-                skip_test = false;
-            }
-            i += 1;
-            continue;
-        }
-
-        result.push(line.to_string());
-        i += 1;
-    }
-
-    result.join("\n")
-}
-
-fn strip_add_plugins(text: &str) -> String {
-    let lines: Vec<&str> = text.lines().collect();
-    let mut result = Vec::new();
-    let mut i = 0;
-
-    while i < lines.len() {
-        let line = lines[i];
-        let stripped = line.trim();
-
-        // 1. Handle new pattern: app.add_plugins(common::default_plugins("name"))
-        //    followed by chained .add_plugins() calls.
-        //    Replace the default_plugins call with just "app" so the chain continues.
-        if stripped.starts_with("app.add_plugins(common::default_plugins(") {
-            // Find the end of this add_plugins call (matching parens)
-            let mut depth = 0;
-            let mut end_line = i;
-            for ch in lines[i].chars() {
-                if ch == '(' {
-                    depth += 1;
-                } else if ch == ')' {
-                    depth -= 1;
-                }
-            }
-            if depth <= 0 {
-                // Single line: app.add_plugins(common::default_plugins("name"))
-                // Check if it ends with ; (standalone) or chains to next line
-                if stripped.ends_with(';') {
-                    // Standalone statement - remove entirely
-                    i += 1;
-                    continue;
-                } else {
-                    // Chains to next line - replace with "app" to keep the chain
-                    let indent = line.chars().take_while(|c| c.is_whitespace()).collect::<String>();
-                    result.push(format!("{}app", indent));
-                    i += 1;
-                    continue;
-                }
-            } else {
-                // Multi-line: find the closing paren
-                end_line = i;
-                while end_line < lines.len() && depth > 0 {
-                    end_line += 1;
-                    for ch in lines[end_line].chars() {
-                        if ch == '(' {
-                            depth += 1;
-                        } else if ch == ')' {
-                            depth -= 1;
-                        }
-                    }
-                }
-                if depth <= 0 {
-                    // Check what comes after
-                    let mut next_i = end_line + 1;
-                    while next_i < lines.len() && lines[next_i].trim().is_empty() {
-                        next_i += 1;
-                    }
-                    if next_i < lines.len() && lines[next_i].trim().starts_with('.') {
-                        // Chains to next line - replace with "app"
-                        let indent = line.chars().take_while(|c| c.is_whitespace()).collect::<String>();
-                        result.push(format!("{}app", indent));
-                    }
-                    // else standalone - skip entirely
-                    i = next_i;
-                    continue;
-                }
-            }
-        }
-
-        // 2. Handle old pattern: "app" on its own line followed by .add_plugins(DefaultPlugins)
-        if stripped == "app" {
-            let mut j = i + 1;
-            while j < lines.len() && lines[j].trim().is_empty() {
                 j += 1;
             }
-            if j < lines.len() && lines[j].contains(".add_plugins(") {
-                let mut k = j;
-                let mut found_default = false;
-                while k < (j + 5).min(lines.len()) {
-                    if lines[k].contains("DefaultPlugins") {
-                        found_default = true;
-                        break;
-                    }
-                    k += 1;
-                }
-                if found_default {
-                    result.push(line.to_string()); // Keep the 'app' line
-                    i += 1;
-                    let mut depth = 0;
-                    let mut started = false;
-                    while i < lines.len() {
-                        for ch in lines[i].chars() {
-                            if ch == '(' {
-                                depth += 1;
-                                started = true;
-                            } else if ch == ')' {
-                                depth -= 1;
-                            }
-                        }
-                        i += 1;
-                        if started && depth == 0 {
-                            let mut next_i = i;
-                            while next_i < lines.len() && lines[next_i].trim().is_empty() {
-                                next_i += 1;
-                            }
-                            if next_i < lines.len()
-                                && (lines[next_i].trim().starts_with(".add_plugins")
-                                    || lines[next_i].trim().starts_with(".add_systems")
-                                    || lines[next_i].trim().starts_with(".add_event"))
-                            {
-                                break;
-                            } else if next_i < lines.len() && lines[next_i].contains(';') {
-                                i = next_i + 1;
-                                break;
-                            }
-                        }
-                    }
-                    continue;
-                }
+            if depth > 0 {
+                i = lines.len();
             }
+            continue;
         }
 
-        // 3. Strip AutoScreenshotPlugin calls (standalone or chained)
-        if stripped.contains(".add_plugins(") && stripped.contains("AutoScreenshotPlugin") {
-            // Skip this entire .add_plugins(AutoScreenshotPlugin...) block
+        // Skip `fn main() { ... }` by tracking brace depth
+        if stripped.starts_with("fn main()") {
             let mut depth = 0;
-            let mut started = false;
-            while i < lines.len() {
-                for ch in lines[i].chars() {
-                    if ch == '(' {
-                        depth += 1;
-                        started = true;
-                    } else if ch == ')' {
-                        depth -= 1;
-                    }
+            let mut j = i;
+            while j < lines.len() {
+                for ch in lines[j].chars() {
+                    if ch == '{' { depth += 1; }
+                    else if ch == '}' { depth -= 1; }
                 }
-                i += 1;
-                if started && depth <= 0 {
-                    // Check if next line continues the chain
-                    let mut next_i = i;
-                    while next_i < lines.len() && lines[next_i].trim().is_empty() {
-                        next_i += 1;
-                    }
-                    if next_i < lines.len() && lines[next_i].trim().starts_with('.') {
-                        // Chain continues, keep going
-                    } else {
-                        // Statement ends here
-                        if next_i < lines.len() && lines[next_i].contains(';') {
-                            i = next_i + 1;
-                        }
-                    }
+                if depth == 0 && j > i {
+                    i = j + 1;
                     break;
                 }
+                j += 1;
+            }
+            if depth > 0 {
+                i = lines.len();
             }
             continue;
         }
 
-        // 4. Strip AutoScreenshotPlugin on next line after .add_plugins(
-        if stripped.contains(".add_plugins(") && !stripped.contains("AutoScreenshotPlugin") {
-            let mut j = i + 1;
-            while j < lines.len() && lines[j].trim().is_empty() {
-                j += 1;
-            }
-            if j < lines.len() && lines[j].contains("AutoScreenshotPlugin") {
-                // Skip from current line through the closing paren and semicolon
+        // Skip `#[cfg(test)] mod tests { ... }`
+        if stripped == "#[cfg(test)]" && i + 1 < lines.len() {
+            if lines[i + 1].trim().starts_with("mod tests") {
                 let mut depth = 0;
-                let mut started = false;
-                while i < lines.len() {
-                    for ch in lines[i].chars() {
-                        if ch == '(' {
-                            depth += 1;
-                            started = true;
-                        } else if ch == ')' {
-                            depth -= 1;
-                        }
+                let mut j = i;
+                while j < lines.len() {
+                    for ch in lines[j].chars() {
+                        if ch == '{' { depth += 1; }
+                        else if ch == '}' { depth -= 1; }
                     }
-                    i += 1;
-                    if started && depth <= 0 {
-                        let mut next_i = i;
-                        while next_i < lines.len() && lines[next_i].trim().is_empty() {
-                            next_i += 1;
-                        }
-                        if next_i < lines.len() && lines[next_i].trim().starts_with('.') {
-                            // Chain continues
-                        } else if next_i < lines.len() && lines[next_i].contains(';') {
-                            i = next_i + 1;
-                        }
+                    if depth == 0 && j > i {
+                        i = j + 1;
                         break;
                     }
+                    j += 1;
+                }
+                if depth > 0 {
+                    i = lines.len();
                 }
                 continue;
             }
         }
 
-        result.push(line.to_string());
+        result.push(lines[i].to_string());
         i += 1;
     }
 

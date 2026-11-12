@@ -90,7 +90,8 @@ serve:
 ## Publish: rebuild both books and WASM runtime, commit, and push to gh-pages
 publish: check-versions build build-wasm build-gallery
 	@echo "Publishing to gh-pages..."
-	git add $(DRAGGING_OUTPUT) $(GRADMESH_OUTPUT) $(DRAGGING_WASM_OUTPUT) $(GRADMESH_WASM_OUTPUT) demos/wasm/ demos/gallery/
+	git add $(DRAGGING_OUTPUT) $(GRADMESH_OUTPUT)
+	git add -f $(DRAGGING_WASM_OUTPUT) $(GRADMESH_WASM_OUTPUT) demos/wasm/ demos/gallery/
 	git commit -m "Rebuild books: $(shell date +%Y-%m-%d)" || echo "No changes to commit"
 	git push origin gh-pages
 	@echo "Done."
