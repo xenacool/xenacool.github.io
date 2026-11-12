@@ -28,6 +28,7 @@ fn main() {
             .set(WindowPlugin {
                 primary_window: Some(Window {
                     title: format!("Bevy Demo: {}", example_name),
+                    #[cfg(not(target_arch = "wasm32"))]
                     resolution: (1280, 720).into(),
                     canvas: Some("#bevy-canvas".into()),
                     fit_canvas_to_parent: true,
