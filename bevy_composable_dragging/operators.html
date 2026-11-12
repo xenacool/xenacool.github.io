@@ -1,0 +1,655 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Operators - Bevy Composable Dragging Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="Comprehensive guide to using bevy_composable_dragging for declarative, composable dragging in Bevy">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="favicon-8114d1fc.png">
+        <link rel="stylesheet" href="css/variables-8adf115d.css">
+        <link rel="stylesheet" href="css/general-e96d0476.css">
+        <link rel="stylesheet" href="css/chrome-d279d366.css">
+        <link rel="stylesheet" href="css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="variant_switch-2015b158.css">
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "searchindex-fab83442.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc-fb5d9845.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Bevy Composable Dragging Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/xenacool/bevy_composable_dragging" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/xenacool/bevy_composable_dragging/edit/main/book/src/operators.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="operators"><a class="header" href="#operators">Operators</a></h1>
+<p>Operators build <code>DragSpec</code>s declaratively. They follow Figure 4 of the Dragology paper and compose freely – specs are plain data that compile into per-frame behavior.</p>
+<h2 id="state--switch-to-a-fixed-state"><a class="header" href="#state--switch-to-a-fixed-state"><code>state</code> – Switch to a Fixed State</a></h2>
+<p>The simplest operator: dragging switches to the given state.</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use bevy_composable_dragging::ops::state;
+
+ViewNode::circle("button", 0.3)
+    .draggable(|| state(true))
+<span class="boring">}</span></code></pre>
+<h2 id="between--toggle-between-states"><a class="header" href="#between--toggle-between-states"><code>between</code> – Toggle Between States</a></h2>
+<p>Drag between a list of discrete states. The preview interpolates between them, and the nearest state wins on release.</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use bevy_composable_dragging::ops::between;
+
+ViewNode::circle("knob", 0.5)
+    .draggable(|| between([false, true]))
+<span class="boring">}</span></code></pre>
+<p>With custom interpolation and drop rules:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use bevy_composable_dragging::ops::{between_with, BetweenOptions, Interpolation, DropRule};
+
+between_with([a, b, c, d], BetweenOptions::new()
+    .with_interpolation(Interpolation::NaturalNeighbor)
+    .with_drop_rule(DropRule::NearestTarget)
+    .with_sharpness(2.0)
+)
+<span class="boring">}</span></code></pre>
+<p><em>Three states arranged in a triangle. Run <code>cargo run --example three_way --features pbr</code>.</em></p>
+<h3 id="interpolation-modes"><a class="header" href="#interpolation-modes">Interpolation Modes</a></h3>
+<p><code>Interpolation</code> controls how weight is spread over the targets:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Mode</th><th>Behavior</th></tr>
+</thead>
+<tbody>
+<tr><td><code>Hull</code></td><td>Barycentric weights in the smallest triangle containing the pointer (default)</td></tr>
+<tr><td><code>Delaunay</code></td><td>Barycentric weights in the Delaunay triangulation triangle</td></tr>
+<tr><td><code>NaturalNeighbor</code></td><td>Sibson weights: smoother, every neighboring target shares the weight</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="drop-rules"><a class="header" href="#drop-rules">Drop Rules</a></h3>
+<p><code>DropRule</code> controls which target a drop commits to:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Rule</th><th>Behavior</th></tr>
+</thead>
+<tbody>
+<tr><td><code>LargestWeight</code></td><td>The target with the largest blend weight (default)</td></tr>
+<tr><td><code>NearestTarget</code></td><td>The target nearest the pointer (Dragology’s behavior)</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="sharpness"><a class="header" href="#sharpness">Sharpness</a></h3>
+<p><code>sharpness</code> raises every weight to a power before normalizing. A value of <code>1.0</code> changes nothing. Higher values make the dragged node pull toward the nearest target, approaching <code>closest</code> behavior at extreme values.</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>BetweenOptions::new().with_sharpness(4.0)  // strong pull to nearest
+<span class="boring">}</span></code></pre>
+<h2 id="closest--pick-the-nearest-state"><a class="header" href="#closest--pick-the-nearest-state"><code>closest</code> – Pick the Nearest State</a></h2>
+<p>Evaluate many drag specs and pick the one whose dragged node is closest to the pointer.</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use bevy_composable_dragging::ops::closest_states;
+
+ViewNode::circle("item", 0.3)
+    .draggable(|| closest_states((0..10).map(|i| {
+        let mut s = state.clone();
+        s.positions[i] = i as f32;
+        s
+    })))
+<span class="boring">}</span></code></pre>
+<p><em>Drag items to reorder a list. Run <code>cargo run --example reorder_list --features pbr</code>.</em></p>
+<p>To resist flicker at the boundary between two branches, add stickiness:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use bevy_composable_dragging::ops::closest_states_with_stickiness;
+
+closest_states_with_stickiness(
+    [State { pos: 0 }, State { pos: 1 }, State { pos: 2 }],
+    1.0,  // world units of bias toward the current branch
+)
+<span class="boring">}</span></code></pre>
+<p>The current branch is kept until another branch is nearer to the pointer by more than the
+stickiness value. A value of zero behaves like plain <code>closest_states</code>.</p>
+<p><em>Three slots with a sticky dot. Run <code>cargo run --example stickiness --features pbr</code>.</em></p>
+<h2 id="vary--continuously-change-a-value"><a class="header" href="#vary--continuously-change-a-value"><code>vary</code> – Continuously Change a Value</a></h2>
+<p>Continuously change a numeric parameter of your state as you drag.</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use bevy_composable_dragging::ops::vary;
+use bevy_composable_dragging::param;
+
+ViewNode::circle("handle", 0.3)
+    .draggable(|| vary(state.clone(), [param!(Slider, value)]))
+<span class="boring">}</span></code></pre>
+<p>With range constraints, use <code>vary_constrained</code>:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use bevy_composable_dragging::ops::vary_constrained;
+use bevy_composable_dragging::{param, constraint};
+
+vary_constrained(
+    state.clone(),
+    [param!(Slider, value)],
+    constraint::in_range(param!(Slider, value), 0.0, 10.0),
+)
+<span class="boring">}</span></code></pre>
+<p><em>A continuous slider. Run <code>cargo run --example slider --features pbr</code>.</em></p>
+<p>When the state depends on numbers that are not direct fields, use <code>vary_func</code> to vary raw
+numbers and build the state from them. For example, a point constrained to a line <code>y = 2x</code> needs
+only one solver variable:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use bevy_composable_dragging::ops::{VaryOptions, vary_func};
+
+vary_func(
+    [0.0],
+    |v| Point { x: v[0], y: v[0] * 2.0 },
+    VaryOptions::new().with_scale(10.0),
+)
+<span class="boring">}</span></code></pre>
+<p>The <code>build</code> closure receives the current solver values and returns the complete state. The <code>scale</code>
+option sizes the solver’s first steps to match the typical magnitude of those values. <code>vary_func</code>
+also accepts constraints and pins via <a href="#varyoptions"><code>VaryOptions</code></a>.</p>
+<h2 id="constraints"><a class="header" href="#constraints">Constraints</a></h2>
+<p>The <code>constraint</code> module provides helpers that restrict how <code>vary</code> changes parameters. Each constraint reports a violation score: zero when satisfied, positive when violated. The solver minimizes both the pointer distance and the total violation.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Constraint</th><th>Meaning</th></tr>
+</thead>
+<tbody>
+<tr><td><code>constraint::less_than(a, b)</code></td><td><code>a &lt;= b</code></td></tr>
+<tr><td><code>constraint::more_than(a, b)</code></td><td><code>a &gt;= b</code></td></tr>
+<tr><td><code>constraint::equal(a, b)</code></td><td><code>a == b</code></td></tr>
+<tr><td><code>constraint::in_order([a, b, c])</code></td><td><code>a &lt;= b &lt;= c</code></td></tr>
+<tr><td><code>constraint::at_least(a, min)</code></td><td><code>a &gt;= min</code></td></tr>
+<tr><td><code>constraint::at_most(a, max)</code></td><td><code>a &lt;= max</code></td></tr>
+<tr><td><code>constraint::in_range(a, min, max)</code></td><td><code>min &lt;= a &lt;= max</code></td></tr>
+<tr><td><code>constraint::and([c1, c2])</code></td><td>All constraints at once</td></tr>
+</tbody>
+</table>
+</div>
+<p>For example, <code>equal</code> locks two parameters together so dragging one forces the other to match:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use bevy_composable_dragging::constraint::equal;
+use bevy_composable_dragging::ops::vary_constrained;
+
+vary_constrained(
+    state.clone(),
+    [param!(State, a), param!(State, b)],
+    equal(param!(State, a), param!(State, b)),
+)
+<span class="boring">}</span></code></pre>
+<p><em>Two knobs locked together. Run <code>cargo run --example equal_constraint --features pbr</code>.</em></p>
+<h2 id="substate--isolate-one-item-with-a-lens-the-zipper-pattern"><a class="header" href="#substate--isolate-one-item-with-a-lens-the-zipper-pattern"><code>substate</code> – Isolate One Item with a Lens (the Zipper Pattern)</a></h2>
+<p><code>substate</code> is the most important operator for collections. When you drag one item in a list, grid, or graph, <code>substate</code> isolates that item’s state so the inner drag spec operates on a small value instead of the entire collection. This is called the <strong>zipper pattern</strong>: you zoom into one element, manipulate it, and zip back out.</p>
+<h3 id="why-use-substate"><a class="header" href="#why-use-substate">Why Use Substate</a></h3>
+<p><strong>1. Sibling drag factories are preserved.</strong> This is the primary benefit. Without <code>substate</code>, the preview frame strips drag factories from every node except the one being dragged. With <code>substate</code>, the library renders the full view (all nodes with their drag factories intact) and only merges the dragged node’s transform from the inner spec. The result: while dragging one item, every sibling remains fully interactive and draggable.</p>
+<p><strong>2. Smaller state means less cloning.</strong> Each snap branch or <code>vary_constrained</code> baseline clones the state. With <code>substate</code>, each branch clones a small struct (e.g., a <code>Vec2</code> position or a <code>Pose { pos, rot }</code>) instead of the entire collection. For a board with 20 tiles and 15 snap positions, this reduces cloning from 15 full boards to 15 small structs.</p>
+<p><strong>3. Scoped constraints.</strong> Constraints operate on the isolated state, not the full collection. A <code>no_overlap</code> constraint sees only the dragged tile’s pose, not the entire board. It cannot accidentally read or write another item’s state.</p>
+<h3 id="how-it-works"><a class="header" href="#how-it-works">How It Works</a></h3>
+<p>A <code>Lens</code> defines how to extract and inject the isolated state:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use bevy_composable_dragging::ops::{substate, closest, state, Lens};
+
+// Extract one tile's position from the full board.
+let tile = Lens::new(
+    |board: &amp;Board| board.tiles[dragged_id].pos,
+    |board: &amp;Board, pos| {
+        let mut b = board.clone();
+        b.tiles[dragged_id].pos = pos;
+        b
+    },
+);
+
+// The inner spec operates on Vec2, not Board.
+substate(tile, closest(branches))
+<span class="boring">}</span></code></pre>
+<p>The <code>substate</code> operator’s <code>lift</code> function (the zipper) works like this:</p>
+<ol>
+<li>Render the full view via the view function – this includes all drag factories from all nodes.</li>
+<li>Run the inner spec to get the dragged node’s new transform.</li>
+<li>Merge only that transform into the full view, leaving every other node untouched.</li>
+</ol>
+<h3 id="nested-substate"><a class="header" href="#nested-substate">Nested Substate</a></h3>
+<p>For operations like <code>when_far</code> inside <code>closest</code>, nest <code>substate</code> calls:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use bevy_composable_dragging::ops::{substate, closest, state, vary_constrained, Lens};
+
+// Outer lens: Board -&gt; Option&lt;TilePose&gt; (None if dropped on trash)
+let tile = Lens::new(
+    |board: &amp;Board| board.tile_pose(id),
+    |board: &amp;Board, pose| board.with_tile(id, pose),
+);
+
+// Inner lens: Option&lt;TilePose&gt; -&gt; TilePose (unwrap or use default)
+let pose = Lens::new(
+    |opt: &amp;Option&lt;TilePose&gt;| opt.unwrap_or(default),
+    |_, pose| Some(pose),
+);
+
+substate(
+    tile,
+    closest(branches)
+        .when_far(substate(pose, free_drag), GAP),
+)
+<span class="boring">}</span></code></pre>
+<p>The outer <code>substate</code> isolates the tile from the board. The inner <code>substate</code> unwraps the <code>Option</code> so <code>vary_constrained</code> operates on a concrete <code>TilePose</code>.</p>
+<h3 id="real-examples"><a class="header" href="#real-examples">Real Examples</a></h3>
+<ul>
+<li><strong><code>constellation</code></strong> – each star’s position is isolated via <code>substate</code>. While dragging one star, the others stay draggable and their connecting lines stretch naturally.</li>
+<li><strong><code>tactile_tessellations</code></strong> – one tile’s pose (position + rotation) is isolated. Snap branches are <code>Some(TilePose)</code> instead of full board clones. The <code>no_overlap</code> constraint scores only the dragged tile’s pose.</li>
+<li><strong><code>tactile_tessellations_3d</code></strong> – same pattern in 3D: one tile’s <code>Pose</code> isolates position and rotation on a face grid.</li>
+<li><strong><code>dag</code></strong> – an arrowhead’s target is isolated via <code>substate</code>, snapping to nodes that keep the graph acyclic.</li>
+<li><strong><code>scheduler</code></strong> – one meeting’s <code>(lane, start, end)</code> is isolated from the full schedule. While dragging one meeting, others remain interactive.</li>
+</ul>
+<h3 id="when-not-to-use-it"><a class="header" href="#when-not-to-use-it">When Not to Use It</a></h3>
+<p>If your state IS the value you’re dragging (a single scalar, a toggle, a slider), <code>substate</code> adds unnecessary indirection. Use it when your state is a collection and you’re dragging one element.</p>
+<h2 id="drop_target--define-a-drop-zone"><a class="header" href="#drop_target--define-a-drop-zone"><code>drop_target</code> – Define a Drop Zone</a></h2>
+<p>Mark a node as a drop target that accepts drops from other nodes.</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use bevy_composable_dragging::ops::drop_target;
+
+ViewNode::rectangle("zone", Vec2::splat(2.0))
+    .draggable(|| drop_target("dropper", dropped_state))
+<span class="boring">}</span></code></pre>
+<h2 id="react_to--react-to-external-values"><a class="header" href="#react_to--react-to-external-values"><code>react_to</code> – React to External Values</a></h2>
+<p>Rebuild the drag spec when an external value changes, such as a modifier key:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use bevy_composable_dragging::ops::react_to;
+
+ViewNode::circle("reactor", 0.3)
+    .draggable(|| react_to(
+        || shift_held.load(std::sync::atomic::Ordering::Relaxed),
+        |shift| if *shift { /* spec with shift */ } else { /* normal spec */ },
+    ))
+<span class="boring">}</span></code></pre>
+<h2 id="button--click-without-dragging"><a class="header" href="#button--click-without-dragging"><code>button</code> – Click Without Dragging</a></h2>
+<p>A node that activates on press-and-release without moving:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use bevy_composable_dragging::ops::button;
+
+ViewNode::circle("btn", 0.3)
+    .draggable(|| button(clicked_state, 0.1))
+<span class="boring">}</span></code></pre>
+<h2 id="custom--full-control"><a class="header" href="#custom--full-control"><code>custom</code> – Full Control</a></h2>
+<p>Provide a custom compile function for complete control over drag behavior.</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use bevy_composable_dragging::ops::custom;
+
+ViewNode::circle("custom", 0.3)
+    .draggable(|| custom(|context| {
+        // Build a DragBehavior from scratch
+        // ...
+    }))
+<span class="boring">}</span></code></pre>
+<h2 id="during--transform-the-preview-state"><a class="header" href="#during--transform-the-preview-state"><code>during</code> – Transform the Preview State</a></h2>
+<p><code>.during()</code> transforms the drop state on every frame and shows the transformed state as the preview. It is like <code>.on_drop_with()</code> but also changes what the user sees during the drag. The gap is measured from the dragged node of the transformed preview.</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use bevy_composable_dragging::ops::closest_states;
+
+// Show a magnified version while dragging, but drop the normal state
+closest_states(states)
+    .during(|state| {
+        let mut s = state.clone();
+        s.scale *= 1.5;
+        s
+    })
+<span class="boring">}</span></code></pre>
+<h2 id="switch_to_state_and_follow--create-and-follow-a-new-node"><a class="header" href="#switch_to_state_and_follow--create-and-follow-a-new-node"><code>switch_to_state_and_follow</code> – Create and Follow a New Node</a></h2>
+<p>Switch to a new state and immediately start dragging a different node in that state. Used for chaining where the dragged node changes identity.</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use bevy_composable_dragging::ops::{switch_to_state_and_follow, closest_states};
+
+// Dragging a tool creates a tile that follows the pointer
+switch_to_state_and_follow(
+    new_state_with_tile,
+    "tile",
+    || closest_states(tile_positions),
+)
+<span class="boring">}</span></code></pre>
+<h2 id="follow--make-a-node-follow-the-pointer"><a class="header" href="#follow--make-a-node-follow-the-pointer"><code>follow</code> – Make a Node Follow the Pointer</a></h2>
+<p>A simple operator that makes the dragged node follow the pointer position directly, with no snapping or targets.</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use bevy_composable_dragging::ops::follow;
+
+ViewNode::sphere("free", 0.5)
+    .draggable(|| follow())
+<span class="boring">}</span></code></pre>
+<h2 id="value-operators"><a class="header" href="#value-operators">Value Operators</a></h2>
+<p>Three operators for direct value editing along axes and planes. Unlike <code>vary</code>, which uses a solver to find parameters, these measure the pointer directly: distance along an axis, angle around an axis, or offset across a plane. They are exact and need no solver.</p>
+<h3 id="along_axis"><a class="header" href="#along_axis"><code>along_axis</code></a></h3>
+<p>Change a value by dragging along a line:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use bevy_composable_dragging::ops::along_axis;
+
+along_axis(|state, distance| {
+    let mut s = state.clone();
+    s.position.x += distance;
+    s
+})
+<span class="boring">}</span></code></pre>
+<h3 id="around_axis"><a class="header" href="#around_axis"><code>around_axis</code></a></h3>
+<p>Change a value by dragging around a ring (rotation):</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use bevy_composable_dragging::ops::around_axis;
+
+around_axis(|state, angle| {
+    let mut s = state.clone();
+    s.rotation += angle;
+    s
+})
+<span class="boring">}</span></code></pre>
+<h3 id="across_plane"><a class="header" href="#across_plane"><code>across_plane</code></a></h3>
+<p>Change a value by dragging across a plane:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use bevy_composable_dragging::ops::across_plane;
+
+across_plane(|state, offset| {
+    let mut s = state.clone();
+    s.position.x += offset.x;
+    s.position.z += offset.y;
+    s
+})
+<span class="boring">}</span></code></pre>
+<h3 id="snap--step-snapping-for-value-operators"><a class="header" href="#snap--step-snapping-for-value-operators"><code>Snap</code> – Step Snapping for Value Operators</a></h3>
+<p>A <code>Snap</code> pulls the preview onto discrete steps. The preview is pulled toward the nearest step once the value is within the snap radius, and a drop commits the exact step.</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use bevy_composable_dragging::ops::Snap;
+
+// No snapping -- continuous values
+Snap::NONE
+
+// Snap to multiples of 0.1
+Snap::step(0.1)
+
+// Snap with a custom pull radius
+Snap::step(0.5).within(0.3)
+<span class="boring">}</span></code></pre>
+<h3 id="tracked--deferred-snapping"><a class="header" href="#tracked--deferred-snapping"><code>Tracked</code> – Deferred Snapping</a></h3>
+<p>Value operators return a <code>Tracked&lt;S&gt;</code> that can be converted to a <code>DragSpec</code> via <code>into()</code>, or further configured with <code>.snap()</code> before conversion:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use bevy_composable_dragging::ops::{along_axis, Snap};
+
+let tracked = along_axis(|state, distance| {
+    let mut s = state.clone();
+    s.position.x += distance;
+    s
+});
+
+// Convert directly (no snapping)
+let spec: DragSpec&lt;MyState&gt; = tracked.into();
+
+// Or add snapping first
+let spec = tracked.snap(Snap::step(0.5)).into();
+<span class="boring">}</span></code></pre>
+<p>Value operators are used by gizmos and curve handles for precise editing with snapping.</p>
+<h2 id="spec-modifiers"><a class="header" href="#spec-modifiers">Spec Modifiers</a></h2>
+<p>Every <code>DragSpec</code> supports modifier methods:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Modifier</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>.with_floating()</code></td><td>Lift the node along the space normal while dragging</td></tr>
+<tr><td><code>.when_far(background, gap)</code></td><td>Switch to background spec when pointer is far</td></tr>
+<tr><td><code>.with_snap_radius(radius)</code></td><td>Snap to the target within this radius</td></tr>
+<tr><td><code>.on_drop(state)</code></td><td>Override the drop state</td></tr>
+<tr><td><code>.with_chaining()</code></td><td>Continue dragging in the new state</td></tr>
+<tr><td><code>.with_overlay(fn)</code></td><td>Show an overlay node during the drag</td></tr>
+<tr><td><code>.during(fn)</code></td><td>Transform the state only during the drag</td></tr>
+<tr><td><code>.with_init_context(fn)</code></td><td>Modify the drag context at start</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="chaining"><a class="header" href="#chaining">Chaining</a></h2>
+<p><code>.with_chaining()</code> lets a drag continue seamlessly after switching states:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use bevy_composable_dragging::ops::closest_states;
+
+ViewNode::circle("item", 0.3)
+    .draggable(|| closest_states(states).with_chaining())
+<span class="boring">}</span></code></pre>
+<h2 id="next-steps"><a class="header" href="#next-steps">Next Steps</a></h2>
+<ul>
+<li>Control where drags happen with <a href="./spaces.html">Drag Spaces</a></li>
+<li>Smooth transitions with <a href="./blending.html">Blending</a></li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="views.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="spaces.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="views.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="spaces.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr-ef4e11c1.min.js"></script>
+        <script src="mark-09e88c2c.min.js"></script>
+        <script src="searcher-09f2665d.js"></script>
+
+        <script src="clipboard-1626706a.min.js"></script>
+        <script src="highlight-abc7f01d.js"></script>
+        <script src="book-609e4cb8.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="variant_switch-903d09f9.js"></script>
+
+
+
+    </div>
+    </body>
+</html>
