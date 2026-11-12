@@ -28,7 +28,7 @@ fn main() {
     let dragging: &[&str] = &[
         "blend_square", "chain_of_cells", "clock", "constellation",
         "dag", "equal_constraint", "gizmo_3d", "graspable_math",
-        "gradient_hanoi_3d", "gradient_kanban_2d",
+        "gradient_hanoi_3d", "gradient_kanban_2d", "gradmesh_showcase",
         "lists_in_lists", "reorder_list", "ring_of_beads", "scheduler",
         "slider", "stickiness", "tactile_tessellations", "tessellations",
         "three_way", "toggle",

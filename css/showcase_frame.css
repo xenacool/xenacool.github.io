@@ -1,22 +1,31 @@
-/* Bevy appends its own canvas to the body and sizes it to 1280x720 with inline styles.
-   The max sizes scale it down to the frame, which keeps the 16:9 shape of the frame. */
+/* The showcase fills the full viewport. Bevy appends its own canvas to the body, and the CSS
+   makes it fill the window. The camera inside each example uses AutoMin scaling so it adapts
+   to any size. */
 
-.showcase-frame {
+html,
+body {
   --frame-bg: #1a1a2e;
   --frame-fg: #ffffff;
 
-  display: grid;
-  place-items: center;
-  height: 100vh;
+  width: 100%;
+  height: 100%;
   margin: 0;
+  padding: 0;
   overflow: hidden;
   background: var(--frame-bg);
 }
 
-canvas {
+.showcase-frame {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+}
+
+.showcase-frame canvas {
+  width: 100vw;
+  height: 100vh;
   display: block;
-  max-width: 100%;
-  max-height: 100%;
 }
 
 .showcase-frame__status {
@@ -25,4 +34,29 @@ canvas {
   color: var(--frame-fg);
   font-family: sans-serif;
   font-size: 14px;
+}
+
+.showcase-frame__close {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  z-index: 10;
+  width: 32px;
+  height: 32px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.5);
+  color: var(--frame-fg);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+.showcase-frame__close:hover {
+  background: rgba(0, 0, 0, 0.7);
+}
+.showcase-frame__close:focus-visible {
+  outline: 2px solid var(--frame-fg);
+  outline-offset: 2px;
 }

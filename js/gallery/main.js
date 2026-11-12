@@ -1,9 +1,8 @@
 import { MANIFEST_URL, parseShowcaseNames, frameSource } from './showcases.js';
-import { createDemoWidget } from '../book_demos/demo_widget.js';
-import { createSingleRunner } from '../book_demos/single_runner.js';
 
 const SHOWCASE_SELECTOR = '[data-showcase]';
 const STAGE_SELECTOR = '.showcase__stage';
+const BUTTON_LABEL = 'Run';
 
 async function loadBuiltShowcases() {
   const response = await fetch(MANIFEST_URL);
@@ -13,17 +12,20 @@ async function loadBuiltShowcases() {
   return parseShowcaseNames(await response.json());
 }
 
-function addRunWidget(article, runner) {
+function addRunButton(article) {
   const name = article.dataset.showcase;
-  const widget = createDemoWidget({
-    title: name,
-    onRun: () => runner.run(widget, frameSource(name)),
-    onStop: () => runner.stop(),
+  const stage = article.querySelector(STAGE_SELECTOR);
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'showcase__run';
+  button.textContent = BUTTON_LABEL + ' ' + name;
+  button.addEventListener('click', () => {
+    window.location.href = frameSource(name);
   });
-  article.querySelector(STAGE_SELECTOR).replaceWith(widget.element);
+  stage.replaceWith(button);
 }
 
-async function addShowcaseWidgets() {
+async function addShowcaseButtons() {
   let built;
   try {
     built = await loadBuiltShowcases();
@@ -31,12 +33,11 @@ async function addShowcaseWidgets() {
     console.warn(`Gallery showcases cannot run: ${error.message}`);
     return;
   }
-  const runner = createSingleRunner();
   for (const article of document.querySelectorAll(SHOWCASE_SELECTOR)) {
     if (built.has(article.dataset.showcase)) {
-      addRunWidget(article, runner);
+      addRunButton(article);
     }
   }
 }
 
-addShowcaseWidgets();
+addShowcaseButtons();
