@@ -20,16 +20,18 @@ fn main() {
     let gradmesh: &[&str] = &[
         "appearance", "arbitrary_shapes", "character_creator", "composed_shapes",
         "curves", "deformation", "gradient_2d", "immediate", "instanced",
-        "mix_spaces", "pbr_effects", "polyline", "retained", "road",
+        "lerp_2d", "mix_spaces", "pbr_effects", "polyline", "retained", "road",
         "sdf_2d", "sdf_dash_gallery", "shapes", "standalone", "styles",
         "sweep", "terrain",
     ];
 
     let dragging: &[&str] = &[
-        "blend_square", "chain_of_cells", "clock", "gizmo_3d",
+        "blend_square", "chain_of_cells", "clock", "constellation",
+        "dag", "equal_constraint", "gizmo_3d", "graspable_math",
         "gradient_hanoi_3d", "gradient_kanban_2d",
         "lists_in_lists", "reorder_list", "ring_of_beads", "scheduler",
-        "slider", "tactile_tessellations", "tessellations", "three_way", "toggle",
+        "slider", "stickiness", "tactile_tessellations", "tessellations",
+        "three_way", "toggle",
     ];
 
     let mut mod_lines = vec![
